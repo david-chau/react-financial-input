@@ -1,2 +1,9 @@
+# Node
+node_modules
+
 # IDE
 .idea
+
+# Storybook
+.cache/*
+*storybook.log
