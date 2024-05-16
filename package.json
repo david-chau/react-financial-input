@@ -1,7 +1,7 @@
 {
   "name": "financial-input",
   "version": "0.0.1",
-  "description": "",
+  "description": "A React financial input component that works in mobile and desktop browsers.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,7 +9,7 @@
     "build-storybook": "storybook build"
   },
   "keywords": [],
-  "author": "",
+  "author": "david-chau",
   "license": "ISC",
   "devDependencies": {
     "@chromatic-com/storybook": "1.4.0",
@@ -21,12 +21,12 @@
     "@storybook/react": "8.1.1",
     "@storybook/react-vite": "8.1.1",
     "@storybook/test": "8.1.1",
-    "@types/react": "^18.3.2",
-    "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.9.0",
-    "@typescript-eslint/parser": "^7.9.0",
+    "@types/react": "18.3.2",
+    "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "7.9.0",
+    "@typescript-eslint/parser": "7.9.0",
     "prop-types": "15.8.1",
     "storybook": "8.1.1",
-    "typescript": "^5.4.5"
+    "typescript": "5.4.5"
   }
 }
