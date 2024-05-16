@@ -1,14 +1,20 @@
 {
   "name": "financial-input",
   "version": "0.0.1",
-  "description": "A React financial input component that works in mobile and desktop browsers.",
-  "main": "index.js",
+  "description": "A React financial input component written in Typescript that works in mobile and desktop browsers.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "build": "tsup"
   },
-  "keywords": [],
+  "keywords": [
+    "financial",
+    "input",
+    "shortcuts",
+    "warning",
+    "limits"
+  ],
   "author": "david-chau",
   "license": "ISC",
   "devDependencies": {
@@ -27,6 +33,13 @@
     "@typescript-eslint/parser": "7.9.0",
     "prop-types": "15.8.1",
     "storybook": "8.1.1",
+    "tsup": "8.0.2",
     "typescript": "5.4.5"
-  }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ]
 }

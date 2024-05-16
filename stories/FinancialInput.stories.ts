@@ -1,5 +1,5 @@
 import { fn } from '@storybook/test';
-import FinancialInput from "./FinancialInput";
+import { FinancialInput } from "../src";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 export default {

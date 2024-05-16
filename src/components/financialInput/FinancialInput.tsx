@@ -8,5 +8,3 @@ export const FinancialInput: React.FC<FinancialInputProps> = (props: FinancialIn
 
     return <div>{label}</div>;
 }
-
-export default FinancialInput
