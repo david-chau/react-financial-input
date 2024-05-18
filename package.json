@@ -6,7 +6,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build": "tsup"
+    "build": "tsup",
+    "lint": "eslint .",
+    "prettier:check": "prettier . --check",
+    "prettier:fix": "prettier . --write"
   },
   "keywords": [
     "financial",
@@ -31,10 +34,15 @@
     "@types/react-dom": "18.3.0",
     "@typescript-eslint/eslint-plugin": "7.9.0",
     "@typescript-eslint/parser": "7.9.0",
+    "eslint": "8.57.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-prettier": "5.1.3",
+    "prettier": "3.2.5",
     "storybook": "8.1.1",
     "tsup": "8.0.2",
     "typescript": "5.4.5",
-    "vite": "5.2.11"
+    "vite": "5.2.11",
+    "vite-tsconfig-paths": "^4.3.2"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

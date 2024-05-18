@@ -1,7 +1,7 @@
 import { fn } from '@storybook/test';
-import { FinancialInput } from "../src";
-import {useArgs} from "@storybook/preview-api";
-import {Nullable} from "../src/types";
+import { useArgs } from '@storybook/preview-api';
+import { FinancialInput, FinancialInputProps } from '../src';
+import { Nullable } from '../src/types';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 export default {
@@ -9,13 +9,12 @@ export default {
   component: FinancialInput,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
-    layout: 'centered',
+    layout: 'centered'
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
-  argTypes: {
-  },
+  argTypes: {}
 };
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
@@ -25,10 +24,10 @@ export const Uncontrolled = {
 
 export const Controlled = {
   args: {
-    value: "100",
+    value: 100,
     onChange: fn()
   },
-  render: function Component(args: any) {
+  render: function Component(args: FinancialInputProps) {
     const [, setArgs] = useArgs();
 
     const onChange = (value: Nullable<number>) => {
@@ -42,5 +41,5 @@ export const Controlled = {
 
     // Forward all args and overwrite onValueChange
     return <FinancialInput {...args} onChange={onChange} />;
-  },
+  }
 };

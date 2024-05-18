@@ -1,1 +1,1 @@
-export * from './financialInput'
+export * from './financialInput';
