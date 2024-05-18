@@ -7,8 +7,8 @@ interface FinancialInputOptions {
 }
 
 export interface FinancialInputProps {
-  value: Nullable<number>;
-  onChange: (value: Nullable<number>) => void;
+  value?: Nullable<number>;
+  onChange?: (value: Nullable<number>) => void;
   options?: FinancialInputOptions;
 }
 export const FinancialInput: React.FC<FinancialInputProps> = (
@@ -35,7 +35,7 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
       case InputType.DELETE_CONTENT_BACKWARD:
       case InputType.DELETE_CONTENT_FORWARD:
         setDisplayValue(targetValue);
-        onChange(targetValue);
+        onChange && onChange(targetValue);
         break;
       default:
         console.log(`FinancialInput - Unsupported input type: ${inputType}`);
