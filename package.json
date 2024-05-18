@@ -1,6 +1,6 @@
 {
   "name": "financial-input",
-  "version": "0.0.1",
+  "version": "0.0.2-SNAPSHOT",
   "description": "A React financial input component written in Typescript that works in mobile and desktop browsers.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -22,8 +22,8 @@
     "@storybook/addon-essentials": "8.1.1",
     "@storybook/addon-interactions": "8.1.1",
     "@storybook/addon-links": "8.1.1",
-    "@storybook/addon-onboarding": "8.1.1",
     "@storybook/blocks": "8.1.1",
+    "@storybook/preview-api": "8.1.1",
     "@storybook/react": "8.1.1",
     "@storybook/react-vite": "8.1.1",
     "@storybook/test": "8.1.1",
@@ -31,10 +31,10 @@
     "@types/react-dom": "18.3.0",
     "@typescript-eslint/eslint-plugin": "7.9.0",
     "@typescript-eslint/parser": "7.9.0",
-    "prop-types": "15.8.1",
     "storybook": "8.1.1",
     "tsup": "8.0.2",
-    "typescript": "5.4.5"
+    "typescript": "5.4.5",
+    "vite": "5.2.11"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

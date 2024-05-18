@@ -8,3 +8,4 @@ dist
 # Storybook
 .cache/*
 *storybook.log
+storybook-static

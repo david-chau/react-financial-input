@@ -1,5 +1,7 @@
 import { fn } from '@storybook/test';
 import { FinancialInput } from "../src";
+import {useArgs} from "@storybook/preview-api";
+import {Nullable} from "../src/types";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 export default {
@@ -13,15 +15,32 @@ export default {
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   argTypes: {
-    backgroundColor: { control: 'color' },
   },
-  // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#action-args
-  args: { onClick: fn() },
 };
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
-export const Default = {
+export const Uncontrolled = {
+  args: {}
+};
+
+export const Controlled = {
   args: {
-    label: 'Default',
+    value: "100",
+    onChange: fn()
+  },
+  render: function Component(args: any) {
+    const [, setArgs] = useArgs();
+
+    const onChange = (value: Nullable<number>) => {
+      // Call the provided callback
+      // This is used for the Actions tab
+      args.onChange?.(value);
+
+      // Update the arg in Storybook
+      setArgs({ value });
+    };
+
+    // Forward all args and overwrite onValueChange
+    return <FinancialInput {...args} onChange={onChange} />;
   },
 };
