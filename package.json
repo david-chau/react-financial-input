@@ -1,6 +1,6 @@
 {
   "name": "financial-input",
-  "version": "0.0.2-SNAPSHOT",
+  "version": "0.0.1-SNAPSHOT",
   "description": "A React financial input component written in Typescript that works in mobile and desktop browsers.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
