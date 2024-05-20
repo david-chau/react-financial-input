@@ -1,7 +1,6 @@
 import { fn } from '@storybook/test';
 import { useArgs } from '@storybook/preview-api';
-import { FinancialInput, FinancialInputProps } from '../src';
-import { Nullable } from '../src/types';
+import { FinancialInput, FinancialInputProps, Nullable } from '../src';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 export default {

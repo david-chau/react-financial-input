@@ -1,6 +1,6 @@
 {
   "name": "financial-input",
-  "version": "0.0.1-SNAPSHOT",
+  "version": "0.0.1-alpha-1",
   "description": "A React financial input component written in Typescript that works in mobile and desktop browsers.",
   "scripts": {
     "test": "jest",
