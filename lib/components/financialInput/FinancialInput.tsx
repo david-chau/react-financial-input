@@ -1,8 +1,8 @@
 import React, { BaseSyntheticEvent, useEffect, useRef, useState } from 'react';
-import { Nullable } from 'src/types';
-import { InputType } from 'src/enums';
-import { Selection } from 'src/types/Selection';
-import { toCommaSeparatedNumber } from '../../utils';
+import { Nullable } from 'lib/types';
+import { InputType } from 'lib/enums';
+import { Selection } from 'lib/types/Selection.ts';
+import { toCommaSeparatedNumber } from 'lib/utils.ts';
 
 interface FinancialInputOptions {
   scale?: number;
@@ -18,7 +18,7 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
   props: FinancialInputProps
 ) => {
   const { value, onChange } = props;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [selection, setSelection] = useState<Selection>({
     start: 0,
     end: 0
