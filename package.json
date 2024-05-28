@@ -66,6 +66,7 @@
     "react-dom": "^18.3.1"
   },
   "optionalDependencies": {
+    "vite": "5.2.11",
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
   },
   "dependencies": {
