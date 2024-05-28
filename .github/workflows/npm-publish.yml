@@ -22,7 +22,6 @@ jobs:
       - run: npm i -g typescript
       - run: npm i -g vite
       - run: npm run tsc:config
-      - run: npm run build
       - run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
