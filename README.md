@@ -1,4 +1,7 @@
 # financial-input
+
+[![Node.js Package](https://github.com/david-chau/financial-input/actions/workflows/npm-publish.yml/badge.svg?branch=main)](https://github.com/david-chau/financial-input/actions/workflows/npm-publish.yml)
+
 A React financial input component written in Typescript that works in mobile and desktop browsers.
 
 Key features:
