@@ -69,7 +69,8 @@
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
   },
   "dependencies": {
-    "bignumber.js": "^9.1.2"
+    "bignumber.js": "^9.1.2",
+    "vite": "5.2.11"
   },
   "type": "module",
   "main": "dist/financial-input.js",
