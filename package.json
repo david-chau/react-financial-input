@@ -13,7 +13,8 @@
     "prettier:check": "prettier . --check",
     "prettier:fix": "prettier . --write",
     "prepublishOnly": "npm run build",
-    "start":  "vite"
+    "start":  "vite",
+    "tsc:config": "tsc --showConfig"
   },
   "keywords": [
     "financial",
