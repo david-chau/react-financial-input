@@ -37,7 +37,7 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
   const {
     value,
     onChange = () => {},
-    isConsoleLoggingEnabled = false,
+    isConsoleLoggingEnabled = true,
     options = {},
     onError
   } = props;
@@ -122,12 +122,6 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
       hasValidShortcut: hasValidShortcutForInsert
     } = handleInsertShortcuts(targetValue, data);
 
-    console.log({
-      numericValueToSetForInsert,
-      isShortCutErrorForInsert,
-      hasValidShortcutForInsert
-    });
-
     if (isShortCutErrorForInsert) {
       handleError(selectionStart - 1);
     } else if (
@@ -152,12 +146,6 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
           : selectionStart +
             getCommaDifference(displayValue, newDisplayedValue);
 
-        console.log({
-          newDisplayedValue,
-          selectionStart,
-          customSelectionStart
-        });
-
         reformatCsvAndSetValues(
           newDisplayedValue,
           customSelectionStart,
@@ -172,6 +160,7 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
   };
 
   const handleInsertFromPaste = () => {};
+  const handleInsertFromDrop = () => {};
   const handleDeleteByCut = () => {};
   const handleDeleteContentBackwards = (
     targetValue: string,
@@ -205,18 +194,16 @@ export const FinancialInput: React.FC<FinancialInputProps> = (
     const { value: targetValue, selectionStart } = target;
     const data = nativeEventData ?? '';
 
-    console.log({
-      targetValue,
-      data,
-      selectionStart
-    });
-
+    // console.log({ inputType, targetValue, data, selectionStart });
     switch (inputType) {
       case InputType.INSERT_TEXT:
         handleInsertText(targetValue, data, selectionStart);
         break;
       case InputType.INSERT_FROM_PASTE:
         handleInsertFromPaste();
+        break;
+      case InputType.INSERT_FROM_DROP:
+        handleInsertFromDrop();
         break;
       case InputType.DELETE_BY_CUT:
         handleDeleteByCut();
