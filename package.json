@@ -1,6 +1,6 @@
 {
   "name": "financial-input",
-  "version": "0.0.1-alpha-13",
+  "version": "0.0.1-alpha-14",
   "description": "A React financial input component written in Typescript that works in mobile and desktop browsers.",
   "scripts": {
     "test": "jest",
@@ -8,6 +8,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build": "tsc --p ./tsconfig-build.json && vite build",
+    "build:ci": "vite build",
     "lint": "eslint .",
     "prettier:check": "prettier . --check",
     "prettier:fix": "prettier . --write",
