@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "prettier:check": "prettier . --check",
     "prettier:fix": "prettier . --write",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "start":  "vite"
   },
   "keywords": [
     "financial",
@@ -59,14 +60,17 @@
     "vite-plugin-lib-inject-css": "2.1.1",
     "vite-tsconfig-paths": "^4.3.2"
   },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "bignumber.js": "^9.1.2"
+  },
   "type": "module",
   "main": "dist/financial-input.js",
   "types": "dist/main.d.ts",
   "files": [
     "dist"
-  ],
-  "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  }
+  ]
 }
