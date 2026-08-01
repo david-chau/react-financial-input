@@ -165,6 +165,36 @@ Retheme with custom properties rather than forking the file:
 }
 ```
 
+### Dark mode is opt-in
+
+Put `rfi-dark` (or `data-rfi-theme="dark"`) on the input or any ancestor:
+
+```tsx
+<div className="rfi-dark">
+  <FinancialInput />
+</div>
+```
+
+It is **not** wired to `prefers-color-scheme`, and that is deliberate. An earlier
+version was, and it broke: the outlined variant is transparent by design, so it
+inherits the host page's background. A user whose OS was dark but whose page was
+still white got white text and a white border on white — the input disappeared
+entirely. The stylesheet cannot know what surface it has been dropped onto; the
+host app can.
+
+If you do want it to follow the OS, opt in from your own stylesheet, where you
+control the page background too:
+
+```css
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rfi-color: #fff;
+    --rfi-border-color: rgba(255, 255, 255, 0.23);
+    --rfi-surface: #121212;
+  }
+}
+```
+
 ### Floating label
 
 The component renders a bare `<input>`, so the label needs a wrapper you supply.

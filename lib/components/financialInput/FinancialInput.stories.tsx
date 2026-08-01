@@ -243,6 +243,27 @@ export const Unstyled: Story = {
   ]
 };
 
+/*
+    Dark is opt-in — put `rfi-dark` on the input or any ancestor. It is not tied
+    to prefers-color-scheme, because the outlined field is transparent and
+    inherits the host page's background: switching on the OS setting alone put
+    white text on a white page.
+ */
+export const Dark: Story = {
+  args: { label: 'Amount', helper: 'Two decimal places' },
+  decorators: [
+    (Story) => (
+      <div
+        className="rfi-dark"
+        style={{ background: '#121212', padding: '1.5rem', borderRadius: 8 }}
+      >
+        <Story />
+      </div>
+    )
+  ],
+  render: (args) => <Field {...args} />
+};
+
 export const MobileViewport: Story = {
   args: { placeholder: '0.00' },
   globals: { viewport: { value: 'mobile2', isRotated: false } }

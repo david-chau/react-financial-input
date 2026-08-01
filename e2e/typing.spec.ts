@@ -97,6 +97,30 @@ test.describe('clipboard', () => {
   });
 });
 
+/*
+    Regression: the stylesheet used to switch on prefers-color-scheme, which put
+    white text and a white border on a still-white page and made the input
+    invisible. Playwright defaults to the light scheme, so this only shows up if
+    the dark scheme is asked for explicitly.
+ */
+test.describe('colour scheme', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test('stays visible when the OS is dark but the page is not', async ({
+    page
+  }) => {
+    await open(page, STORIES.default);
+
+    const { color, borderColor } = await input(page).evaluate((element) => {
+      const computed = getComputedStyle(element);
+      return { color: computed.color, borderColor: computed.borderTopColor };
+    });
+
+    expect(color).not.toBe('rgb(255, 255, 255)');
+    expect(borderColor).not.toBe('rgba(255, 255, 255, 0.23)');
+  });
+});
+
 test.describe('mobile affordances', () => {
   /*
       Every mobile numeric keypad omits letter keys, so inputmode="decimal"
