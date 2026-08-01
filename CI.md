@@ -1,89 +1,66 @@
 # CI and releasing
 
-Four workflows. Only one of them you trigger by hand.
+Four workflows. Releasing is automated — you never run `npm publish`, and you
+never bump a version by hand.
 
-| Workflow         | File                                                     | Runs when                         | Does                                                                                                       |
-| ---------------- | -------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| CI               | [`ci.yml`](.github/workflows/ci.yml)                     | every push to `main`, every PR    | lint, typecheck, prettier, build, unit tests on React 18 **and** 19, Playwright on Windows / macOS / Linux |
-| Publish to npm   | [`npm-publish.yml`](.github/workflows/npm-publish.yml)   | a GitHub **Release** is published | re-runs the checks, then `npm publish` over OIDC                                                           |
-| Deploy Storybook | [`pages.yml`](.github/workflows/pages.yml)               | every push to `main`              | builds Storybook, deploys to GitHub Pages                                                                  |
-| Record demo GIFs | [`record-demos.yml`](.github/workflows/record-demos.yml) | manual only                       | re-records `docs/*.gif` and commits them                                                                   |
+| Workflow         | File                                                     | Runs when                      | Does                                                                                                       |
+| ---------------- | -------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| CI               | [`ci.yml`](.github/workflows/ci.yml)                     | every push to `main`, every PR | lint, typecheck, prettier, build, unit tests on React 18 **and** 19, Playwright on Windows / macOS / Linux |
+| Publish to npm   | [`npm-publish.yml`](.github/workflows/npm-publish.yml)   | every push to `main`           | maintains the release PR; on merging it, tags, releases and publishes over OIDC                            |
+| Deploy Storybook | [`pages.yml`](.github/workflows/pages.yml)               | every push to `main`           | builds Storybook, deploys to GitHub Pages                                                                  |
+| Record demo GIFs | [`record-demos.yml`](.github/workflows/record-demos.yml) | manual only                    | re-records `docs/*.gif` and commits them                                                                   |
 
 ---
 
-## Publishing a new version
+## Releasing
 
-```bash
-npm run release              # patch
-npm run release minor
-npm run release major
-npm run release prerelease beta
-npm run release -- --dry-run # show the plan, change nothing
+Merge your work to `main` as normal. A bot keeps an open pull request titled
+**`chore(main): release x.y.z`**, updating it as commits land:
+
+```
+merge  fix: keep the merged ref stable      ->  release PR now says 0.2.1
+merge  feat: handle paste and drop          ->  release PR now says 0.3.0
 ```
 
-**Do not run `npm publish` locally.** The release workflow does it, and it is the
-only path that produces a provenance attestation.
+**Merging that PR is the release.** It bumps `package.json`, writes
+`CHANGELOG.md`, tags, creates the GitHub Release, and publishes to npm — all in
+[`npm-publish.yml`](.github/workflows/npm-publish.yml).
 
-[`scripts/release.sh`](scripts/release.sh) refuses to run unless the working tree
-is clean, you are on `main`, `main` matches origin, and `gh` is authenticated. It
-then runs lint, typecheck, prettier, tests and build **before** creating a tag —
-so a broken release fails locally rather than leaving an unpublishable tag
-behind. It shows the version change and asks for confirmation, since npm versions
-are immutable.
-
-After that it does the three things a release needs:
+So: merge features whenever you like, and ship when you want to by merging the
+release PR. Nothing publishes until you do.
 
 ```bash
-npm version <bump>      # commits and tags
-git push --follow-tags  # pushes both
-gh release create ...   # the Release event is what triggers publishing
+gh pr list                                  # the release PR is in here
+gh run watch                                # watch the publish
+npm view react-financial-input version      # confirm
 ```
 
-Watch it land:
+### The version comes from your commit messages
 
-```bash
-gh run watch
-npm view react-financial-input version
-```
+The bump is derived from [Conventional Commits](https://www.conventionalcommits.org):
 
-The workflow re-runs the same checks before publishing.
+| Commit prefix                           | Bump                                       |
+| --------------------------------------- | ------------------------------------------ |
+| `fix:`                                  | patch — `0.2.0` → `0.2.1`                  |
+| `feat:`                                 | minor — `0.2.0` → `0.3.0`                  |
+| `feat!:` or a `BREAKING CHANGE:` footer | minor while `0.x`, major once past `1.0.0` |
+| `docs:` `chore:` `test:` `ci:`          | no release on their own                    |
 
-<details>
-<summary>Doing it by hand</summary>
+> **Squash merges use the pull request title as the commit message.** A PR
+> titled "Chore/release script" produces a commit the bot cannot parse and no
+> version bump. Title PRs the same way you would a commit: `fix: …`, `feat: …`.
 
-```bash
-npm version patch
-git push --follow-tags
-gh release create "v$(node -p "require('./package.json').version")" --generate-notes
-```
+### Publishing is not on `on: release`
 
-Or create the Release from the GitHub UI: **Releases → Draft a new release → pick
-the tag you just pushed → Publish release**.
+It would be the obvious place, but a Release created with `GITHUB_TOKEN`
+[does not trigger further workflows](https://github.com/orgs/community/discussions/25281).
+That is why `npm-publish.yml` both creates the release and publishes, gated on
+release-please's `release_created` output. The alternative is a personal access
+token, which would put a long-lived secret back in the repo.
 
-</details>
-
-### Which bump?
-
-|                     | When                                            |
-| ------------------- | ----------------------------------------------- |
-| `npm version patch` | bug fixes, docs, internals — no API change      |
-| `npm version minor` | new props, new exports, anything additive       |
-| `npm version major` | changed or removed public API, changed defaults |
-
-Changing a default counts as breaking. The `inputMode` default going from
-`decimal` to `text` is the kind of change that warrants a major once the package
-is past `0.x`.
-
-### Pre-releases
-
-```bash
-npm version prerelease --preid=beta     # 0.2.0 -> 0.2.1-beta.0
-git push --follow-tags
-gh release create v0.2.1-beta.0 --generate-notes --prerelease
-```
-
-Marking the GitHub Release as a pre-release is what keeps it off `latest`, so
-`npm install react-financial-input` stays on the stable version.
+The publish job checks out the **tag**, not the commit that triggered the run —
+the version bump is a commit the bot pushes, so the triggering commit still has
+the old version in `package.json`.
 
 ---
 
@@ -131,12 +108,24 @@ remove the `_authToken` line from `~/.npmrc`, then `npm login --auth-type=web`,
 which creates a session that _can_ prompt for an OTP.
 
 **`403 … cannot publish over previously published version`**
-The version in `package.json` already exists on npm. Bump it — npm versions are
-immutable.
+The version in `package.json` already exists on npm. Normally impossible now,
+since release-please owns the bump — it means something published by hand.
 
-**Publish workflow did not run**
-It triggers on a _published Release_, not on a pushed tag. Pushing a tag alone
-does nothing. Check **Releases**, not just tags.
+**No release PR appeared after merging**
+Nothing on `main` since the last release parsed as a releasable Conventional
+Commit. `docs:`, `chore:`, `test:` and `ci:` do not trigger a release on their
+own. Most often the culprit is a squash merge whose PR title was not
+conventional, so check the merge commit message on `main`.
+
+**Release PR merged but nothing published**
+Look at the `publish` job in the run. It is skipped unless release-please
+reports `release_created`, and it checks out the tag rather than the triggering
+commit — if the checkout ref is wrong, the tarball carries the previous version.
+
+**`.release-please-manifest.json` drifts from `package.json`**
+The manifest is the bot's record of the last released version. If someone
+publishes by hand, update the manifest to match or the next release PR proposes
+a version that already exists.
 
 **Storybook deployed but assets 404**
 Pages serves a project site from `/react-financial-input/`. `pages.yml` passes
