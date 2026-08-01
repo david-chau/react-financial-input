@@ -13,31 +13,54 @@ Four workflows. Only one of them you trigger by hand.
 
 ## Publishing a new version
 
-Three commands. **Do not run `npm publish` locally** — the release workflow does
-it, and it is the only path that produces a provenance attestation.
-
 ```bash
-# 1. Bump the version. Commits and tags in one step.
-npm version patch          # or minor / major
-
-# 2. Push the commit and its tag.
-git push --follow-tags
-
-# 3. Create the Release. This is what triggers the publish.
-gh release create "v$(node -p "require('./package.json').version")" --generate-notes
+npm run release              # patch
+npm run release minor
+npm run release major
+npm run release prerelease beta
+npm run release -- --dry-run # show the plan, change nothing
 ```
 
-That last step can equally be done from the GitHub UI: **Releases → Draft a new
-release → pick the tag you just pushed → Publish release**.
+**Do not run `npm publish` locally.** The release workflow does it, and it is the
+only path that produces a provenance attestation.
+
+[`scripts/release.sh`](scripts/release.sh) refuses to run unless the working tree
+is clean, you are on `main`, `main` matches origin, and `gh` is authenticated. It
+then runs lint, typecheck, prettier, tests and build **before** creating a tag —
+so a broken release fails locally rather than leaving an unpublishable tag
+behind. It shows the version change and asks for confirmation, since npm versions
+are immutable.
+
+After that it does the three things a release needs:
+
+```bash
+npm version <bump>      # commits and tags
+git push --follow-tags  # pushes both
+gh release create ...   # the Release event is what triggers publishing
+```
 
 Watch it land:
 
 ```bash
 gh run watch
+npm view react-financial-input version
 ```
 
-The workflow re-runs lint, typecheck, tests and build before publishing, so a
-broken release fails at the gate rather than on npm.
+The workflow re-runs the same checks before publishing.
+
+<details>
+<summary>Doing it by hand</summary>
+
+```bash
+npm version patch
+git push --follow-tags
+gh release create "v$(node -p "require('./package.json').version")" --generate-notes
+```
+
+Or create the Release from the GitHub UI: **Releases → Draft a new release → pick
+the tag you just pushed → Publish release**.
+
+</details>
 
 ### Which bump?
 
