@@ -87,12 +87,16 @@ npx playwright test
 npm run record-demos  # needs ffmpeg
 ```
 
+## Commit messages
+
+[Conventional Commits](https://www.conventionalcommits.org), because the release
+version is derived from them: `fix:` is a patch, `feat:` is a minor, `feat!:` or
+a `BREAKING CHANGE:` footer is a major once past `1.0.0`.
+
+**Squash merges use the pull request title as the commit message**, so title PRs
+the same way: `fix: keep the merged ref stable`, not `Fix ref bug`.
+
 ## Releasing
 
-```bash
-npm run release              # patch; also minor / major / prerelease
-npm run release -- --dry-run # show the plan, change nothing
-```
-
-Do not `npm publish` locally — the Release workflow owns publishing. See
-[CI.md](CI.md) for what each workflow does and how the OIDC publish works.
+Nothing manual. A bot keeps an open `chore(main): release x.y.z` PR; merging it
+bumps the version, writes the changelog, tags and publishes. See [CI.md](CI.md).

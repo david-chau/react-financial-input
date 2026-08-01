@@ -1,4 +1,4 @@
-import { createRef } from 'react';
+import { createRef, useCallback, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -126,6 +126,63 @@ describe('<FinancialInput />', () => {
     render(<FinancialInput ref={ref} />);
 
     expect(ref.current).toBeInstanceOf(HTMLInputElement);
+  });
+
+  /*
+      Regression: the merged ref used to be rebuilt on every render, so React
+      detached and re-attached it each time and the consumer's callback ref
+      fired repeatedly. A callback ref that sets state then looped until React
+      threw "Maximum update depth exceeded".
+   */
+  it('does not re-invoke a stable callback ref on re-render', async () => {
+    let attachments = 0;
+
+    const Harness = () => {
+      const [, setTick] = useState(0);
+      const ref = useCallback((node: HTMLInputElement | null) => {
+        if (node) attachments += 1;
+      }, []);
+
+      return (
+        <>
+          <FinancialInput ref={ref} />
+          <button onClick={() => setTick((tick) => tick + 1)}>rerender</button>
+        </>
+      );
+    };
+
+    const user = userEvent.setup();
+    render(<Harness />);
+    expect(attachments).toBe(1);
+
+    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByRole('button'));
+
+    expect(attachments).toBe(1);
+  });
+
+  it('survives a callback ref that sets state', async () => {
+    const Harness = () => {
+      const [tagName, setTagName] = useState('');
+      const ref = useCallback((node: HTMLInputElement | null) => {
+        if (node) setTagName(node.tagName);
+      }, []);
+
+      return (
+        <>
+          <FinancialInput ref={ref} />
+          <output>{tagName}</output>
+        </>
+      );
+    };
+
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('INPUT');
+
+    await user.type(screen.getByRole('textbox'), '1000');
+    expect(screen.getByRole('textbox')).toHaveValue('1,000');
   });
 
   it('still calls a consumer onInput handler', async () => {

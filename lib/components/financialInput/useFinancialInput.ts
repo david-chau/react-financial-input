@@ -76,6 +76,26 @@ export const useFinancialInput = ({
     createInitialState(value)
   );
 
+  /*
+      Merging the caller's ref has to be cached on the caller's ref identity.
+      Building it inline would hand React a new callback ref on every render,
+      and React detaches and re-attaches a ref whose identity changed — so a
+      consumer's callback ref would fire on every render. If that callback sets
+      state, the result is an infinite render loop.
+   */
+  const mergedRef = useRef<{
+    external: Ref<HTMLInputElement> | undefined;
+    merged: (node: HTMLInputElement | null) => void;
+  } | null>(null);
+
+  const getMergedRef = (external?: Ref<HTMLInputElement>) => {
+    if (!mergedRef.current || mergedRef.current.external !== external) {
+      mergedRef.current = { external, merged: mergeRefs(inputRef, external) };
+    }
+
+    return mergedRef.current.merged;
+  };
+
   const handleInput = (event: InputLikeEvent) => {
     const { inputType, data } = event.nativeEvent as globalThis.InputEvent;
     const target = event.currentTarget;
@@ -160,7 +180,7 @@ export const useFinancialInput = ({
     inputMode,
     autoComplete: 'off',
     ...rest,
-    ref: mergeRefs(inputRef, ref),
+    ref: getMergedRef(ref),
     value: state.displayValue,
     className: className
       ? `${INPUT_CLASS_NAME} ${className}`

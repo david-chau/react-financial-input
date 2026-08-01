@@ -270,19 +270,41 @@
 
 /* -------------------------------------------------------------------- dark */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --rfi-primary: #90caf9;
-    --rfi-error: #f44336;
-    --rfi-color: #fff;
-    --rfi-color-disabled: rgba(255, 255, 255, 0.5);
-    --rfi-border-color: rgba(255, 255, 255, 0.23);
-    --rfi-border-color-hover: #fff;
-    --rfi-border-color-disabled: rgba(255, 255, 255, 0.3);
-    --rfi-label-color: rgba(255, 255, 255, 0.7);
-    --rfi-filled-background: rgba(255, 255, 255, 0.09);
-    --rfi-filled-background-hover: rgba(255, 255, 255, 0.13);
-    --rfi-underline-color: rgba(255, 255, 255, 0.7);
-    --rfi-surface: #121212;
-  }
+/*
+ * Dark is opt-in, deliberately.
+ *
+ * An earlier version switched automatically on `prefers-color-scheme: dark`,
+ * which is wrong for a component stylesheet: the outlined field is transparent
+ * by design, so it inherits whatever background the host page has. If the OS
+ * was dark but the page was not, the text and border went white on a white
+ * page and the input vanished.
+ *
+ * The host app knows its own surface; this file does not. Put `rfi-dark` on the
+ * input or any ancestor:
+ *
+ *   <div className="rfi-dark"> … </div>
+ *
+ * To follow the OS after all, opt in from your own stylesheet, where you also
+ * control the page background:
+ *
+ *   @media (prefers-color-scheme: dark) {
+ *     :root { --rfi-color: #fff; --rfi-border-color: rgba(255,255,255,0.23); … }
+ *   }
+ */
+.rfi-dark,
+[data-rfi-theme='dark'] {
+  --rfi-primary: #90caf9;
+  --rfi-error: #f44336;
+  --rfi-color: #fff;
+  --rfi-color-disabled: rgba(255, 255, 255, 0.5);
+  --rfi-border-color: rgba(255, 255, 255, 0.23);
+  --rfi-border-color-hover: #fff;
+  --rfi-border-color-disabled: rgba(255, 255, 255, 0.3);
+  --rfi-label-color: rgba(255, 255, 255, 0.7);
+  --rfi-filled-background: rgba(255, 255, 255, 0.09);
+  --rfi-filled-background-hover: rgba(255, 255, 255, 0.13);
+  --rfi-underline-color: rgba(255, 255, 255, 0.7);
+  --rfi-surface: #121212;
+
+  color-scheme: dark;
 }
