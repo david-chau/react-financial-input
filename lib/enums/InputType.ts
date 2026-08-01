@@ -6,6 +6,7 @@ export enum InputType {
   INSERT_TEXT = 'insertText',
   INSERT_FROM_PASTE = 'insertFromPaste',
   INSERT_FROM_DROP = 'insertFromDrop',
+  INSERT_COMPOSITION_TEXT = 'insertCompositionText',
   DELETE_BY_CUT = 'deleteByCut',
   DELETE_CONTENT_BACKWARD = 'deleteContentBackward',
   DELETE_CONTENT_FORWARD = 'deleteContentForward'

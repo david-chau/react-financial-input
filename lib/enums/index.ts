@@ -1,1 +1,2 @@
-export * from './InputType.ts';
+export * from './InputType';
+export * from './Shortcut';

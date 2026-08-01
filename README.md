@@ -1,88 +1,213 @@
-# financial-input
+# react-financial-input
 
-[![Node.js Package](https://github.com/david-chau/financial-input/actions/workflows/npm-publish.yml/badge.svg?branch=main)](https://github.com/david-chau/financial-input/actions/workflows/npm-publish.yml)
+[![CI](https://github.com/david-chau/react-financial-input/actions/workflows/ci.yml/badge.svg)](https://github.com/david-chau/react-financial-input/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/react-financial-input)](https://www.npmjs.com/package/react-financial-input)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/react-financial-input)](https://bundlephobia.com/package/react-financial-input)
+[![license](https://img.shields.io/npm/l/react-financial-input)](./LICENSE)
 
-A React financial input component written in Typescript that works in mobile and desktop browsers.
+A React currency input that formats as you type, with `h`/`k`/`m`/`b` multiplier
+shortcuts. **Zero runtime dependencies.** Unstyled by default.
 
-Key features:
-- auto-formatting to money format (i.e `123,456,789.01`)
-- prevents invalid input whether typed, dragged or pasted
-- default `h`,`k`,`m`,`b`  multiplier keys
+```
+1234567  ->  1,234,567
+2.5m     ->  2,500,000
+```
+
+## Why this exists
+
+Most React currency inputs are written and tested against a desktop keyboard,
+and treat the browser's `InputEvent` as an afterthought. That works until a real
+device shows up:
+
+- **Android soft keyboards** report `insertCompositionText` with a `data` field
+  that cannot be trusted, rather than the `insertText` a desktop keyboard sends.
+- **iOS Safari** moves the caret when the value is reformatted mid-edit, so the
+  next keystroke lands in the wrong place.
+- **Paste and drag-and-drop** bypass keystroke validation entirely, which is how
+  `$1,234.00 USD` ends up inside a numeric field.
+- **Windows and macOS** disagree about which modifier means "select all".
+
+`react-financial-input` branches on the `InputEvent` `inputType` as the primary
+signal instead of guessing from key codes, so each platform's input path is
+handled explicitly rather than assumed. That logic lives in a pure reducer, which
+means every platform quirk is a row in a test table rather than a branch buried
+in a component.
+
+**It is not all finished yet.** The support matrix below marks what is shipped
+and what is still in progress. Nothing there is aspirational.
+
+## Demo
+
+|                                |                                                   |
+| ------------------------------ | ------------------------------------------------- |
+| Digits group as you type       | ![](docs/demo-digits-group-as-you-type.gif)       |
+| Shortcuts expand               | ![](docs/demo-shortcuts-expand.gif)               |
+| Backspacing across a separator | ![](docs/demo-backspacing-across-a-separator.gif) |
+
+Browse every state in [Storybook](https://david-chau.github.io/react-financial-input/).
+
+> The recordings show the optional stylesheet. Out of the box the component is an
+> unstyled `<input>`.
+
+## Install
+
+```bash
+npm install react-financial-input
+```
+
+React 18 or 19 is required as a peer dependency. There are no other dependencies.
 
 ## Usage
-### Install package
-`npm install financial-input`
 
-### Import the component
-```
-import { FinancialInput, FinancialInputProps } from 'financial-input';
-...
-const props: FinancialInputProps = {...}
-...
-return (
-<div className='my-app'>
-    <FinancialInput {...props}/>
-</div>
+```tsx
+import { FinancialInput } from 'react-financial-input';
+
+<FinancialInput
+  value={amount}
+  onChange={setAmount}
+  options={{ scale: 2, maxDigits: 11 }}
+/>;
 ```
 
-## Options
-### scale
-Type: `number`  
-Default: `2`
+`onChange` receives a `number`, or `null` while the value is incomplete — an
+empty input, or a lone `.` part-way through typing. It is never `NaN`.
 
-Maximum number of decimal digits the value can take
+### Props
 
-##### range
-Type: `string`  
-Default: `ALL`
+Every native `<input>` prop is passed through, so `placeholder`, `disabled`,
+`name`, `onBlur` and `aria-*` all work as usual. `ref` is forwarded to the
+underlying input.
 
-The possible range of values that the value can take
+| Prop                | Type                              | Default     | Description                                                        |
+| ------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------ |
+| `value`             | `number \| null`                  | `undefined` | The numeric value.                                                 |
+| `onChange`          | `(value: number \| null) => void` | —           | Called with the numeric value, not the formatted string.           |
+| `onError`           | `() => void`                      | —           | Called when a keystroke is refused, such as a third decimal place. |
+| `options.scale`     | `number`                          | `2`         | Maximum decimal places. `0` refuses the decimal point entirely.    |
+| `options.maxDigits` | `number`                          | `11`        | Maximum integer digits.                                            |
 
-Possible Values:
-- `'ALL'`: Number can take any value
-- `'POSITIVE'`: Number can only be positive
+### Shortcuts
 
-##### shortcuts
-Type: `Object { [character]: multiplier }`  
-Default: `{
-'h: 100,
-'k': 1000,
-'m': 1000000,
-'b': 1000000000
-}`  
-An object mapping of shortcuts that the user can use to quickly enter common values.
-E.g. with the default shortcuts, typing `k` will multiply the number value by 1000
+| Key | Multiplier     |
+| --- | -------------- |
+| `h` | ×100           |
+| `k` | ×1,000         |
+| `m` | ×1,000,000     |
+| `b` | ×1,000,000,000 |
 
-## Props
-##### options
-Retrieves the options on the input
+Typing a shortcut on its own reads as one of that unit, so `k` gives `1,000`.
 
-#### value
-Retrieves the formatted value of the input (string)
+Multipliers are applied by shifting the decimal point through the string rather
+than by multiplying floats, so `4.35h` is exactly `435` — not the
+`434.99999999999994` that `4.35 * 100` produces in JavaScript. This is why there
+is no `bignumber.js` dependency.
 
-The following functions are exposed on the returned finput instance:
+## Styling
+
+Nothing is styled unless you ask for it. Pick a tier:
+
+```tsx
+// 1. Unstyled — a bare <input>, no CSS loaded at all.
+<FinancialInput />
+
+// 2. Your own classes.
+<FinancialInput className="border rounded px-2" />
+
+// 3. The optional stylesheet.
+import 'react-financial-input/styles.css';
+
+// 4. Your own component entirely — see the headless hook below.
+```
+
+The stylesheet is a separate export. Nothing in the JavaScript references it, so
+if you do not import it, it never reaches your bundle. Retheme it with custom
+properties rather than forking it:
+
+```css
+:root {
+  --rfi-border-color: #cbd5e1;
+  --rfi-radius: 8px;
+  --rfi-focus-ring-color: #6366f1;
+}
+```
+
+### Headless
+
+`useFinancialInput` gives you the formatting and validation with none of the
+markup, so you can keep your own design system's input:
+
+```tsx
+import { useFinancialInput } from 'react-financial-input';
+
+const { getInputProps, numericValue } = useFinancialInput({
+  value,
+  onChange: setValue
+});
+
+<TextField slotProps={{ htmlInput: getInputProps() }} />; // MUI
+<Input {...getInputProps()} />; // Chakra
+```
+
+## Device support
+
+Backed by four layers of verification, so each cell says what it is based on:
+
+| Layer  | What it is                                            | What it proves                                |
+| ------ | ----------------------------------------------------- | --------------------------------------------- |
+| **L1** | `it.each` tables over the pure reducer                | Every `inputType` sequence, deterministically |
+| **L2** | Playwright on a Windows / macOS / Linux runner matrix | Real OS key handling, real browser engines    |
+| **L3** | Playwright + CDP `Input.imeSetComposition`            | Genuine composition events, without a device  |
+| **L4** | Real devices (BrowserStack)                           | Real iOS Safari and real Android GBoard       |
+
+| Capability                             | Chrome | Firefox | Safari | Android | iOS | Verified by                               |
+| -------------------------------------- | ------ | ------- | ------ | ------- | --- | ----------------------------------------- |
+| Type digits, group as you type         | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
+| `h`/`k`/`m`/`b` shortcuts              | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
+| Backspace, including across separators | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
+| Refuse over-scale / over-digit input   | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
+| Select-all then overtype               | ✅     | ✅      | ✅     | ✅      | ✅  | L2                                        |
+| Numeric keypad on mobile (`inputMode`) | —      | —       | —      | ✅      | ✅  | L2                                        |
+| Paste                                  | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet parsed           |
+| Drag and drop                          | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet parsed           |
+| Cut, forward delete                    | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet applied          |
+| IME composition                        | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | L3 harness in place, reducer case pending |
+
+✅ shipped and tested — 🚧 not implemented; the input keeps its previous value
+rather than corrupting it, and `onError` stays quiet.
+
+**Honest caveat.** The Android and iOS columns are Playwright device emulation:
+viewport, touch and user agent. They are _not_ a real soft keyboard or IME.
+`devices['Pixel 7']` is desktop Chromium with a phone-sized window. Real-device
+verification (L4) is not wired up yet, which is exactly why the composition row
+is 🚧.
+
+## Roadmap
+
+1. Paste, drop, cut and forward-delete
+2. Android `insertCompositionText` handling
+3. Controlled-mode sync when the `value` prop changes externally
+4. `groupSeparator` / `decimalSeparator` props, for `1.000,50`
+5. Opt-in currency symbol via `Intl`, overridable with a prop
+6. Configurable shortcuts and a positive-only range
+7. Real-device CI
 
 ## Developing
-Install dependencies:
-- `npm install`
 
-To see the component, you can run the example test app
-- `npm start`
+```bash
+npm install
+npm run storybook     # the dev loop
+npm test              # unit tests (Vitest)
+npm run lint
+npm run typecheck
+npm run build         # dist/ — ESM, CJS and .d.ts
+npx playwright test   # cross-browser e2e
+npm run record-demos  # regenerate docs/*.gif (needs ffmpeg)
+```
 
-You can also use storybook as well
-- `npm run storybook`
+Architecture rules are in [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
+`.tsx` holds the render and nothing else, `.ts` holds pure functions, and every
+pure function gets an `it.each` table.
 
-To add new dependencies, ensure they are correctly added in either `dependencies`, `peerDependencies` or `devDependencies`.
+## License
 
-Building Library
-----------------
-- `npm run build` will create a build into `dist` folder
-
-Running tests
--------------
-Execute the tests locally:
-- `npm test`
-
-Releasing
----------
-`npm publish` will publish the build files in `dist`, there is a pre-publish step to always build when publishing.
+MIT

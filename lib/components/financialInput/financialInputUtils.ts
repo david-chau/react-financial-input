@@ -1,152 +1,119 @@
-import { Nullable, NullableOrUndefinable, StringKeyedMap } from 'lib/types';
+import { Nullable, StringKeyedMap } from '../../types';
+import { Shortcut } from '../../enums';
 import {
-  containsDecimals,
-  containsOnlyNumberRelatedCharacters,
-  csvToNumber,
-  csvToStringNumber,
+  DECIMAL_SEPARATOR,
   hasLeadingZero,
-  hasMultipleDecimals
-} from 'lib/utils';
-import BigNumber from 'bignumber.js';
-import {
-  containsLetters,
-  endsInDecimal,
-  hasCommasOrSpaces
-} from 'lib/utils/string.ts';
-import { Shortcut } from 'lib/enums/Shortcut.ts';
+  hasMultipleDecimals,
+  hasSeparatorOrSpace,
+  shiftDecimal,
+  stripGroupSeparators
+} from '../../utils';
 
-export const DEFAULT_MAX_DECIMAL_PLACES: number = 2;
-export const DEFAULT_MAX_DIGITS: number = 11;
+export const DEFAULT_SCALE = 2;
+export const DEFAULT_MAX_DIGITS = 11;
 
-export const SHORTCUT_TO_MULTIPLIER: StringKeyedMap<number> = {
-  [Shortcut.HUNDRED]: 100,
-  [Shortcut.THOUSAND]: 1000,
-  [Shortcut.MILLION]: 1000000,
-  [Shortcut.BILLION]: 1000000000
+/*
+    Stored as powers of ten rather than multipliers so that shiftDecimal can
+    consume them directly and stay exact.
+ */
+export const SHORTCUT_EXPONENTS: StringKeyedMap<number> = {
+  [Shortcut.HUNDRED]: 2,
+  [Shortcut.THOUSAND]: 3,
+  [Shortcut.MILLION]: 6,
+  [Shortcut.BILLION]: 9
 };
 
-export const areDecimalsAllowed = (scale: number): boolean => scale > 0;
-export const isOnlyDecimalPoint = (value: string): boolean => value === '.';
-
-export const isNumericValueEqualToCsv = (
-  numericValue: NullableOrUndefinable<number>,
-  csv: string
-): boolean => {
-  const sanitizedTargetValue = endsInDecimal(csv) ? csv.replace('.', '') : csv;
-  return csvToNumber(sanitizedTargetValue) === numericValue;
-};
-
-export interface HandleInsertShortcutsResult {
-  numericValueToSet: Nullable<number | BigNumber>;
-  isError: boolean;
-  hasValidShortcut: boolean;
-}
-
-export const isValidInputShortcut = (shortcut: Nullable<string>): boolean =>
-  shortcut !== null && !!SHORTCUT_TO_MULTIPLIER[shortcut.toLowerCase()];
-
-export const computeShortcut = (
-  baseValue: number | BigNumber,
-  shortcut: Nullable<string>
-): number | BigNumber => {
-  if (isValidInputShortcut(shortcut)) {
-    return multipleShortcut(baseValue, shortcut);
-  } else {
-    return baseValue;
-  }
-};
-
-export const multipleShortcut = (
-  baseValue: number | BigNumber,
-  shortcut: Nullable<string>
-): number | BigNumber => {
-  if (isValidInputShortcut(shortcut)) {
-    const multiplier =
-      shortcut !== null && SHORTCUT_TO_MULTIPLIER[shortcut.toLowerCase()];
-
-    if (multiplier) {
-      if (baseValue === 0) {
-        return multiplier;
-      } else {
-        const baseValueNumber: BigNumber = new BigNumber(baseValue);
-        return baseValueNumber.multipliedBy(multiplier).toNumber();
-      }
-    }
-  }
-  return baseValue;
-};
-
-export const handleInsertShortcuts = (
-  insertValue: string,
-  data: Nullable<string>
-): HandleInsertShortcutsResult => {
-  let numericValueToSet: Nullable<number | BigNumber> = null;
-  let isError: boolean = false;
-  let hasValidShortcut: boolean = false;
-
-  if (data !== null && containsLetters(insertValue)) {
-    if (isValidInputShortcut(data)) {
-      // Remove shortcut from string
-      const baseValue = insertValue.replace(data, '');
-      numericValueToSet = computeShortcut(csvToNumber(baseValue), data);
-      hasValidShortcut = true;
-    } else {
-      isError = true;
-    }
-  } else if (!isOnlyDecimalPoint(insertValue)) {
-    numericValueToSet = csvToNumber(insertValue);
+export const getShortcutExponent = (
+  character: Nullable<string>
+): Nullable<number> => {
+  if (character === null || character.length !== 1) {
+    return null;
   }
 
-  return {
-    numericValueToSet,
-    isError,
-    hasValidShortcut
-  };
+  const exponent = SHORTCUT_EXPONENTS[character.toLowerCase()];
+
+  return exponent === undefined ? null : exponent;
 };
 
-export const isStringNumberAboveMaxDecimalPlaces = (
-  stringNumber: string,
-  maxDecimalPlaces: number
-) => stringNumber.length > maxDecimalPlaces;
+export const isShortcut = (character: Nullable<string>): boolean =>
+  getShortcutExponent(character) !== null;
 
-export const isIntegerAboveMaxLength = (
-  integer: string,
-  maxDigits?: number
-): boolean => (maxDigits === undefined ? false : integer.length > maxDigits);
+/*
+    Applies a shortcut to the digits typed before it. An empty base means the
+    user typed the shortcut on its own, which reads as one of that unit —
+    "k" is 1,000. An explicit "0" multiplies out to 0, as it should.
+ */
+export const applyShortcut = (
+  base: string,
+  character: string
+): Nullable<string> => {
+  const exponent = getShortcutExponent(character);
 
-export const isValidFinancialInputInsert = (
+  if (exponent === null) {
+    return null;
+  }
+
+  const raw = stripGroupSeparators(base);
+
+  return shiftDecimal(raw === '' ? '1' : raw, exponent);
+};
+
+export const isAboveScale = (fraction: string, scale: number): boolean =>
+  fraction.length > scale;
+
+export const isAboveMaxDigits = (integer: string, maxDigits: number): boolean =>
+  integer.replace('-', '').length > maxDigits;
+
+/*
+    Validates the value the browser has already put in the input, before it is
+    accepted and reformatted. Splitting on the decimal separator is the fix for
+    the bug where the scale limit was never enforced: the old code stripped the
+    grouping separators and then split the result on a grouping separator, so
+    the fraction was always empty.
+ */
+export const isValidInsert = (
   targetValue: string,
   data: string,
   maxDigits: number,
   scale: number
 ): boolean => {
-  const _areDecimalsAllowed: boolean = areDecimalsAllowed(scale);
-
-  if (isOnlyDecimalPoint(targetValue)) {
-    return _areDecimalsAllowed;
-  }
-
-  if (
-    hasMultipleDecimals(targetValue) ||
-    (!_areDecimalsAllowed && containsDecimals(targetValue))
-  ) {
+  if (hasSeparatorOrSpace(data)) {
     return false;
   }
 
-  const targetValueWithoutCommas = csvToStringNumber(targetValue);
+  const raw = stripGroupSeparators(targetValue);
 
-  const [integer, fraction = ''] = targetValueWithoutCommas.split(',');
+  if (raw === '' || raw === '-') {
+    return true;
+  }
+
+  if (raw === DECIMAL_SEPARATOR) {
+    return scale > 0;
+  }
+
+  if (hasMultipleDecimals(raw)) {
+    return false;
+  }
+
+  const [integer, fraction = ''] = raw.split(DECIMAL_SEPARATOR);
+
+  if (raw.includes(DECIMAL_SEPARATOR) && scale === 0) {
+    return false;
+  }
 
   return (
-    !hasLeadingZero(targetValue) &&
-    !hasCommasOrSpaces(data) &&
-    !isStringNumberAboveMaxDecimalPlaces(fraction, scale) &&
-    !isIntegerAboveMaxLength(integer, maxDigits)
+    !hasLeadingZero(raw) &&
+    !isAboveScale(fraction, scale) &&
+    !isAboveMaxDigits(integer, maxDigits)
   );
 };
 
-export const isValidNumericFinancialInput = (
-  value: Nullable<number | BigNumber>,
+/*
+    Validates a number string produced by the library itself, such as the result
+    of applying a shortcut.
+ */
+export const isValidNumberString = (
+  value: Nullable<string>,
   maxDigits: number,
   scale: number
 ): boolean => {
@@ -154,13 +121,9 @@ export const isValidNumericFinancialInput = (
     return false;
   }
 
-  const stringValue = String(value);
-  const [integer, fraction = ''] = stringValue.split('.');
-  const absInteger = integer.replace('-', '');
+  const [integer, fraction = ''] = value.split(DECIMAL_SEPARATOR);
 
   return (
-    containsOnlyNumberRelatedCharacters(stringValue) &&
-    !isIntegerAboveMaxLength(absInteger, maxDigits) &&
-    !isStringNumberAboveMaxDecimalPlaces(fraction, scale)
+    !isAboveMaxDigits(integer, maxDigits) && !isAboveScale(fraction, scale)
   );
 };
