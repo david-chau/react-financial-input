@@ -1,3 +1,5 @@
+# WORK IN PROGRESS - revamp underway !!!
+
 # financial-input
 
 [![Node.js Package](https://github.com/david-chau/financial-input/actions/workflows/npm-publish.yml/badge.svg?branch=main)](https://github.com/david-chau/financial-input/actions/workflows/npm-publish.yml)
