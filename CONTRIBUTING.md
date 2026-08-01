@@ -89,5 +89,10 @@ npm run record-demos  # needs ffmpeg
 
 ## Releasing
 
-See [CI.md](CI.md) — what each workflow does, and the three commands that ship a
-version. Do not `npm publish` locally; the Release workflow owns publishing.
+```bash
+npm run release              # patch; also minor / major / prerelease
+npm run release -- --dry-run # show the plan, change nothing
+```
+
+Do not `npm publish` locally — the Release workflow owns publishing. See
+[CI.md](CI.md) for what each workflow does and how the OIDC publish works.
