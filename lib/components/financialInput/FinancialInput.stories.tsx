@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
@@ -67,7 +67,7 @@ const Field = ({ label, helper, error, ...props }: FieldArgs) => {
 };
 
 export const Default: Story = {
-  args: { placeholder: '0.00' }
+  args: { placeholder: '' }
 };
 
 export const WithValue: Story = {
@@ -284,7 +284,13 @@ export const MobileViewport: Story = {
 export const KeyboardDiagnostics: Story = {
   render: function KeyboardDiagnostics(args) {
     const [resolved, setResolved] = useState<Record<string, string>>({});
-    const ref = useCallback((node: HTMLInputElement | null) => {
+    const ref = useRef<HTMLInputElement>(null);
+
+    // Read after mount rather than from a ref callback, so this never depends
+    // on how often React attaches the ref.
+    useEffect(() => {
+      const node = ref.current;
+
       if (!node) return;
 
       setResolved({
@@ -319,8 +325,9 @@ export const KeyboardDiagnostics: Story = {
           ))}
         </dl>
         <small style={{ opacity: 0.7, lineHeight: 1.5, fontSize: '0.7rem' }}>
-          Expected <code>type=text</code> and <code>inputmode=decimal</code>. If
-          both are right and the keypad still is not numeric, the keyboard app
+          Expected <code>type=text</code>. <code>inputmode</code> is{' '}
+          <code>text</code> by default, so the shortcut letters stay typeable.
+          If you opt into a keypad and it still is not numeric, the keyboard app
           is ignoring <code>inputmode</code> — switch to Gboard to confirm.
         </small>
       </div>
@@ -328,8 +335,8 @@ export const KeyboardDiagnostics: Story = {
   }
 };
 
-/** scale 0 resolves inputmode to "numeric" — there is no decimal key to offer. */
-export const KeyboardDiagnosticsWholeNumbers: Story = {
+/** Opted into the numeric keypad, for comparing what a device raises. */
+export const KeyboardDiagnosticsKeypad: Story = {
   ...KeyboardDiagnostics,
-  args: { options: { scale: 0 } }
+  args: { options: { inputMode: 'decimal' } }
 };
