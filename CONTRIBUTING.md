@@ -50,7 +50,8 @@ New input handling belongs in the reducer as a new `case`, with rows added to
 
 ## Verification layers
 
-Read the support matrix in the README first. In short:
+The support matrix and what backs each row are in
+[DESIGN.md](DESIGN.md#verification-layers). In short:
 
 - **L1** unit tables — where coverage actually lives. Fast, free, deterministic.
 - **L2** `npx playwright test` — real browser engines; the CI matrix supplies
@@ -88,7 +89,5 @@ npm run record-demos  # needs ffmpeg
 
 ## Releasing
 
-1. Bump the version and merge to `main`.
-2. Cut a GitHub Release.
-3. `.github/workflows/npm-publish.yml` publishes via npm Trusted Publishing
-   (OIDC) — there is no `NPM_TOKEN`, and provenance is attached automatically.
+See [CI.md](CI.md) — what each workflow does, and the three commands that ship a
+version. Do not `npm publish` locally; the Release workflow owns publishing.
