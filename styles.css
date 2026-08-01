@@ -1,0 +1,56 @@
+/*
+ * Optional. Nothing in the JavaScript references this file — import it only if
+ * you want it:
+ *
+ *   import 'react-financial-input/styles.css';
+ *
+ * Retheme with the custom properties rather than forking the file.
+ */
+
+.rfi-input {
+  box-sizing: border-box;
+  width: var(--rfi-width, auto);
+  padding: var(--rfi-padding, 0.5rem 0.75rem);
+  border: var(--rfi-border-width, 1px) solid var(--rfi-border-color, #d0d5dd);
+  border-radius: var(--rfi-radius, 6px);
+  background: var(--rfi-background, #fff);
+  color: var(--rfi-color, #101828);
+  font-family: var(--rfi-font-family, inherit);
+  font-size: var(--rfi-font-size, 1rem);
+  /* Digits keep the same width, so the value stops jittering as it groups. */
+  font-variant-numeric: tabular-nums;
+  text-align: var(--rfi-text-align, right);
+}
+
+.rfi-input:focus-visible {
+  outline: var(--rfi-focus-ring-width, 2px) solid
+    var(--rfi-focus-ring-color, #3b82f6);
+  outline-offset: var(--rfi-focus-ring-offset, 1px);
+}
+
+.rfi-input:disabled {
+  background: var(--rfi-background-disabled, #f9fafb);
+  color: var(--rfi-color-disabled, #98a2b3);
+  cursor: not-allowed;
+}
+
+.rfi-input[aria-invalid='true'] {
+  border-color: var(--rfi-border-color-error, #d92d20);
+}
+
+.rfi-input[aria-invalid='true']:focus-visible {
+  outline-color: var(--rfi-focus-ring-color-error, #d92d20);
+}
+
+@media (prefers-color-scheme: dark) {
+  .rfi-input {
+    border-color: var(--rfi-border-color, #344054);
+    background: var(--rfi-background, #101828);
+    color: var(--rfi-color, #f9fafb);
+  }
+
+  .rfi-input:disabled {
+    background: var(--rfi-background-disabled, #1d2939);
+    color: var(--rfi-color-disabled, #667085);
+  }
+}

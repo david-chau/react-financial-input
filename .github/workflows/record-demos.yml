@@ -1,0 +1,39 @@
+name: Record demo GIFs
+
+# Manual only. Regenerating binaries on every push would churn the repository.
+on:
+  workflow_dispatch:
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # ffmpeg is preinstalled on ubuntu-latest.
+      - run: ./scripts/record-demos.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-gifs
+          path: docs/*.gif
+
+      - name: Commit if the GIFs changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain docs)" ]; then
+            git add docs
+            git commit -m "chore: re-record demo GIFs"
+            git push
+          else
+            echo "No change."
+          fi

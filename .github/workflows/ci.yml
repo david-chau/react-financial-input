@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, types and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run prettier:check
+      - run: npm run build
+      - name: Styling must stay opt-in
+        # Nothing in the built JavaScript may pull in the stylesheet, or
+        # importing the component would drag styles into every consumer.
+        run: |
+          if grep -qE "(import|require)\(?['\"][^'\"]*\.css['\"]" dist/index.js dist/index.cjs; then
+            echo "::error::dist references the stylesheet; styling is no longer opt-in"
+            exit 1
+          fi
+
+  unit:
+    name: Unit tests (React ${{ matrix.react }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        react: [18, 19]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pin React ${{ matrix.react }}
+        if: matrix.react != 19
+        run: |
+          npm install --no-save --legacy-peer-deps \
+            react@${{ matrix.react }} \
+            react-dom@${{ matrix.react }} \
+            @types/react@${{ matrix.react }} \
+            @types/react-dom@${{ matrix.react }}
+      - run: npm test
+
+  e2e:
+    name: E2E (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The runner is the operating system under test — a device descriptor
+          # cannot stand in for real Windows or macOS key handling.
+          - os: ubuntu-latest
+            browsers: chromium firefox
+            projects: --project=chromium --project=firefox --project=mobile-chrome --project=chromium-ime
+          - os: windows-latest
+            browsers: chromium firefox
+            projects: --project=chromium --project=firefox
+          - os: macos-latest
+            browsers: chromium webkit
+            projects: --project=chromium --project=webkit --project=mobile-safari
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browsers }}
+      # Serving the built Storybook is faster and more deterministic than
+      # booting the dev server for every shard.
+      - run: npm run build-storybook
+      - run: npx playwright test ${{ matrix.projects }}
+        env:
+          RFI_STATIC_STORYBOOK: '1'
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: playwright-report/
+          retention-days: 7

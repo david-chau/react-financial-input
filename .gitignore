@@ -1,9 +1,11 @@
 # NPM
 node_modules
 dist
+*.tgz
 
 # IDE
 .idea
+.vscode
 
 # Storybook
 .cache/*
@@ -12,3 +14,9 @@ storybook-static
 
 # Test
 coverage
+test-results
+playwright-report
+blob-report
+.playwright
+
+# The demo GIFs in docs/ ARE committed — they are what the README renders.

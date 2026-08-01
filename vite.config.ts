@@ -1,26 +1,41 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import dts from 'vite-plugin-dts';
-import { libInjectCss } from 'vite-plugin-lib-inject-css';
-import tsconfigPaths from 'vite-tsconfig-paths';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
-// https://vitejs.dev/config/
+const rootDir = import.meta.dirname;
+
 export default defineConfig({
-  plugins: [
-    react(),
-    libInjectCss(),
-    tsconfigPaths(),
-    dts({ include: ['lib'] })
-  ],
+  plugins: [react()],
   build: {
     copyPublicDir: false,
+    sourcemap: true,
     lib: {
-      entry: resolve(__dirname, 'lib/main.ts'),
-      formats: ['es']
+      entry: resolve(rootDir, 'lib/index.ts'),
+      formats: ['es', 'cjs'],
+      fileName: (format) => (format === 'es' ? 'index.js' : 'index.cjs')
     },
     rollupOptions: {
-      external: ['react', 'react/jsx-runtime']
+      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      output: {
+        // Lets the component be imported from a Next.js App Router server file.
+        banner: "'use client';"
+      }
+    }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./vitest.setup.ts'],
+    include: ['lib/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['lib/**/*.{ts,tsx}'],
+      exclude: [
+        'lib/**/*.test.{ts,tsx}',
+        'lib/**/*.stories.tsx',
+        'lib/**/index.ts'
+      ]
     }
   }
 });
