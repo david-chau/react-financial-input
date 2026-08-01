@@ -8,9 +8,11 @@ import {
 import { Nullable } from '../../types';
 import { mergeRefs } from '../../utils';
 import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
+import { InputType } from '../../enums';
 import {
   FinancialInputState,
   createInitialState,
+  reduceCompositionEnd,
   reduceInput,
   reduceShortcut
 } from './financialInputReducer';
@@ -96,19 +98,15 @@ export const useFinancialInput = ({
     return mergedRef.current.merged;
   };
 
-  const handleInput = (event: InputLikeEvent) => {
-    const { inputType, data } = event.nativeEvent as globalThis.InputEvent;
-    const target = event.currentTarget;
+  /*
+      Android soft keyboards emit insertCompositionText for every keystroke of a
+      word still being composed. Reformatting mid-composition makes the IME
+      fight the input, so the reducer holds the raw text until the composition
+      ends. This ref is the only thing the reducer cannot work out for itself.
+   */
+  const isComposing = useRef(false);
 
-    const next = reduceInput(state, {
-      inputType,
-      data,
-      targetValue: target.value,
-      selectionStart: target.selectionStart ?? target.value.length,
-      scale,
-      maxDigits
-    });
-
+  const commit = (next: FinancialInputState) => {
     setState(next);
 
     if (next.rejected) {
@@ -116,6 +114,43 @@ export const useFinancialInput = ({
     } else if (next.numericValue !== state.numericValue) {
       onChange?.(next.numericValue);
     }
+  };
+
+  const toAction = (
+    target: HTMLInputElement,
+    inputType: string,
+    data = null
+  ) => ({
+    inputType,
+    data,
+    targetValue: target.value,
+    selectionStart: target.selectionStart ?? target.value.length,
+    scale,
+    maxDigits,
+    isComposing: isComposing.current
+  });
+
+  const handleInput = (event: InputLikeEvent) => {
+    const { inputType, data } = event.nativeEvent as globalThis.InputEvent;
+    const target = event.currentTarget;
+
+    commit(reduceInput(state, { ...toAction(target, inputType), data }));
+  };
+
+  const handleCompositionStart = () => {
+    isComposing.current = true;
+  };
+
+  const handleCompositionEnd = (event: InputLikeEvent) => {
+    isComposing.current = false;
+
+    // The composed text is final now, so validate and format it for real.
+    commit(
+      reduceCompositionEnd(
+        state,
+        toAction(event.currentTarget, InputType.INSERT_COMPOSITION_TEXT)
+      )
+    );
   };
 
   /*
@@ -160,6 +195,8 @@ export const useFinancialInput = ({
   const getInputProps = ({
     className,
     onInput,
+    onCompositionStart,
+    onCompositionEnd,
     ref,
     ...rest
   }: InputProps = {}): InputProps => ({
@@ -188,6 +225,14 @@ export const useFinancialInput = ({
     onInput: (event) => {
       handleInput(event);
       onInput?.(event);
+    },
+    onCompositionStart: (event) => {
+      handleCompositionStart();
+      onCompositionStart?.(event);
+    },
+    onCompositionEnd: (event) => {
+      handleCompositionEnd(event);
+      onCompositionEnd?.(event);
     }
   });
 

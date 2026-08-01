@@ -58,6 +58,50 @@ export const applyShortcut = (
   return shiftDecimal(raw === '' ? '1' : raw, exponent);
 };
 
+/*
+    Extracts a number from arbitrary text — a paste, a drop, or an iOS
+    autocorrect replacement. Unlike typing, this text was not filtered
+    keystroke by keystroke, so it can be anything the clipboard held:
+    "$1,234.56 USD", "(1,234.00)", "2.5m", or a paragraph of prose.
+
+    Returns null when there is no number in there to take.
+ */
+export const sanitiseNumericText = (text: string): Nullable<string> => {
+  const trimmed = text.trim();
+
+  if (trimmed === '') {
+    return null;
+  }
+
+  /*
+      Accountants write negatives in parentheses, and spreadsheets copy them
+      out that way.
+   */
+  const isNegative = trimmed.startsWith('-') || /^\(.*\)$/.test(trimmed);
+
+  // A trailing shortcut letter, so pasting "2.5m" behaves like typing it.
+  const trailing = trimmed.match(/([a-z])\s*\)?\s*$/i);
+  const exponent = trailing ? getShortcutExponent(trailing[1]) : null;
+
+  const digits = trimmed.replace(
+    new RegExp(`[^0-9\\${DECIMAL_SEPARATOR}]`, 'g'),
+    ''
+  );
+
+  if (digits === '' || digits === DECIMAL_SEPARATOR) {
+    return null;
+  }
+
+  if (hasMultipleDecimals(digits)) {
+    return null;
+  }
+
+  const shifted = exponent === null ? digits : shiftDecimal(digits, exponent);
+  const normalised = shifted.replace(/^0+(?=\d)/, '');
+
+  return isNegative ? `-${normalised}` : normalised;
+};
+
 export const isAboveScale = (fraction: string, scale: number): boolean =>
   fraction.length > scale;
 

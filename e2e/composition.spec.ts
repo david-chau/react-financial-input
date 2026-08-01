@@ -51,32 +51,57 @@ test.describe('IME composition', () => {
     expect(observed).toContain('insertCompositionText');
   });
 
-  /*
-      Phase 2. Once the reducer handles insertCompositionText, this asserts the
-      value actually forms. Until then the component deliberately ignores it,
-      and pretending otherwise here would be a false green.
-   */
-  test.fixme('composed digits build up a formatted value', async ({
+  test('composed digits build up and commit a formatted value', async ({
     page,
     context
   }) => {
     await page.goto(STORIES.default);
 
     const input = page.getByRole('textbox');
+    await input.waitFor();
     await input.click();
 
     const cdp = await context.newCDPSession(page);
 
-    for (const text of ['1', '12', '123', '1234']) {
+    /*
+        Mid-composition the raw text is shown unformatted on purpose:
+        reformatting under a composing IME makes the keyboard fight the input.
+     */
+    for (const text of ['1', '12', '123', '1234567']) {
       await cdp.send('Input.imeSetComposition', {
         text,
-        selectionStart: 0,
+        selectionStart: text.length,
         selectionEnd: text.length
       });
     }
 
-    await cdp.send('Input.insertText', { text: '1234' });
+    await expect(input).toHaveValue('1234567');
 
-    await expect(input).toHaveValue('1,234');
+    // Committing the composition is what formats it.
+    await cdp.send('Input.insertText', { text: '1234567' });
+
+    await expect(input).toHaveValue('1,234,567');
+  });
+
+  test('a composed value that is not a number is refused', async ({
+    page,
+    context
+  }) => {
+    await page.goto(STORIES.default);
+
+    const input = page.getByRole('textbox');
+    await input.waitFor();
+    await input.click();
+
+    const cdp = await context.newCDPSession(page);
+
+    await cdp.send('Input.imeSetComposition', {
+      text: 'abc',
+      selectionStart: 3,
+      selectionEnd: 3
+    });
+    await cdp.send('Input.insertText', { text: 'abc' });
+
+    await expect(input).toHaveValue('');
   });
 });
