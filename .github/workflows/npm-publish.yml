@@ -1,22 +1,58 @@
+# Automated releases.
+#
+# release-please keeps an open "chore(main): release x.y.z" PR, built from the
+# Conventional Commit messages landed on main. Merging that PR bumps the
+# version, writes CHANGELOG.md, tags, creates the GitHub Release — and this
+# same workflow then publishes to npm.
+#
+# Publishing lives here rather than in a separate `on: release` workflow
+# because a Release created with GITHUB_TOKEN does not trigger further
+# workflows. Doing both in one run avoids needing a PAT.
+#
+# The filename matters: npm's trusted publisher for this package is pinned to
+# `npm-publish.yml`. Renaming this file breaks OIDC until npm is updated too.
 name: Publish to npm
 
-# Publishing on every push to main fails with a 403 the moment the version is
-# unchanged, which is what the previous workflow did. A release is the event
-# that actually means "ship this".
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  release-please:
     runs-on: ubuntu-latest
     permissions:
-      # Required for npm Trusted Publishing (OIDC) and for provenance.
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for npm Trusted Publishing (OIDC) and provenance.
       id-token: write
       contents: read
     steps:
+      # The version bump is a commit release-please just pushed, so check out
+      # the tag rather than the commit that triggered this run.
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -31,10 +67,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm publish --dry-run
 
-      - name: Check the tarball contents
-        run: npm publish --dry-run
-
-      # No NODE_AUTH_TOKEN. Authentication is OIDC against the trusted publisher
-      # configured on npmjs.com, and provenance is attached automatically.
+      # No NODE_AUTH_TOKEN. Authentication is OIDC against the trusted
+      # publisher configured on npmjs.com; provenance is attached automatically.
       - run: npm publish
