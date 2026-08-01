@@ -109,8 +109,20 @@ export const useFinancialInput = ({
     ...rest
   }: InputProps = {}): InputProps => ({
     type: 'text',
-    // The reason mobile shows a numeric keypad instead of the alphabet.
-    inputMode: 'decimal',
+    /*
+        What makes mobile show a numeric keypad instead of the alphabet.
+
+        'numeric' at scale 0, because a decimal key that the reducer will
+        refuse anyway should not be on the keypad in the first place.
+
+        type stays 'text': type="number" cannot hold grouping separators, so
+        the formatted value would be rejected by the browser.
+
+        Overridable — it sits before ...rest deliberately. Some Android
+        keyboards (Samsung's in particular) ignore inputmode entirely, so a
+        consumer targeting those may want to force a different value.
+     */
+    inputMode: scale > 0 ? 'decimal' : 'numeric',
     autoComplete: 'off',
     ...rest,
     ref: mergeRefs(inputRef, ref),

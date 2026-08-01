@@ -120,16 +120,53 @@ import 'react-financial-input/styles.css';
 ```
 
 The stylesheet is a separate export. Nothing in the JavaScript references it, so
-if you do not import it, it never reaches your bundle. Retheme it with custom
-properties rather than forking it:
+if you do not import it, it never reaches your bundle.
+
+### The optional stylesheet
+
+Modelled on Material UI's TextField — but hand-written CSS, with **no MUI
+dependency**. The same three variants, by class:
+
+```tsx
+<FinancialInput />                                  {/* outlined (default) */}
+<FinancialInput className="rfi-input--filled" />
+<FinancialInput className="rfi-input--standard" />
+<FinancialInput className="rfi-input--small" />     {/* 40px instead of 56px */}
+```
+
+Retheme with custom properties rather than forking the file:
 
 ```css
 :root {
-  --rfi-border-color: #cbd5e1;
+  --rfi-primary: #6366f1;
   --rfi-radius: 8px;
-  --rfi-focus-ring-color: #6366f1;
+  --rfi-height: 48px;
+  --rfi-text-align: left; /* defaults to right, the finance convention */
+  --rfi-surface: #fff; /* the colour the floating label paints over */
 }
 ```
+
+#### Floating label
+
+The component renders a bare `<input>`, so the label needs a wrapper you supply.
+It is pure CSS — no JavaScript, driven by `:focus-within` and
+`:placeholder-shown`, which is why the input needs `placeholder=" "`:
+
+```tsx
+<>
+  <div className="rfi-field">
+    <FinancialInput id="amount" placeholder=" " aria-invalid={hasError} />
+    <label className="rfi-label" htmlFor="amount">
+      Amount
+    </label>
+  </div>
+  {hasError && <p className="rfi-helper rfi-helper--error">Not allowed</p>}
+</>
+```
+
+The floated label paints a slice of `--rfi-surface` behind itself to sit in the
+border — the CSS-only stand-in for MUI's notched fieldset. Set `--rfi-surface` if
+the field sits on anything other than white.
 
 ### Headless
 
@@ -166,7 +203,7 @@ Backed by four layers of verification, so each cell says what it is based on:
 | Backspace, including across separators | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
 | Refuse over-scale / over-digit input   | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
 | Select-all then overtype               | ✅     | ✅      | ✅     | ✅      | ✅  | L2                                        |
-| Numeric keypad on mobile (`inputMode`) | —      | —       | —      | ✅      | ✅  | L2                                        |
+| Numeric keypad on mobile (`inputMode`) | —      | —       | —      | ⚠️      | ✅  | L2                                        |
 | Paste                                  | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet parsed           |
 | Drag and drop                          | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet parsed           |
 | Cut, forward delete                    | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet applied          |
@@ -174,6 +211,15 @@ Backed by four layers of verification, so each cell says what it is based on:
 
 ✅ shipped and tested — 🚧 not implemented; the input keeps its previous value
 rather than corrupting it, and `onError` stays quiet.
+
+⚠️ The component sets `inputmode="decimal"` (or `numeric` when `scale: 0`), which
+is the correct and spec-compliant way to ask for a numeric keypad. Gboard and iOS
+both honour it. **Some Android keyboards — Samsung's in particular — ignore
+`inputmode` and key off `type` alone**, and `type` cannot be `number` here
+because a number input refuses to hold a value containing grouping separators.
+`inputMode` is overridable if you need to force something else for your users.
+The `KeyboardDiagnostics` story in Storybook reports what a given device
+actually resolves.
 
 **Honest caveat.** The Android and iOS columns are Playwright device emulation:
 viewport, touch and user agent. They are _not_ a real soft keyboard or IME.

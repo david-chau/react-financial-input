@@ -20,7 +20,7 @@ const open = async (page: Page, url: string) => {
 };
 
 test('demo: digits group as you type', async ({ page }) => {
-  await open(page, STORIES.default);
+  await open(page, STORIES.withFloatingLabel);
   await typeSlowly(page, '1234567');
 });
 
@@ -30,7 +30,7 @@ test('demo: shortcuts expand', async ({ page }) => {
 });
 
 test('demo: backspacing across a separator', async ({ page }) => {
-  await open(page, STORIES.default);
+  await open(page, STORIES.withFloatingLabel);
   await typeSlowly(page, '1000');
 
   for (let i = 0; i < 4; i += 1) {

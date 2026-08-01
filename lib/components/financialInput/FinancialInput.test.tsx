@@ -77,6 +77,23 @@ describe('<FinancialInput />', () => {
     expect(input).toHaveAttribute('autocomplete', 'off');
   });
 
+  it.each([
+    // scale  inputmode   note
+    [2, 'decimal', 'decimals allowed, so offer the decimal key'],
+    [4, 'decimal', 'any positive scale'],
+    [0, 'numeric', 'no decimals, so do not offer a key the reducer refuses']
+  ])('scale %i resolves inputmode to %j (%s)', (scale, expected) => {
+    const { input } = setup({ options: { scale } });
+
+    expect(input).toHaveAttribute('inputmode', expected);
+  });
+
+  it('lets a consumer override inputMode for keyboards that ignore decimal', () => {
+    const { input } = setup({ inputMode: 'numeric' });
+
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
   it('merges a consumer className with its own', () => {
     const { input } = setup({ className: 'my-input' });
 

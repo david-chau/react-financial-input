@@ -79,8 +79,8 @@ export default defineConfig({
             page into the frame. Captured larger than the final GIF so that
             ffmpeg downscales — which is sharper than upscaling.
          */
-        viewport: { width: 660, height: 180 },
-        video: { mode: 'on', size: { width: 660, height: 180 } }
+        viewport: { width: 660, height: 220 },
+        video: { mode: 'on', size: { width: 660, height: 220 } }
       }
     }
   ]
