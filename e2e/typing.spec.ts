@@ -98,10 +98,31 @@ test.describe('clipboard', () => {
 });
 
 test.describe('mobile affordances', () => {
-  test('asks for a numeric keypad', async ({ page }) => {
+  /*
+      Every mobile numeric keypad omits letter keys, so inputmode="decimal"
+      would make h/k/m/b untypeable on a phone — leaving an ordinary formatted
+      number input on exactly the devices this library exists for. The default
+      keeps the letters reachable; the keypad is opt-in.
+   */
+  test('defaults to a keyboard that can type the shortcut letters', async ({
+    page
+  }) => {
     await open(page, STORIES.default);
 
-    await expect(input(page)).toHaveAttribute('inputmode', 'decimal');
+    await expect(input(page)).toHaveAttribute('inputmode', 'text');
     await expect(input(page)).toHaveAttribute('type', 'text');
+  });
+
+  test('opting into the keypad still reaches multipliers by tap', async ({
+    page
+  }) => {
+    await open(page, STORIES.shortcutButtons);
+
+    await expect(input(page)).toHaveAttribute('inputmode', 'decimal');
+
+    await input(page).pressSequentially('2.5');
+    await page.getByRole('button', { name: 'M' }).click();
+
+    await expect(input(page)).toHaveValue('2,500,000');
   });
 });

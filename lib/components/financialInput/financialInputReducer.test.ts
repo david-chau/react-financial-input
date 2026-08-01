@@ -3,7 +3,8 @@ import { InputType } from '../../enums';
 import {
   FinancialInputState,
   createInitialState,
-  reduceInput
+  reduceInput,
+  reduceShortcut
 } from './financialInputReducer';
 import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
 
@@ -183,6 +184,49 @@ describe('shortcuts', () => {
 
     expect(next.rejected).toBe(true);
     expect(next.displayValue).toBe('999999999');
+  });
+});
+
+describe('reduceShortcut', () => {
+  it.each([
+    // displayValue  character  ->  displayValue  numericValue  note
+    ['2.5', 'm', '2,500,000', 2500000, 'same result as typing the letter'],
+    ['1', 'k', '1,000', 1000, 'k'],
+    ['1.1', 'h', '110', 110, 'exact, no float drift'],
+    ['1,000', 'k', '1,000,000', 1000000, 'operates on the formatted value'],
+    ['', 'k', '1,000', 1000, 'on an empty value, reads as one of that unit'],
+    ['0', 'k', '0', 0, 'zero stays zero']
+  ])(
+    'applying %j to %j -> %j (%s)',
+    (displayValue, character, expected, numericValue) => {
+      const next = reduceShortcut(
+        stateOf(displayValue as string),
+        character as string,
+        DEFAULT_SCALE,
+        DEFAULT_MAX_DIGITS
+      );
+
+      expect(next.rejected).toBe(false);
+      expect(next.displayValue).toBe(expected);
+      expect(next.numericValue).toBe(numericValue);
+      expect(next.cursor).toBe((expected as string).length);
+    }
+  );
+
+  it.each([
+    ['1', 'z', 'not a shortcut character'],
+    ['999999999', 'b', 'would exceed maxDigits']
+  ])('refuses %j + %j (%s)', (displayValue, character) => {
+    const state = stateOf(displayValue);
+    const next = reduceShortcut(
+      state,
+      character,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS
+    );
+
+    expect(next.rejected).toBe(true);
+    expect(next.displayValue).toBe(state.displayValue);
   });
 });
 

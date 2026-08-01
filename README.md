@@ -78,13 +78,14 @@ Every native `<input>` prop is passed through, so `placeholder`, `disabled`,
 `name`, `onBlur` and `aria-*` all work as usual. `ref` is forwarded to the
 underlying input.
 
-| Prop                | Type                              | Default     | Description                                                        |
-| ------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------ |
-| `value`             | `number \| null`                  | `undefined` | The numeric value.                                                 |
-| `onChange`          | `(value: number \| null) => void` | —           | Called with the numeric value, not the formatted string.           |
-| `onError`           | `() => void`                      | —           | Called when a keystroke is refused, such as a third decimal place. |
-| `options.scale`     | `number`                          | `2`         | Maximum decimal places. `0` refuses the decimal point entirely.    |
-| `options.maxDigits` | `number`                          | `11`        | Maximum integer digits.                                            |
+| Prop                | Type                               | Default     | Description                                                                    |
+| ------------------- | ---------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `value`             | `number \| null`                   | `undefined` | The numeric value.                                                             |
+| `onChange`          | `(value: number \| null) => void`  | —           | Called with the numeric value, not the formatted string.                       |
+| `onError`           | `() => void`                       | —           | Called when a keystroke is refused, such as a third decimal place.             |
+| `options.scale`     | `number`                           | `2`         | Maximum decimal places. `0` refuses the decimal point entirely.                |
+| `options.maxDigits` | `number`                           | `11`        | Maximum integer digits.                                                        |
+| `options.inputMode` | `'text' \| 'decimal' \| 'numeric'` | `'text'`    | Which keyboard mobile raises. See [Shortcuts on mobile](#shortcuts-on-mobile). |
 
 ### Shortcuts
 
@@ -101,6 +102,40 @@ Multipliers are applied by shifting the decimal point through the string rather
 than by multiplying floats, so `4.35h` is exactly `435` — not the
 `434.99999999999994` that `4.35 * 100` produces in JavaScript. This is why there
 is no `bignumber.js` dependency.
+
+#### Shortcuts on mobile
+
+**Every mobile numeric keypad omits letter keys.** The digits on iOS's decimal
+pad have `ABC`/`DEF` printed under them, but those are cosmetic — you cannot
+enter a letter. So `inputmode="decimal"` would make `h`/`k`/`m`/`b` physically
+unreachable on a phone, leaving an ordinary formatted number input on exactly
+the devices this library exists for.
+
+That is why **`inputMode` defaults to `text`**, not `decimal`. Shortcuts work on
+every device out of the box.
+
+If a numeric keypad matters more to your users, opt in — and use `applyShortcut`
+to keep the multipliers reachable by tap:
+
+```tsx
+const { getInputProps, applyShortcut } = useFinancialInput({
+  options: { inputMode: 'decimal' } // numeric keypad, letters no longer typeable
+});
+
+return (
+  <>
+    <input {...getInputProps()} />
+    {['h', 'k', 'm', 'b'].map((c) => (
+      <button key={c} onClick={() => applyShortcut(c)}>
+        {c.toUpperCase()}
+      </button>
+    ))}
+  </>
+);
+```
+
+`applyShortcut` produces exactly what typing the letter would. See the
+`ShortcutButtons` story.
 
 ## Styling
 
@@ -203,7 +238,7 @@ Backed by four layers of verification, so each cell says what it is based on:
 | Backspace, including across separators | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
 | Refuse over-scale / over-digit input   | ✅     | ✅      | ✅     | ✅      | ✅  | L1, L2                                    |
 | Select-all then overtype               | ✅     | ✅      | ✅     | ✅      | ✅  | L2                                        |
-| Numeric keypad on mobile (`inputMode`) | —      | —       | —      | ⚠️      | ✅  | L2                                        |
+| Optional numeric keypad (`inputMode`)  | —      | —       | —      | ⚠️      | ✅  | L2                                        |
 | Paste                                  | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet parsed           |
 | Drag and drop                          | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet parsed           |
 | Cut, forward delete                    | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet applied          |
@@ -212,14 +247,15 @@ Backed by four layers of verification, so each cell says what it is based on:
 ✅ shipped and tested — 🚧 not implemented; the input keeps its previous value
 rather than corrupting it, and `onError` stays quiet.
 
-⚠️ The component sets `inputmode="decimal"` (or `numeric` when `scale: 0`), which
-is the correct and spec-compliant way to ask for a numeric keypad. Gboard and iOS
-both honour it. **Some Android keyboards — Samsung's in particular — ignore
-`inputmode` and key off `type` alone**, and `type` cannot be `number` here
-because a number input refuses to hold a value containing grouping separators.
-`inputMode` is overridable if you need to force something else for your users.
-The `KeyboardDiagnostics` story in Storybook reports what a given device
-actually resolves.
+The shortcut row is ✅ on mobile because `inputMode` defaults to `text` — see
+[Shortcuts on mobile](#shortcuts-on-mobile) for why that default is deliberate.
+
+⚠️ The numeric keypad is opt-in via `options.inputMode`. `inputmode` is the
+correct, spec-compliant way to request one, and Gboard and iOS both honour it.
+**Some Android keyboards — Samsung's in particular — ignore `inputmode` and key
+off `type` alone**, and `type` cannot be `number` here because a number input
+refuses to hold a value containing grouping separators. The `KeyboardDiagnostics`
+and `Keyboard tester` stories report what a given device actually resolves.
 
 **Honest caveat.** The Android and iOS columns are Playwright device emulation:
 viewport, touch and user agent. They are _not_ a real soft keyboard or IME.

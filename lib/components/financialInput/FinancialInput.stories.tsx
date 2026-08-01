@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
 import { FinancialInput, FinancialInputProps } from './FinancialInput';
+import { useFinancialInput } from './useFinancialInput';
 
 /*
     The floating-label stories wrap the input, so their args are wider than the
@@ -131,6 +132,55 @@ export const Controlled: Story = {
 export const Shortcuts: Story = {
   args: { label: 'Amount', helper: 'h ×100 · k ×1,000 · m ×1M · b ×1B' },
   render: (args) => <Field {...args} />
+};
+
+/*
+    The mobile answer to shortcuts.
+
+    Every mobile numeric keypad omits letter keys, so if you opt into
+    `options.inputMode: 'decimal'` for the keypad, h/k/m/b become untypeable.
+    `applyShortcut` applies a multiplier as if it had been typed, so a row of tap
+    targets restores them. The buttons are yours to render and style.
+ */
+export const ShortcutButtons: Story = {
+  args: { options: { inputMode: 'decimal' } },
+  render: function ShortcutButtons(args) {
+    const { getInputProps, applyShortcut, numericValue } = useFinancialInput({
+      options: args.options,
+      onChange: args.onChange,
+      onError: args.onError
+    });
+
+    return (
+      <div style={{ display: 'grid', gap: '0.75rem' }}>
+        <input {...getInputProps({ placeholder: '0.00' })} />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {['h', 'k', 'm', 'b'].map((character) => (
+            <button
+              key={character}
+              type="button"
+              onClick={() => applyShortcut(character)}
+              style={{
+                flex: 1,
+                padding: '0.6rem 0',
+                border: '1px solid rgba(0,0,0,0.23)',
+                borderRadius: 4,
+                background: 'transparent',
+                color: 'inherit',
+                font: 'inherit',
+                cursor: 'pointer'
+              }}
+            >
+              {character.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <small style={{ fontFamily: 'monospace', opacity: 0.7 }}>
+          value: {numericValue === null ? 'null' : numericValue}
+        </small>
+      </div>
+    );
+  }
 };
 
 /** `scale: 0` refuses the decimal point entirely. */

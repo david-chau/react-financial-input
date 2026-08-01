@@ -144,6 +144,35 @@ const remove = (
 };
 
 /*
+    Applies a shortcut to the current value without anything having been typed.
+
+    Mobile numeric keypads have no letter keys, so on a phone the h/k/m/b
+    shortcuts are physically unreachable. This is what lets a consumer put a tap
+    target next to the input and get the same result.
+ */
+export const reduceShortcut = (
+  state: FinancialInputState,
+  character: string,
+  scale: number,
+  maxDigits: number
+): FinancialInputState => {
+  const shifted = applyShortcut(state.displayValue, character);
+
+  if (shifted === null || !isValidNumberString(shifted, maxDigits, scale)) {
+    return reject(state, state.cursor);
+  }
+
+  const displayValue = formatNumberString(shifted);
+
+  return {
+    displayValue,
+    numericValue: parseNumber(displayValue),
+    cursor: displayValue.length,
+    rejected: false
+  };
+};
+
+/*
     Pure. Every platform quirk becomes a row in the reducer's test table rather
     than a branch in the component.
  */

@@ -11,7 +11,8 @@ import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
 import {
   FinancialInputState,
   createInitialState,
-  reduceInput
+  reduceInput,
+  reduceShortcut
 } from './financialInputReducer';
 
 /** The class is inert unless `react-financial-input/styles.css` is imported. */
@@ -22,6 +23,19 @@ export interface FinancialInputOptions {
   scale?: number;
   /** Maximum number of integer digits. Defaults to 11. */
   maxDigits?: number;
+  /*
+      Which keyboard mobile raises. Defaults to 'text'.
+
+      Mobile numeric keypads have no letter keys, so 'decimal' and 'numeric'
+      make the h/k/m/b shortcuts physically unreachable on a phone — which
+      leaves an ordinary formatted number input, and the shortcuts working on
+      every device is the point of this library.
+
+      Set 'decimal' or 'numeric' if a numeric keypad matters more than typed
+      shortcuts for your users; pair it with `applyShortcut` and a row of tap
+      targets so the multipliers stay reachable.
+   */
+  inputMode?: 'decimal' | 'numeric' | 'text';
 }
 
 export interface UseFinancialInputOptions {
@@ -51,7 +65,11 @@ export const useFinancialInput = ({
   onError,
   options = {}
 }: UseFinancialInputOptions = {}) => {
-  const { scale = DEFAULT_SCALE, maxDigits = DEFAULT_MAX_DIGITS } = options;
+  const {
+    scale = DEFAULT_SCALE,
+    maxDigits = DEFAULT_MAX_DIGITS,
+    inputMode = 'text'
+  } = options;
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, setState] = useState<FinancialInputState>(() =>
@@ -72,6 +90,23 @@ export const useFinancialInput = ({
     });
 
     setState(next);
+
+    if (next.rejected) {
+      onError?.();
+    } else if (next.numericValue !== state.numericValue) {
+      onChange?.(next.numericValue);
+    }
+  };
+
+  /*
+      Applies a multiplier as if it had been typed. The escape hatch for mobile
+      keypads, which have no letter keys — wire it to a row of tap targets.
+   */
+  const applyShortcut = (character: string) => {
+    const next = reduceShortcut(state, character, scale, maxDigits);
+
+    setState(next);
+    inputRef.current?.focus();
 
     if (next.rejected) {
       onError?.();
@@ -108,21 +143,21 @@ export const useFinancialInput = ({
     ref,
     ...rest
   }: InputProps = {}): InputProps => ({
-    type: 'text',
     /*
-        What makes mobile show a numeric keypad instead of the alphabet.
+        type stays 'text' always: type="number" cannot hold a value containing
+        grouping separators, so the browser would reject the formatted value.
 
-        'numeric' at scale 0, because a decimal key that the reducer will
-        refuse anyway should not be on the keypad in the first place.
+        inputMode defaults to 'text' so that the h/k/m/b shortcuts are typeable
+        on a phone. Every mobile numeric keypad omits letter keys, so 'decimal'
+        would silently reduce this to an ordinary formatted number input on
+        exactly the devices this library exists to handle. Consumers who want
+        the keypad set options.inputMode and reach the multipliers through
+        applyShortcut instead.
 
-        type stays 'text': type="number" cannot hold grouping separators, so
-        the formatted value would be rejected by the browser.
-
-        Overridable — it sits before ...rest deliberately. Some Android
-        keyboards (Samsung's in particular) ignore inputmode entirely, so a
-        consumer targeting those may want to force a different value.
+        Both sit before ...rest, so a caller can still override either.
      */
-    inputMode: scale > 0 ? 'decimal' : 'numeric',
+    type: 'text',
+    inputMode,
     autoComplete: 'off',
     ...rest,
     ref: mergeRefs(inputRef, ref),
@@ -140,6 +175,7 @@ export const useFinancialInput = ({
     inputRef,
     displayValue: state.displayValue,
     numericValue: state.numericValue,
-    getInputProps
+    getInputProps,
+    applyShortcut
   };
 };

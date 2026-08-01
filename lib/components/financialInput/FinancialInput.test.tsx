@@ -69,29 +69,37 @@ describe('<FinancialInput />', () => {
     expect(input).toHaveValue('1,234,567.5');
   });
 
-  it('sets the attributes that make mobile show a numeric keypad', () => {
+  /*
+      Mobile numeric keypads have no letter keys, so inputmode="decimal" would
+      make the h/k/m/b shortcuts unreachable on a phone. Defaulting to "text"
+      keeps them typeable on every device, which is the point of the library.
+   */
+  it('defaults to a keyboard that can type the shortcut letters', () => {
     const { input } = setup();
 
     expect(input).toHaveAttribute('type', 'text');
-    expect(input).toHaveAttribute('inputmode', 'decimal');
+    expect(input).toHaveAttribute('inputmode', 'text');
     expect(input).toHaveAttribute('autocomplete', 'off');
   });
 
   it.each([
-    // scale  inputmode   note
-    [2, 'decimal', 'decimals allowed, so offer the decimal key'],
-    [4, 'decimal', 'any positive scale'],
-    [0, 'numeric', 'no decimals, so do not offer a key the reducer refuses']
-  ])('scale %i resolves inputmode to %j (%s)', (scale, expected) => {
-    const { input } = setup({ options: { scale } });
+    // options.inputMode  expected   note
+    [undefined, 'text', 'default keeps the shortcut letters typeable'],
+    ['decimal', 'decimal', 'opt in to a keypad, losing typed shortcuts'],
+    ['numeric', 'numeric', 'keypad without a decimal key'],
+    ['text', 'text', 'explicit default']
+  ])('options.inputMode %j renders %j (%s)', (inputMode, expected, _note) => {
+    const { input } = setup({
+      options: inputMode ? { inputMode } : {}
+    });
 
     expect(input).toHaveAttribute('inputmode', expected);
   });
 
-  it('lets a consumer override inputMode for keyboards that ignore decimal', () => {
-    const { input } = setup({ inputMode: 'numeric' });
+  it('never uses type=number, which cannot hold a grouped value', () => {
+    const { input } = setup({ options: { inputMode: 'decimal' } });
 
-    expect(input).toHaveAttribute('inputmode', 'numeric');
+    expect(input).toHaveAttribute('type', 'text');
   });
 
   it('merges a consumer className with its own', () => {

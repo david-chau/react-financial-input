@@ -13,5 +13,6 @@ export const STORIES = {
   wholeNumbersOnly: storyUrl('financialinput--whole-numbers-only'),
   withValue: storyUrl('financialinput--with-value'),
   withFloatingLabel: storyUrl('financialinput--with-floating-label'),
-  allVariants: storyUrl('financialinput--all-variants')
+  allVariants: storyUrl('financialinput--all-variants'),
+  shortcutButtons: storyUrl('financialinput--shortcut-buttons')
 };

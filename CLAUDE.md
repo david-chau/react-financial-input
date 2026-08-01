@@ -32,6 +32,15 @@ it should never require touching the component.
 - React 18 and 19 are both supported. React 18 types `onInput` with `FormEvent`,
   React 19 with its own `InputEvent`, which is why the hook uses a structural
   event type instead of either.
+- **`inputMode` defaults to `'text'`, not `'decimal'`.** Every mobile numeric
+  keypad omits letter keys — the `ABC`/`DEF` printed under iOS's digits are
+  cosmetic — so `'decimal'` makes the `h`/`k`/`m`/`b` shortcuts physically
+  unreachable on a phone, reducing the library to an ordinary formatted number
+  input on exactly the devices it exists for. The keypad is opt-in via
+  `options.inputMode`, paired with `applyShortcut` for tap targets. Do not
+  "fix" this back to `decimal`.
+- `type` is always `'text'`. `type="number"` cannot hold a value containing
+  grouping separators.
 
 ## Verification
 
