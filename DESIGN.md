@@ -89,6 +89,61 @@ component, and it is why the component file is a single line of JSX.
 Unhandled input types are _ignored_ rather than rejected: the previous value is
 kept and `onError` stays quiet, because the user did nothing wrong.
 
+## Input event cheatsheet
+
+Every gesture a user can perform produces a different `InputEvent.inputType`,
+and which one you get varies by platform, browser and keyboard app. This is the
+full set the reducer handles, and what it does with each.
+
+| Action                 | `inputType`                                              | Handling                                                |
+| ---------------------- | -------------------------------------------------------- | ------------------------------------------------------- |
+| Type a digit           | `insertText`                                             | validated, then formatted                               |
+| Type `h`/`k`/`m`/`b`   | `insertText`                                             | multiplier applied by decimal shift                     |
+| Backspace              | `deleteContentBackward`                                  | reformatted; a separator only moves the caret           |
+| Delete forward         | `deleteContentForward`                                   | reformatted                                             |
+| Cut                    | `deleteByCut`                                            | reformatted                                             |
+| Drag text out          | `deleteByDrag`                                           | reformatted                                             |
+| Word / line delete     | `deleteWord*`, `deleteSoftLine*`, `deleteEntireSoftLine` | reformatted                                             |
+| Paste                  | `insertFromPaste`                                        | **sanitised**, then validated                           |
+| Drag text in           | `insertFromDrop`                                         | **sanitised**, then validated                           |
+| Autocorrect, QuickType | `insertReplacementText`                                  | **sanitised**, then validated                           |
+| Android soft keyboard  | `insertCompositionText`                                  | held raw while composing, committed on `compositionend` |
+| Undo / redo            | `historyUndo`, `historyRedo`                             | **ignored on purpose**                                  |
+| Anything else          | —                                                        | ignored, value kept, `onError` stays quiet              |
+
+Three behaviours are worth spelling out.
+
+**Sanitised, not refused.** Pasted text never passed through keystroke
+validation, so refusing anything imperfect would reject values users plainly
+meant to enter. Everything that is not a digit or the fraction separator is
+stripped, which takes currency symbols, spaces, letters and grouping separators
+with it:
+
+| Pasted          | Result                            |
+| --------------- | --------------------------------- |
+| `1,234.56`      | `1,234.56`                        |
+| `$1,234.56 USD` | `1,234.56`                        |
+| `(1,234.00)`    | `-1,234.00` — accounting negative |
+| `2.5m`          | `2,500,000` — trailing shortcut   |
+| `1 234 567`     | `1,234,567`                       |
+| `not a number`  | refused, previous value kept      |
+| `1.2.3`         | refused — two fraction separators |
+
+**Composition is held, not formatted.** Android emits
+`insertCompositionText` for every keystroke of a word still being composed, with
+`data` that cannot be trusted until it settles. Reformatting mid-composition
+makes the keyboard fight the input, so the raw text is shown as-is and no
+numeric value is committed until `compositionend`. A refused commit rebuilds
+from the last committed value rather than leaving the IME's raw text on screen.
+
+**Undo is ignored deliberately.** The browser's undo stack holds its own edits
+— the unformatted text it inserted — not the reformatted value React rendered.
+Replaying it would restore something the user never saw.
+
+> The **Event tester** story logs all of this live. Open it on a device,
+> perform the gesture, and read off what actually fired. That is the fastest way
+> to find out what a particular keyboard app really does.
+
 ## Verification layers
 
 Coverage lives in L1. The browser layers confirm reality still matches it.
