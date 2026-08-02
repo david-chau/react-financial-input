@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/david-chau/react-financial-input/compare/v0.5.0...v0.5.1) (2026-08-02)
+
+
+### Bug fixes
+
+* mobile debug panel, keypad polish, and a version badge ([#14](https://github.com/david-chau/react-financial-input/issues/14)) ([9888759](https://github.com/david-chau/react-financial-input/commit/98887591c93e7900061f4ca22c00ab832742f218))
+
 ## [0.5.0](https://github.com/david-chau/react-financial-input/compare/v0.4.0...v0.5.0) (2026-08-02)
 
 
