@@ -257,10 +257,30 @@
 
 /*
  * A refused keystroke flashes rather than doing nothing at all. The component
- * adds .rfi-input--rejected for the duration; prefers-reduced-motion gets a
- * static tint instead of a shake.
+ * adds .rfi-input--rejected for the duration of the animation.
+ *
+ * Colour only by default. Because the keyframes declare `from` and nothing
+ * else, the browser animates back to whatever the element's real style is —
+ * so this fades out correctly on every variant, focused or not, without
+ * hard-coding the resting colours.
  */
-@keyframes rfi-reject {
+@keyframes rfi-flash {
+  from {
+    border-color: var(--rfi-error);
+    background-color: var(--rfi-error-tint, rgba(217, 45, 32, 0.1));
+  }
+}
+
+.rfi-input--rejected {
+  animation: rfi-flash var(--rfi-flash-duration, 450ms) ease-out;
+}
+
+/*
+ * Motion is opt-in: add `rfi-input--shake` alongside your own classes and the
+ * flash gains a shake. Some people find the movement unpleasant, and a colour
+ * change alone is enough to say "refused".
+ */
+@keyframes rfi-shake {
   0%,
   100% {
     transform: translateX(0);
@@ -275,19 +295,16 @@
   }
 }
 
-.rfi-input--rejected {
-  border-color: var(--rfi-error);
-  animation: rfi-reject 0.3s ease-in-out;
+.rfi-input--shake.rfi-input--rejected {
+  animation:
+    rfi-flash var(--rfi-flash-duration, 450ms) ease-out,
+    rfi-shake 0.3s ease-in-out;
 }
 
-.rfi-input--rejected:focus {
-  box-shadow: inset 0 0 0 1px var(--rfi-error);
-}
-
+/* Never shake when the user has asked for less motion — the flash still runs. */
 @media (prefers-reduced-motion: reduce) {
-  .rfi-input--rejected {
-    animation: none;
-    background: var(--rfi-error-tint, rgba(217, 45, 32, 0.08));
+  .rfi-input--shake.rfi-input--rejected {
+    animation: rfi-flash var(--rfi-flash-duration, 450ms) ease-out;
   }
 }
 

@@ -40,8 +40,8 @@ export const INPUT_CLASS_NAME = 'rfi-input';
 /** Added for a moment when a keystroke is refused, so the refusal is visible. */
 export const REJECTED_CLASS_NAME = 'rfi-input--rejected';
 
-/** Matches the animation in styles.css. */
-const REJECTED_FLASH_MS = 400;
+/** Must outlast the longest animation in styles.css. */
+const REJECTED_FLASH_MS = 450;
 
 export interface FinancialInputOptions {
   /** Maximum number of decimal places. Defaults to 2. Use 0 for whole numbers. */
@@ -61,9 +61,12 @@ export interface FinancialInputOptions {
   /** 'POSITIVE' refuses negatives outright. Defaults to 'ALL'. */
   range?: Range;
   /*
-      Briefly flag the input when a keystroke is refused. On by default: without
-      it a refusal is completely silent, which reads as a dead input. Needs the
-      optional stylesheet, or your own rule for .rfi-input--rejected.
+      Briefly flag the input when a keystroke is refused. On by default:
+      without it a refusal is completely silent, which reads as a dead input.
+
+      The stylesheet flashes colour only. Add the `rfi-input--shake` class for
+      motion as well; it is opt-in because some people find the movement
+      unpleasant, and it is suppressed under prefers-reduced-motion regardless.
    */
   flashOnError?: boolean;
   /*

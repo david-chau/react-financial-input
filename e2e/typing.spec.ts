@@ -165,6 +165,35 @@ test.describe('character validation', () => {
     await expect(input(page)).toHaveValue('12,123');
   });
 
+  /*
+      Colour by default, motion only when asked for. Asserted on the computed
+      animation-name rather than by eye, because "it looked fine" is how the
+      dark-mode bug shipped.
+   */
+  const FEEDBACK: [number, string, string][] = [
+    [0, 'rfi-flash', 'default is colour only'],
+    [1, 'rfi-flash, rfi-shake', 'rfi-input--shake opts into motion']
+  ];
+
+  for (const [index, expected, note] of FEEDBACK) {
+    test(`error feedback on field ${index} is ${expected} (${note})`, async ({
+      page
+    }) => {
+      await page.goto(STORIES.errorFeedback);
+      const field = page.getByRole('textbox').nth(index);
+      await field.waitFor();
+      await field.click();
+      await field.pressSequentially('1.234');
+
+      await expect(field).toHaveClass(/rfi-input--rejected/);
+      expect(
+        await field.evaluate(
+          (element) => getComputedStyle(element).animationName
+        )
+      ).toBe(expected);
+    });
+  }
+
   test('flags a refused keystroke, then clears it', async ({ page }) => {
     await open(page, STORIES.default);
     await input(page).pressSequentially('1.23');

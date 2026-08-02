@@ -298,6 +298,35 @@ export const WithErrorState: Story = {
   }
 };
 
+/*
+    A refused keystroke flashes colour by default — a silent refusal reads as a
+    dead input. Motion is opt-in via `rfi-input--shake`, because some people
+    find it unpleasant; it is suppressed under prefers-reduced-motion either
+    way.
+
+    Type a third decimal place into either field.
+ */
+export const ErrorFeedback: Story = {
+  parameters: { layout: 'padded' },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
+      <Field {...args} label="Flash only (default)" helper="Try 1.234" />
+      <Field
+        {...args}
+        label="Flash and shake"
+        helper="Add rfi-input--shake"
+        className="rfi-input--shake"
+      />
+      <Field
+        {...args}
+        label="No feedback"
+        helper="options.flashOnError: false"
+        options={{ flashOnError: false }}
+      />
+    </div>
+  )
+};
+
 export const MobileViewport: Story = {
   args: { placeholder: '0.00' },
   globals: { viewport: { value: 'mobile2', isRotated: false } }
