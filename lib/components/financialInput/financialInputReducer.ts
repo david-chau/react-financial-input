@@ -20,15 +20,31 @@ import {
   sanitiseNumericText
 } from './financialInputUtils';
 
-export interface FinancialInputState {
-  /** What the input shows, formatted. */
+/** One point in the undo history. */
+export interface FinancialInputSnapshot {
   displayValue: string;
-  /** The committed numeric value, or null while the value is incomplete. */
   numericValue: Nullable<number>;
-  /** Where the caret should sit once React has re-rendered. */
   cursor: number;
+}
+
+/*
+    Long enough that undo feels unlimited in a single-field form, short enough
+    that the state cannot grow without bound.
+ */
+export const HISTORY_LIMIT = 100;
+
+export interface FinancialInputState extends FinancialInputSnapshot {
   /** True when the action was refused and the previous value was kept. */
   rejected: boolean;
+  /*
+      The component owns undo, because the browser's stack cannot be used: it
+      holds the raw text the browser inserted, not the reformatted value React
+      rendered, so replaying it restores something the user never saw. Newest
+      last.
+   */
+  past: FinancialInputSnapshot[];
+  /** Undone snapshots, newest first. Cleared by any fresh edit. */
+  future: FinancialInputSnapshot[];
 }
 
 export interface FinancialInputAction {
@@ -65,7 +81,82 @@ export const createInitialState = (
     displayValue,
     numericValue: value ?? null,
     cursor: displayValue.length,
-    rejected: false
+    rejected: false,
+    past: [],
+    future: []
+  };
+};
+
+const snapshotOf = (state: FinancialInputState): FinancialInputSnapshot => ({
+  displayValue: state.displayValue,
+  numericValue: state.numericValue,
+  cursor: state.cursor
+});
+
+/*
+    Records the previous value in the undo history, unless nothing visible
+    changed. A fresh edit discards anything that had been undone, which is how
+    every text editor behaves.
+ */
+const remember = (
+  previous: FinancialInputState,
+  next: FinancialInputState
+): FinancialInputState => {
+  if (next.rejected || next.displayValue === previous.displayValue) {
+    return next;
+  }
+
+  return {
+    ...next,
+    past: [...previous.past, snapshotOf(previous)].slice(-HISTORY_LIMIT),
+    future: []
+  };
+};
+
+/*
+    Undo and redo move a snapshot between the two stacks. `rejected` stays
+    false at the boundaries: reaching the end of the history is not an error.
+ */
+/*
+    Driven from the keystroke rather than the historyUndo input type.
+
+    The browser only emits historyUndo while its *own* undo stack has entries,
+    and that stack is exhausted as soon as React overwrites the value — so the
+    first Ctrl+Z arrives and the second never does. Intercepting the key is the
+    only way to make repeated undo work.
+ */
+export const reduceHistory = (
+  state: FinancialInputState,
+  direction: 'undo' | 'redo'
+): FinancialInputState => (direction === 'undo' ? undo(state) : redo(state));
+
+const undo = (state: FinancialInputState): FinancialInputState => {
+  const previous = state.past[state.past.length - 1];
+
+  if (!previous) {
+    return { ...state, rejected: false };
+  }
+
+  return {
+    ...previous,
+    rejected: false,
+    past: state.past.slice(0, -1),
+    future: [snapshotOf(state), ...state.future].slice(0, HISTORY_LIMIT)
+  };
+};
+
+const redo = (state: FinancialInputState): FinancialInputState => {
+  const [next, ...rest] = state.future;
+
+  if (!next) {
+    return { ...state, rejected: false };
+  }
+
+  return {
+    ...next,
+    rejected: false,
+    past: [...state.past, snapshotOf(state)].slice(-HISTORY_LIMIT),
+    future: rest
   };
 };
 
@@ -93,11 +184,13 @@ const ignore = (state: FinancialInputState): FinancialInputState => ({
 });
 
 const accept = (
+  state: FinancialInputState,
   displayValue: string,
   targetValue: string,
   selectionStart: number,
   separators: Separators
 ): FinancialInputState => ({
+  ...state,
   displayValue,
   numericValue: parseNumber(displayValue, separators),
   cursor: mapCursorToFormatted(
@@ -151,6 +244,7 @@ const insert = (
     const displayValue = formatCanonical(shifted, separators);
 
     return {
+      ...state,
       displayValue,
       numericValue: parseNumber(displayValue, separators),
       cursor: displayValue.length,
@@ -163,6 +257,7 @@ const insert = (
   }
 
   return accept(
+    state,
     formatNumberString(targetValue, separators),
     targetValue,
     selectionStart,
@@ -186,6 +281,7 @@ const remove = (
   }
 
   return accept(
+    state,
     formatNumberString(targetValue, separators),
     targetValue,
     selectionStart,
@@ -198,8 +294,12 @@ const remove = (
     characters from an already-valid value, so there is nothing to validate —
     just reformat what is left.
  */
-const removeRange = (action: FinancialInputAction): FinancialInputState =>
+const removeRange = (
+  _state: FinancialInputState,
+  action: FinancialInputAction
+): FinancialInputState =>
   accept(
+    _state,
     formatNumberString(action.targetValue, action.separators),
     action.targetValue,
     action.selectionStart,
@@ -233,6 +333,7 @@ const replace = (
   const displayValue = formatCanonical(sanitised, separators);
 
   return {
+    ...state,
     displayValue,
     numericValue: parseNumber(displayValue, separators),
     cursor: displayValue.length,
@@ -265,7 +366,7 @@ export const reduceCompositionEnd = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const next = replace(state, action);
+  const next = remember(state, replace(state, action));
 
   if (!next.rejected) {
     return next;
@@ -279,7 +380,9 @@ export const reduceCompositionEnd = (
    */
   return {
     ...createInitialState(state.numericValue, action.separators),
-    rejected: true
+    rejected: true,
+    past: state.past,
+    future: state.future
   };
 };
 
@@ -315,12 +418,13 @@ export const reduceShortcut = (
 
   const displayValue = formatCanonical(shifted, separators);
 
-  return {
+  return remember(state, {
+    ...state,
     displayValue,
     numericValue: parseNumber(displayValue, separators),
     cursor: displayValue.length,
     rejected: false
-  };
+  });
 };
 
 /*
@@ -333,10 +437,10 @@ export const reduceInput = (
 ): FinancialInputState => {
   switch (action.inputType) {
     case InputType.INSERT_TEXT:
-      return insert(state, action);
+      return remember(state, insert(state, action));
 
     case InputType.DELETE_CONTENT_BACKWARD:
-      return remove(state, action);
+      return remember(state, remove(state, action));
 
     case InputType.DELETE_BY_CUT:
     case InputType.DELETE_BY_DRAG:
@@ -346,29 +450,32 @@ export const reduceInput = (
     case InputType.DELETE_SOFT_LINE_BACKWARD:
     case InputType.DELETE_SOFT_LINE_FORWARD:
     case InputType.DELETE_ENTIRE_SOFT_LINE:
-      return removeRange(action);
+      return remember(state, removeRange(state, action));
 
     case InputType.INSERT_FROM_PASTE:
     case InputType.INSERT_FROM_DROP:
     case InputType.INSERT_REPLACEMENT_TEXT:
-      return replace(state, action);
+      return remember(state, replace(state, action));
 
     /*
         Some browsers emit insertCompositionText without ever firing the
         composition events, so this falls back to treating it as a paste
         rather than holding forever.
+
+        Nothing is remembered mid-composition: the raw text is not a value the
+        user could meaningfully undo to. reduceCompositionEnd records the
+        committed result instead.
      */
     case InputType.INSERT_COMPOSITION_TEXT:
-      return action.isComposing ? hold(state, action) : replace(state, action);
+      return action.isComposing
+        ? hold(state, action)
+        : remember(state, replace(state, action));
 
-    /*
-        The browser's undo stack tracks its own edits, not the reformatted
-        value React renders, so replaying it would restore something that was
-        never shown. Left alone, and quiet: the user did nothing wrong.
-     */
     case InputType.HISTORY_UNDO:
+      return undo(state);
+
     case InputType.HISTORY_REDO:
-      return ignore(state);
+      return redo(state);
 
     default:
       return ignore(state);

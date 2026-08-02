@@ -146,6 +146,61 @@ test.describe('clipboard', () => {
     invisible. Playwright defaults to the light scheme, so this only shows up if
     the dark scheme is asked for explicitly.
  */
+/*
+    Driven from the keystroke rather than the historyUndo input type: the
+    browser stops emitting that once its own stack is exhausted, which happens
+    as soon as React overwrites the value — so only the first Ctrl+Z ever
+    arrived. This caught that.
+ */
+test.describe('undo and redo', () => {
+  test('steps back repeatedly, then forward again', async ({ page }) => {
+    await open(page, STORIES.default);
+    await input(page).pressSequentially('1234');
+    await expect(input(page)).toHaveValue('1,234');
+
+    await input(page).press('ControlOrMeta+z');
+    await expect(input(page)).toHaveValue('123');
+    await input(page).press('ControlOrMeta+z');
+    await expect(input(page)).toHaveValue('12');
+    await input(page).press('ControlOrMeta+z');
+    await expect(input(page)).toHaveValue('1');
+
+    await input(page).press('ControlOrMeta+Shift+z');
+    await expect(input(page)).toHaveValue('12');
+  });
+
+  test('past the end of the history is a no-op', async ({ page }) => {
+    await open(page, STORIES.default);
+    await input(page).pressSequentially('1');
+
+    await input(page).press('ControlOrMeta+z');
+    await input(page).press('ControlOrMeta+z');
+    await input(page).press('ControlOrMeta+z');
+
+    await expect(input(page)).toHaveValue('');
+  });
+
+  test('reverses a shortcut in a single step', async ({ page }) => {
+    await open(page, STORIES.default);
+    await input(page).pressSequentially('2m');
+    await expect(input(page)).toHaveValue('2,000,000');
+
+    await input(page).press('ControlOrMeta+z');
+    await expect(input(page)).toHaveValue('2');
+  });
+
+  test('a fresh edit clears the redo stack', async ({ page }) => {
+    await open(page, STORIES.default);
+    await input(page).pressSequentially('12');
+    await input(page).press('ControlOrMeta+z');
+    await input(page).pressSequentially('9');
+    await expect(input(page)).toHaveValue('19');
+
+    await input(page).press('ControlOrMeta+Shift+z');
+    await expect(input(page)).toHaveValue('19');
+  });
+});
+
 test.describe('colour scheme', () => {
   test.use({ colorScheme: 'dark' });
 

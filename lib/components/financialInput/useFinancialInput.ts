@@ -1,5 +1,6 @@
 import {
   InputHTMLAttributes,
+  KeyboardEvent,
   Ref,
   useLayoutEffect,
   useMemo,
@@ -27,6 +28,7 @@ import {
   FinancialInputState,
   createInitialState,
   reduceCompositionEnd,
+  reduceHistory,
   reduceInput,
   reduceShortcut
 } from './financialInputReducer';
@@ -234,6 +236,37 @@ export const useFinancialInput = ({
     commit(reduceInput(state, { ...toAction(target, inputType), data }));
   };
 
+  /*
+      Undo and redo are handled here rather than from the historyUndo input
+      type: the browser stops emitting it once its own stack is exhausted,
+      which happens as soon as React overwrites the value, so only the first
+      Ctrl+Z would ever arrive.
+   */
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!event.metaKey && !event.ctrlKey) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+
+    // Ctrl+Y is redo on Windows.
+    const direction =
+      key === 'y'
+        ? 'redo'
+        : key === 'z'
+          ? event.shiftKey
+            ? 'redo'
+            : 'undo'
+          : null;
+
+    if (!direction) {
+      return;
+    }
+
+    event.preventDefault();
+    commit(reduceHistory(state, direction));
+  };
+
   const handleCompositionStart = () => {
     isComposing.current = true;
   };
@@ -325,6 +358,7 @@ export const useFinancialInput = ({
   const getInputProps = ({
     className,
     onInput,
+    onKeyDown,
     onCompositionStart,
     onCompositionEnd,
     ref,
@@ -355,6 +389,10 @@ export const useFinancialInput = ({
     onInput: (event) => {
       handleInput(event);
       onInput?.(event);
+    },
+    onKeyDown: (event) => {
+      handleKeyDown(event);
+      onKeyDown?.(event);
     },
     onCompositionStart: (event) => {
       handleCompositionStart();
