@@ -478,7 +478,12 @@ test.describe('mobile affordances', () => {
     await expect(input(page)).toHaveAttribute('inputmode', 'decimal');
 
     await input(page).pressSequentially('2.5');
-    await page.getByRole('button', { name: 'M' }).click();
+    /*
+        By accessible name, not the visible "M": the keys carry an aria-label
+        describing the multiplier, and { name: 'M' } substring-matched all four
+        of them.
+     */
+    await page.getByRole('button', { name: 'Multiply by 1 million' }).click();
 
     await expect(input(page)).toHaveValue('2,500,000');
   });
