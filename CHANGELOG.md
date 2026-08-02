@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/david-chau/react-financial-input/compare/v0.4.0...v0.5.0) (2026-08-02)
+
+
+### Features
+
+* clear button, currency picker, calculator keypad ([#12](https://github.com/david-chau/react-financial-input/issues/12)) ([d39f82d](https://github.com/david-chau/react-financial-input/commit/d39f82dd857fd0b0d081c218d820ab61e02b66ce))
+
 ## [0.4.0](https://github.com/david-chau/react-financial-input/compare/v0.3.0...v0.4.0) (2026-08-02)
 
 
