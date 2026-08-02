@@ -28,6 +28,7 @@ import { InputType } from '../../enums';
 import {
   FinancialInputState,
   createInitialState,
+  reduceClear,
   reduceCompositionEnd,
   reduceHistory,
   reduceInput,
@@ -336,6 +337,15 @@ export const useFinancialInput = ({
   };
 
   /*
+      Empties the value and returns focus, for a clear button. Undoable, since
+      it goes through the history like any other edit.
+   */
+  const clear = () => {
+    commit(reduceClear(state));
+    inputRef.current?.focus();
+  };
+
+  /*
       Applies a multiplier as if it had been typed. The escape hatch for mobile
       keypads, which have no letter keys — wire it to a row of tap targets.
    */
@@ -462,6 +472,7 @@ export const useFinancialInput = ({
     numericValue: state.numericValue,
     getInputProps,
     applyShortcut,
+    clear,
     separators,
     /** Resolved from `currency` unless overridden. Empty when not opted in. */
     symbol: symbolOverride ?? resolvedCurrency?.symbol ?? '',

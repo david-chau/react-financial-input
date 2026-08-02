@@ -122,7 +122,10 @@ Keep the formatting and validation, bring your own input:
 ```tsx
 import { useFinancialInput } from 'react-financial-input';
 
-const { getInputProps } = useFinancialInput({ value, onChange: setValue });
+const { getInputProps, clear, applyShortcut } = useFinancialInput({
+  value,
+  onChange: setValue
+});
 
 <TextField slotProps={{ htmlInput: getInputProps() }} />; // MUI
 <Input {...getInputProps()} />; // Chakra

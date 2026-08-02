@@ -206,6 +206,44 @@ test.describe('character validation', () => {
   });
 });
 
+test.describe('clear button', () => {
+  // sv-SE groups with U+00A0, not a plain space.
+  const SEK = '1\u00a0234,56';
+
+  test('empties the value, and undo puts it back', async ({ page }) => {
+    await page.goto(STORIES.withClearButton);
+    const field = input(page);
+    await field.waitFor();
+    await expect(field).toHaveValue(SEK);
+
+    await page.getByRole('button', { name: 'Clear the amount' }).click();
+    await expect(field).toHaveValue('');
+
+    await field.press('ControlOrMeta+z');
+    await expect(field).toHaveValue(SEK);
+  });
+
+  test('does not sit on top of a suffix currency symbol', async ({ page }) => {
+    await page.goto(STORIES.withClearButton);
+    await input(page).waitFor();
+
+    const overlap = await page.evaluate(() => {
+      const field = document.querySelector('.rfi-field');
+      const button = field?.querySelector('.rfi-clear');
+      const symbol = field?.querySelector('.rfi-adornment--suffix');
+
+      if (!button || !symbol) return 'missing';
+
+      return symbol.getBoundingClientRect().right <=
+        button.getBoundingClientRect().left + 1
+        ? 'clear'
+        : 'overlap';
+    });
+
+    expect(overlap).toBe('clear');
+  });
+});
+
 test.describe('undo and redo', () => {
   test('steps back repeatedly, then forward again', async ({ page }) => {
     await open(page, STORIES.default);

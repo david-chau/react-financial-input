@@ -309,6 +309,67 @@
 }
 
 /*
+ * Clear button. Off by default — the component never renders one; you do, and
+ * the hook gives you `clear()`. Same arrangement as the currency symbol and the
+ * floating label.
+ *
+ *   const { getInputProps, clear, numericValue } = useFinancialInput();
+ *
+ *   <div class="rfi-field">
+ *     <input class="rfi-input" />
+ *     {numericValue !== null && (
+ *       <button class="rfi-clear" onClick={clear} aria-label="Clear">×</button>
+ *     )}
+ *   </div>
+ */
+.rfi-clear {
+  position: absolute;
+  top: 50%;
+  right: var(--rfi-padding-x);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rfi-clear-size, 1.25rem);
+  height: var(--rfi-clear-size, 1.25rem);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--rfi-clear-background, rgba(0, 0, 0, 0.26));
+  color: var(--rfi-clear-color, #fff);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.rfi-clear:hover {
+  background: var(--rfi-clear-background-hover, rgba(0, 0, 0, 0.45));
+}
+
+.rfi-clear:focus-visible {
+  outline: 2px solid var(--rfi-primary);
+  outline-offset: 1px;
+}
+
+/* Keep the value from running underneath the button. */
+.rfi-field:has(.rfi-clear) .rfi-input {
+  padding-right: var(--rfi-clear-space, 2.25rem);
+}
+
+/*
+ * With a suffix currency symbol as well, the symbol moves inboard so the two
+ * do not stack on top of each other.
+ */
+.rfi-field:has(.rfi-clear) .rfi-adornment--suffix {
+  right: var(--rfi-clear-space, 2.25rem);
+}
+
+.rfi-field:has(.rfi-clear):has(.rfi-adornment--suffix) .rfi-input {
+  padding-right: var(--rfi-clear-suffix-space, 4rem);
+}
+
+/*
  * Currency symbol. The hook resolves it; you render it. Keeping it out of the
  * input's value is what lets the caret arithmetic work on digits alone.
  *

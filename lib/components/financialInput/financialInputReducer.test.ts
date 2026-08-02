@@ -5,6 +5,7 @@ import {
   FinancialInputState,
   HISTORY_LIMIT,
   createInitialState,
+  reduceClear,
   reduceCompositionEnd,
   reduceInput,
   reduceShortcut
@@ -599,5 +600,39 @@ describe('undo and redo', () => {
     }
 
     expect(state.past.length).toBeLessThanOrEqual(HISTORY_LIMIT);
+  });
+});
+
+describe('reduceClear', () => {
+  it('empties the value and reports null', () => {
+    const state = stateOf('1,234.56', 1234.56);
+    const cleared = reduceClear(state);
+
+    expect(cleared.displayValue).toBe('');
+    expect(cleared.numericValue).toBe(null);
+    expect(cleared.cursor).toBe(0);
+    expect(cleared.rejected).toBe(false);
+  });
+
+  /*
+      A clear button is only safe to offer if it can be taken back, so it goes
+      through the history like any other edit.
+   */
+  it('is undoable', () => {
+    const state = stateOf('1,234.56', 1234.56);
+    const cleared = reduceClear(state);
+
+    expect(cleared.past).toHaveLength(1);
+
+    const restored = run(cleared, InputType.HISTORY_UNDO, null, '', 0);
+
+    expect(restored.displayValue).toBe('1,234.56');
+    expect(restored.numericValue).toBe(1234.56);
+  });
+
+  it('records nothing when the value is already empty', () => {
+    const cleared = reduceClear(stateOf(''));
+
+    expect(cleared.past).toHaveLength(0);
   });
 });

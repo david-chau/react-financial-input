@@ -299,6 +299,58 @@ export const WithErrorState: Story = {
 };
 
 /*
+    A clear button is off by default — the component renders a bare input and
+    never adds one. `clear()` from the hook does the work, and it goes through
+    the history, so Ctrl+Z puts back what was cleared.
+ */
+export const WithClearButton: Story = {
+  parameters: { layout: 'padded' },
+  render: function WithClearButton(args) {
+    const id = useId();
+    const { getInputProps, clear, numericValue, symbol, symbolPosition } =
+      useFinancialInput({
+        value: 1234.56,
+        onChange: args.onChange,
+        options: { locale: 'sv-SE', currency: 'SEK' }
+      });
+
+    return (
+      <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
+        <div>
+          <div className="rfi-field">
+            <input {...getInputProps({ id, placeholder: ' ' })} />
+            <label className="rfi-label" htmlFor={id}>
+              Amount
+            </label>
+            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+              {symbol}
+            </span>
+            {numericValue !== null && (
+              <button
+                type="button"
+                className="rfi-clear"
+                onClick={clear}
+                aria-label="Clear the amount"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <p className="rfi-helper">
+            Clear, then press Ctrl/Cmd+Z — the value comes back
+          </p>
+        </div>
+        <p className="rfi-helper">
+          Deliberately shown with a suffix symbol ({symbol}), since that is the
+          case where the button and the symbol would otherwise sit on top of
+          each other.
+        </p>
+      </div>
+    );
+  }
+};
+
+/*
     A refused keystroke flashes colour by default — a silent refusal reads as a
     dead input. Motion is opt-in via `rfi-input--shake`, because some people
     find it unpleasant; it is suppressed under prefers-reduced-motion either

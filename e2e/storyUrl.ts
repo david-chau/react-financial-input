@@ -15,5 +15,6 @@ export const STORIES = {
   withFloatingLabel: storyUrl('financialinput--with-floating-label'),
   variants: storyUrl('financialinput--variants'),
   errorFeedback: storyUrl('financialinput--error-feedback'),
+  withClearButton: storyUrl('financialinput--with-clear-button'),
   shortcutButtons: storyUrl('financialinput--shortcut-buttons')
 };
