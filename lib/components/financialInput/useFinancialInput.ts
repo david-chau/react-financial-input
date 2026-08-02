@@ -7,7 +7,14 @@ import {
   useState
 } from 'react';
 import { Nullable, StringKeyedMap } from '../../types';
-import { DEFAULT_SEPARATORS, areSeparatorsValid, mergeRefs } from '../../utils';
+import {
+  DEFAULT_SEPARATORS,
+  SymbolPosition,
+  areSeparatorsValid,
+  mergeRefs,
+  resolveCurrency,
+  resolveSeparators
+} from '../../utils';
 import {
   DEFAULT_MAX_DIGITS,
   DEFAULT_SCALE,
@@ -44,6 +51,25 @@ export interface FinancialInputOptions {
   shortcuts?: StringKeyedMap<number>;
   /** 'POSITIVE' refuses negatives outright. Defaults to 'ALL'. */
   range?: Range;
+  /*
+      A BCP 47 locale, used to derive the separators and the currency symbol.
+      Explicit groupSeparator / decimalSeparator win over it.
+   */
+  locale?: string;
+  /*
+      An ISO 4217 code, e.g. 'USD'. Opt-in: with no currency there is no symbol.
+      The symbol and which side it sits on come from Intl, so every code works
+      and suffix currencies ("1 000 kr") are right without special-casing.
+
+      The symbol is *not* put inside the input's value. It is returned from the
+      hook for you to render beside the input, which keeps the caret arithmetic
+      operating on digits alone. See the WithCurrency story.
+   */
+  currency?: string;
+  /** Overrides the symbol Intl resolved. */
+  symbol?: string;
+  /** Overrides the side Intl resolved. */
+  symbolPosition?: SymbolPosition;
   /*
       Which keyboard mobile raises. Defaults to 'text'.
 
@@ -90,11 +116,29 @@ export const useFinancialInput = ({
     scale = DEFAULT_SCALE,
     maxDigits = DEFAULT_MAX_DIGITS,
     inputMode = 'text',
-    groupSeparator = DEFAULT_SEPARATORS.group,
-    decimalSeparator = DEFAULT_SEPARATORS.decimal,
+    groupSeparator,
+    decimalSeparator,
     shortcuts = DEFAULT_SHORTCUTS,
-    range = 'ALL'
+    range = 'ALL',
+    locale,
+    currency,
+    symbol: symbolOverride,
+    symbolPosition: positionOverride
   } = options;
+
+  /*
+      Intl is resolved once per locale/currency rather than per keystroke: it is
+      comparatively expensive, and none of the typing paths need it.
+   */
+  const resolvedCurrency = useMemo(
+    () => (currency ? resolveCurrency(currency, locale) : null),
+    [currency, locale]
+  );
+
+  const localeSeparators = useMemo(
+    () => (locale ? resolveSeparators(locale) : DEFAULT_SEPARATORS),
+    [locale]
+  );
 
   const exponents = useMemo(() => toExponents(shortcuts), [shortcuts]);
 
@@ -103,8 +147,11 @@ export const useFinancialInput = ({
       stays stable and does not defeat the comparisons below.
    */
   const separators = useMemo(
-    () => ({ group: groupSeparator, decimal: decimalSeparator }),
-    [groupSeparator, decimalSeparator]
+    () => ({
+      group: groupSeparator ?? localeSeparators.group,
+      decimal: decimalSeparator ?? localeSeparators.decimal
+    }),
+    [groupSeparator, decimalSeparator, localeSeparators]
   );
 
   if (!areSeparatorsValid(separators)) {
@@ -119,8 +166,9 @@ export const useFinancialInput = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, setState] = useState<FinancialInputState>(() =>
     createInitialState(value, {
-      group: options.groupSeparator ?? DEFAULT_SEPARATORS.group,
-      decimal: options.decimalSeparator ?? DEFAULT_SEPARATORS.decimal
+      group: options.groupSeparator ?? resolveSeparators(options.locale).group,
+      decimal:
+        options.decimalSeparator ?? resolveSeparators(options.locale).decimal
     })
   );
 
@@ -323,6 +371,10 @@ export const useFinancialInput = ({
     displayValue: state.displayValue,
     numericValue: state.numericValue,
     getInputProps,
-    applyShortcut
+    applyShortcut,
+    separators,
+    /** Resolved from `currency` unless overridden. Empty when not opted in. */
+    symbol: symbolOverride ?? resolvedCurrency?.symbol ?? '',
+    symbolPosition: positionOverride ?? resolvedCurrency?.position ?? 'prefix'
   };
 };

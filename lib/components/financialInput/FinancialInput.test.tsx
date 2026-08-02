@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialInput } from './FinancialInput';
+import { useFinancialInput } from './useFinancialInput';
 
 /*
     Deliberately thin. The formatting and validation rules are covered by the
@@ -67,6 +68,79 @@ describe('<FinancialInput />', () => {
     const { input } = setup({ value: 1234567.5 });
 
     expect(input).toHaveValue('1,234,567.5');
+  });
+
+  describe('currency and locale', () => {
+    const Harness = (options: Record<string, unknown>) => {
+      const { getInputProps, symbol, symbolPosition } = useFinancialInput({
+        options
+      });
+
+      return (
+        <>
+          <input {...getInputProps()} />
+          <output>{`${symbolPosition}:${symbol}`}</output>
+        </>
+      );
+    };
+
+    it.each([
+      // locale   currency  -> rendered
+      ['en-US', 'USD', 'prefix:$'],
+      ['en-GB', 'GBP', 'prefix:£'],
+      ['sv-SE', 'SEK', 'suffix:kr']
+    ])('resolves %s / %s to %j', (locale, currency, expected) => {
+      render(<Harness locale={locale} currency={currency} />);
+
+      expect(screen.getByRole('status')).toHaveTextContent(expected);
+    });
+
+    it('has no symbol unless a currency is given', () => {
+      render(<Harness />);
+
+      expect(screen.getByRole('status')).toHaveTextContent('prefix:');
+    });
+
+    it.each([
+      [{ currency: 'USD', symbol: 'US$' }, 'prefix:US$'],
+      [{ currency: 'USD', symbolPosition: 'suffix' }, 'suffix:$'],
+      [{ symbol: '€', symbolPosition: 'suffix' }, 'suffix:€']
+    ])('lets props override Intl (%j)', (options, expected) => {
+      render(<Harness {...options} />);
+
+      expect(screen.getByRole('status')).toHaveTextContent(expected);
+    });
+
+    it('takes the separators from the locale', async () => {
+      const user = userEvent.setup();
+      render(<Harness locale="de-DE" currency="EUR" />);
+
+      await user.type(screen.getByRole('textbox'), '1234567');
+
+      expect(screen.getByRole('textbox')).toHaveValue('1.234.567');
+    });
+
+    it('lets an explicit separator win over the locale', async () => {
+      const user = userEvent.setup();
+      render(<Harness locale="de-DE" groupSeparator=" " />);
+
+      await user.type(screen.getByRole('textbox'), '1234567');
+
+      expect(screen.getByRole('textbox')).toHaveValue('1 234 567');
+    });
+
+    /*
+        The symbol is not part of the value: it is rendered beside the input, so
+        the caret arithmetic never has to skip over it.
+     */
+    it('keeps the symbol out of the input value', async () => {
+      const user = userEvent.setup();
+      render(<Harness locale="en-US" currency="USD" />);
+
+      await user.type(screen.getByRole('textbox'), '1000');
+
+      expect(screen.getByRole('textbox')).toHaveValue('1,000');
+    });
   });
 
   describe('configurable shortcuts', () => {

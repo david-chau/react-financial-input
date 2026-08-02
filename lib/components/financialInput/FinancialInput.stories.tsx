@@ -183,6 +183,72 @@ export const ShortcutButtons: Story = {
   }
 };
 
+/*
+    Currency and locale.
+
+    The symbol and which side it belongs on come from Intl, so every ISO 4217
+    code works and suffix currencies ("1 000 kr" in sv-SE) are right without a
+    symbol table. `locale` also supplies the separators, so de-DE gets
+    1.234,56 without configuring anything else.
+
+    The symbol is deliberately not inside the input's value — the hook returns
+    it and you render it, which keeps the caret arithmetic working on digits
+    alone.
+ */
+export const WithCurrency: Story = {
+  render: function WithCurrency() {
+    const rows: { locale: string; currency: string; label: string }[] = [
+      { locale: 'en-US', currency: 'USD', label: 'United States' },
+      { locale: 'en-GB', currency: 'GBP', label: 'United Kingdom' },
+      { locale: 'de-DE', currency: 'EUR', label: 'Germany' },
+      { locale: 'sv-SE', currency: 'SEK', label: 'Sweden' },
+      { locale: 'ja-JP', currency: 'JPY', label: 'Japan' }
+    ];
+
+    return (
+      <div style={{ display: 'grid', gap: '1.5rem', width: 260 }}>
+        {rows.map((row) => (
+          <CurrencyField key={row.currency} {...row} />
+        ))}
+      </div>
+    );
+  }
+};
+
+const CurrencyField = ({
+  locale,
+  currency,
+  label
+}: {
+  locale: string;
+  currency: string;
+  label: string;
+}) => {
+  const id = useId();
+  const { getInputProps, symbol, symbolPosition, numericValue } =
+    useFinancialInput({
+      options: { locale, currency, scale: currency === 'JPY' ? 0 : 2 }
+    });
+
+  return (
+    <div>
+      <div className="rfi-field">
+        <input {...getInputProps({ id, placeholder: ' ' })} />
+        <label className="rfi-label" htmlFor={id}>
+          {label}
+        </label>
+        <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+          {symbol}
+        </span>
+      </div>
+      <p className="rfi-helper">
+        {currency} · {locale} · {symbolPosition} ·{' '}
+        {numericValue === null ? 'null' : numericValue}
+      </p>
+    </div>
+  );
+};
+
 /** `scale: 0` refuses the decimal point entirely. */
 export const WholeNumbersOnly: Story = {
   args: { options: { scale: 0 }, placeholder: 'no decimals' }
