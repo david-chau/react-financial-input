@@ -1,5 +1,5 @@
 import { test, Page } from '@playwright/test';
-import { STORIES } from './storyUrl';
+import { STORIES, withoutBadge } from './storyUrl';
 
 /*
     Marketing recordings, not evidence — see typing.spec.ts and composition.spec.ts
@@ -20,17 +20,17 @@ const open = async (page: Page, url: string) => {
 };
 
 test('demo: digits group as you type', async ({ page }) => {
-  await open(page, STORIES.withFloatingLabel);
+  await open(page, withoutBadge(STORIES.withFloatingLabel));
   await typeSlowly(page, '1234567');
 });
 
 test('demo: shortcuts expand', async ({ page }) => {
-  await open(page, STORIES.shortcuts);
+  await open(page, withoutBadge(STORIES.shortcuts));
   await typeSlowly(page, '2.5m');
 });
 
 test('demo: backspacing across a separator', async ({ page }) => {
-  await open(page, STORIES.withFloatingLabel);
+  await open(page, withoutBadge(STORIES.withFloatingLabel));
   await typeSlowly(page, '1000');
 
   for (let i = 0; i < 4; i += 1) {

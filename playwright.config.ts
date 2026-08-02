@@ -1,6 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 6006;
+/*
+    Overridable, because reuseExistingServer will otherwise happily attach to a
+    Storybook dev server you already have open on 6006 and test that instead of
+    the build under test.
+ */
+const PORT = Number(process.env.RFI_PORT ?? 6006);
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 /*

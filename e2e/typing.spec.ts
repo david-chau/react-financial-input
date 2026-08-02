@@ -1,5 +1,5 @@
 import { expect, test, Page } from '@playwright/test';
-import { STORIES } from './storyUrl';
+import { STORIES, withoutBadge } from './storyUrl';
 
 const input = (page: Page) => page.getByRole('textbox');
 
@@ -210,6 +210,26 @@ test.describe('character validation', () => {
     Regression: the resolved-values panel put the user agent on one line, which
     pushed the page wider than the phone and made it scroll sideways.
  */
+/*
+    The deployed Storybook lags whatever is on a branch, and nothing on the page
+    said which build you were looking at — a merged fix and an unmerged one look
+    identical.
+ */
+test.describe('version badge', () => {
+  test('names the version on every story', async ({ page }) => {
+    await open(page, STORIES.default);
+
+    await expect(page.getByTitle(/react-financial-input/)).toBeVisible();
+  });
+
+  test('is suppressed for the demo recordings', async ({ page }) => {
+    await page.goto(withoutBadge(STORIES.default));
+    await input(page).waitFor();
+
+    await expect(page.getByTitle(/react-financial-input/)).toHaveCount(0);
+  });
+});
+
 test.describe('debug panel on a phone', () => {
   test.use({ viewport: { width: 393, height: 852 }, hasTouch: true });
 
