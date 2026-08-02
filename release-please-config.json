@@ -1,12 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "separate-pull-requests": false,
+  "$comment": "separate-pull-requests must stay true. With false, the Merge plugin builds one PR on a branch carrying no component, but getBranchComponent() falls back to the package.json name — so buildRelease compares 'undefined' against 'react-financial-input', returns undefined, and no release is ever tagged. There is only one package here, so this still produces a single release PR.",
+  "separate-pull-requests": true,
   "packages": {
     ".": {
       "release-type": "node",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false,
-      "component": "",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false,
       "changelog-sections": [

@@ -82,7 +82,32 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps ${{ matrix.browsers }}
+
+      # Browser binaries are hundreds of megabytes and change only when
+      # Playwright does, so the key is the resolved Playwright version rather
+      # than the lockfile hash — a lockfile hash would miss the cache on every
+      # unrelated dependency bump.
+      - name: Resolve Playwright version
+        id: playwright
+        shell: bash
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.os == 'Linux' && '~/.cache/ms-playwright' || runner.os == 'macOS' && '~/Library/Caches/ms-playwright' || '~\AppData\Local\ms-playwright' }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
+
+      - name: Install browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.browsers }}
+
+      # The binaries are cached but the system libraries they link against are
+      # not, and they live outside the cached directory.
+      - name: Install system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true' && runner.os == 'Linux'
+        run: npx playwright install-deps ${{ matrix.browsers }}
       # Serving the built Storybook is faster and more deterministic than
       # booting the dev server for every shard.
       - run: npm run build-storybook
