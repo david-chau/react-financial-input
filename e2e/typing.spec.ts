@@ -293,6 +293,39 @@ test.describe('clear button', () => {
     await expect(field).toHaveValue(SEK);
   });
 
+  /*
+      Not just "does not overlap" — the first attempt left about two pixels
+      between the symbol and the button, which read as a collision. The insets
+      are derived from the button size now, so this asserts real gaps.
+   */
+  test('leaves room between the symbol, the button and the edge', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withClearButton);
+    await input(page).waitFor();
+
+    const gaps = await page.evaluate(() => {
+      const field = document.querySelector('.rfi-field');
+      const button = field
+        ?.querySelector('.rfi-clear')
+        ?.getBoundingClientRect();
+      const symbol = field
+        ?.querySelector('.rfi-adornment--suffix')
+        ?.getBoundingClientRect();
+      const box = field?.querySelector('.rfi-input')?.getBoundingClientRect();
+
+      if (!button || !symbol || !box) return null;
+
+      return {
+        symbolToButton: button.left - symbol.right,
+        buttonToEdge: box.right - button.right
+      };
+    });
+
+    expect(gaps?.symbolToButton ?? 0).toBeGreaterThanOrEqual(6);
+    expect(gaps?.buttonToEdge ?? 0).toBeGreaterThanOrEqual(6);
+  });
+
   test('does not sit on top of a suffix currency symbol', async ({ page }) => {
     await page.goto(STORIES.withClearButton);
     await input(page).waitFor();

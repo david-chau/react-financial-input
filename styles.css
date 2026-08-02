@@ -502,21 +502,32 @@
   outline-offset: 1px;
 }
 
-/* Keep the value from running underneath the button. */
+/*
+ * Everything to the right of the value is measured from the button rather than
+ * hard-coded, so changing --rfi-clear-size or --rfi-padding-x keeps the gaps.
+ * The first attempt used fixed insets and left about two pixels between the
+ * symbol and the button.
+ */
 .rfi-field:has(.rfi-clear) .rfi-input {
-  padding-right: var(--rfi-clear-space, 2.25rem);
+  padding-right: calc(
+    var(--rfi-padding-x) + var(--rfi-clear-size, 1.25rem) +
+      var(--rfi-clear-gap, 0.6rem)
+  );
 }
 
-/*
- * With a suffix currency symbol as well, the symbol moves inboard so the two
- * do not stack on top of each other.
- */
+/* With a suffix symbol too, it sits inboard of the button, not against it. */
 .rfi-field:has(.rfi-clear) .rfi-adornment--suffix {
-  right: var(--rfi-clear-space, 2.25rem);
+  right: calc(
+    var(--rfi-padding-x) + var(--rfi-clear-size, 1.25rem) +
+      var(--rfi-clear-gap, 0.6rem)
+  );
 }
 
 .rfi-field:has(.rfi-clear):has(.rfi-adornment--suffix) .rfi-input {
-  padding-right: var(--rfi-clear-suffix-space, 4rem);
+  padding-right: calc(
+    var(--rfi-padding-x) + var(--rfi-clear-size, 1.25rem) +
+      var(--rfi-clear-gap, 0.6rem) + var(--rfi-suffix-space, 2rem)
+  );
 }
 
 /*
