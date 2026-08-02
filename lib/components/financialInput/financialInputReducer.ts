@@ -1,8 +1,10 @@
 import { Nullable } from '../../types';
 import { InputType } from '../../enums';
 import {
-  GROUP_SEPARATOR,
+  DEFAULT_SEPARATORS,
+  Separators,
   containsLetters,
+  formatCanonical,
   formatNumber,
   formatNumberString,
   mapCursorToFormatted,
@@ -36,6 +38,7 @@ export interface FinancialInputAction {
   selectionStart: number;
   scale: number;
   maxDigits: number;
+  separators: Separators;
   /*
       True between compositionstart and compositionend. Android soft keyboards
       emit insertCompositionText for every keystroke of a word still being
@@ -45,10 +48,13 @@ export interface FinancialInputAction {
 }
 
 export const createInitialState = (
-  value?: Nullable<number>
+  value?: Nullable<number>,
+  separators: Separators = DEFAULT_SEPARATORS
 ): FinancialInputState => {
   const displayValue =
-    value === null || value === undefined ? '' : formatNumber(value);
+    value === null || value === undefined
+      ? ''
+      : formatNumber(value, separators);
 
   return {
     displayValue,
@@ -84,11 +90,17 @@ const ignore = (state: FinancialInputState): FinancialInputState => ({
 const accept = (
   displayValue: string,
   targetValue: string,
-  selectionStart: number
+  selectionStart: number,
+  separators: Separators
 ): FinancialInputState => ({
   displayValue,
-  numericValue: parseNumber(displayValue),
-  cursor: mapCursorToFormatted(targetValue, selectionStart, displayValue),
+  numericValue: parseNumber(displayValue, separators),
+  cursor: mapCursorToFormatted(
+    targetValue,
+    selectionStart,
+    displayValue,
+    separators
+  ),
   rejected: false
 });
 
@@ -96,7 +108,7 @@ const insert = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const { targetValue, selectionStart, scale, maxDigits } = action;
+  const { targetValue, selectionStart, scale, maxDigits, separators } = action;
   const data = action.data ?? '';
 
   /*
@@ -109,45 +121,59 @@ const insert = (
       return reject(state, selectionStart - 1);
     }
 
-    const shifted = applyShortcut(targetValue.replace(data, ''), data);
+    const shifted = applyShortcut(
+      targetValue.replace(data, ''),
+      data,
+      separators
+    );
 
     if (shifted === null || !isValidNumberString(shifted, maxDigits, scale)) {
       return reject(state, selectionStart - 1);
     }
 
-    const displayValue = formatNumberString(shifted);
+    const displayValue = formatCanonical(shifted, separators);
 
     return {
       displayValue,
-      numericValue: parseNumber(displayValue),
+      numericValue: parseNumber(displayValue, separators),
       cursor: displayValue.length,
       rejected: false
     };
   }
 
-  if (!isValidInsert(targetValue, data, maxDigits, scale)) {
+  if (!isValidInsert(targetValue, data, maxDigits, scale, separators)) {
     return reject(state, selectionStart - 1);
   }
 
-  return accept(formatNumberString(targetValue), targetValue, selectionStart);
+  return accept(
+    formatNumberString(targetValue, separators),
+    targetValue,
+    selectionStart,
+    separators
+  );
 };
 
 const remove = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const { targetValue, selectionStart } = action;
+  const { targetValue, selectionStart, separators } = action;
 
   /*
       Backspacing a grouping separator only moves the caret. The separator is
       formatter output, not something the user typed, so deleting it would just
       be undone by the next reformat.
    */
-  if (state.displayValue.charAt(selectionStart) === GROUP_SEPARATOR) {
+  if (state.displayValue.charAt(selectionStart) === separators.group) {
     return { ...state, cursor: selectionStart, rejected: false };
   }
 
-  return accept(formatNumberString(targetValue), targetValue, selectionStart);
+  return accept(
+    formatNumberString(targetValue, separators),
+    targetValue,
+    selectionStart,
+    separators
+  );
 };
 
 /*
@@ -157,9 +183,10 @@ const remove = (
  */
 const removeRange = (action: FinancialInputAction): FinancialInputState =>
   accept(
-    formatNumberString(action.targetValue),
+    formatNumberString(action.targetValue, action.separators),
     action.targetValue,
-    action.selectionStart
+    action.selectionStart,
+    action.separators
   );
 
 /*
@@ -174,19 +201,19 @@ const replace = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const { targetValue, scale, maxDigits } = action;
+  const { targetValue, scale, maxDigits, separators } = action;
 
-  const sanitised = sanitiseNumericText(targetValue);
+  const sanitised = sanitiseNumericText(targetValue, separators);
 
   if (sanitised === null || !isValidNumberString(sanitised, maxDigits, scale)) {
     return reject(state, state.cursor);
   }
 
-  const displayValue = formatNumberString(sanitised);
+  const displayValue = formatCanonical(sanitised, separators);
 
   return {
     displayValue,
-    numericValue: parseNumber(displayValue),
+    numericValue: parseNumber(displayValue, separators),
     cursor: displayValue.length,
     rejected: false
   };
@@ -229,7 +256,10 @@ export const reduceCompositionEnd = (
       leave "abc" on screen. Rebuild from the last committed numeric value,
       which hold() deliberately never touched.
    */
-  return { ...createInitialState(state.numericValue), rejected: true };
+  return {
+    ...createInitialState(state.numericValue, action.separators),
+    rejected: true
+  };
 };
 
 /*
@@ -243,19 +273,20 @@ export const reduceShortcut = (
   state: FinancialInputState,
   character: string,
   scale: number,
-  maxDigits: number
+  maxDigits: number,
+  separators: Separators = DEFAULT_SEPARATORS
 ): FinancialInputState => {
-  const shifted = applyShortcut(state.displayValue, character);
+  const shifted = applyShortcut(state.displayValue, character, separators);
 
   if (shifted === null || !isValidNumberString(shifted, maxDigits, scale)) {
     return reject(state, state.cursor);
   }
 
-  const displayValue = formatNumberString(shifted);
+  const displayValue = formatCanonical(shifted, separators);
 
   return {
     displayValue,
-    numericValue: parseNumber(displayValue),
+    numericValue: parseNumber(displayValue, separators),
     cursor: displayValue.length,
     rejected: false
   };

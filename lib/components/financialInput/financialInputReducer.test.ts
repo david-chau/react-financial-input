@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InputType } from '../../enums';
+import { DEFAULT_SEPARATORS, Separators } from '../../utils';
 import {
   FinancialInputState,
   createInitialState,
@@ -27,7 +28,8 @@ const run = (
   selectionStart: number,
   scale: number = DEFAULT_SCALE,
   maxDigits: number = DEFAULT_MAX_DIGITS,
-  isComposing: boolean = false
+  isComposing: boolean = false,
+  separators: Separators = DEFAULT_SEPARATORS
 ) =>
   reduceInput(state, {
     inputType,
@@ -36,6 +38,7 @@ const run = (
     selectionStart,
     scale,
     maxDigits,
+    separators,
     isComposing
   });
 
@@ -400,7 +403,8 @@ describe('IME composition', () => {
       targetValue: '1234567',
       selectionStart: 7,
       scale: DEFAULT_SCALE,
-      maxDigits: DEFAULT_MAX_DIGITS
+      maxDigits: DEFAULT_MAX_DIGITS,
+      separators: DEFAULT_SEPARATORS
     });
 
     expect(committed.displayValue).toBe('1,234,567');
@@ -436,7 +440,8 @@ describe('IME composition', () => {
       targetValue: composed,
       selectionStart: composed.length,
       scale: DEFAULT_SCALE,
-      maxDigits: DEFAULT_MAX_DIGITS
+      maxDigits: DEFAULT_MAX_DIGITS,
+      separators: DEFAULT_SEPARATORS
     });
 
     expect(committed.rejected).toBe(true);

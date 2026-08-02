@@ -1,12 +1,14 @@
 import { Nullable, StringKeyedMap } from '../../types';
 import { Shortcut } from '../../enums';
 import {
-  DECIMAL_SEPARATOR,
+  CANONICAL_DECIMAL,
+  DEFAULT_SEPARATORS,
+  Separators,
+  buildDecimalPattern,
   hasLeadingZero,
   hasMultipleDecimals,
-  hasSeparatorOrSpace,
   shiftDecimal,
-  stripGroupSeparators
+  toCanonical
 } from '../../utils';
 
 export const DEFAULT_SCALE = 2;
@@ -45,7 +47,8 @@ export const isShortcut = (character: Nullable<string>): boolean =>
  */
 export const applyShortcut = (
   base: string,
-  character: string
+  character: string,
+  separators: Separators = DEFAULT_SEPARATORS
 ): Nullable<string> => {
   const exponent = getShortcutExponent(character);
 
@@ -53,9 +56,9 @@ export const applyShortcut = (
     return null;
   }
 
-  const raw = stripGroupSeparators(base);
+  const canonical = toCanonical(base, separators);
 
-  return shiftDecimal(raw === '' ? '1' : raw, exponent);
+  return shiftDecimal(canonical === '' ? '1' : canonical, exponent);
 };
 
 /*
@@ -66,7 +69,10 @@ export const applyShortcut = (
 
     Returns null when there is no number in there to take.
  */
-export const sanitiseNumericText = (text: string): Nullable<string> => {
+export const sanitiseNumericText = (
+  text: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): Nullable<string> => {
   const trimmed = text.trim();
 
   if (trimmed === '') {
@@ -83,12 +89,17 @@ export const sanitiseNumericText = (text: string): Nullable<string> => {
   const trailing = trimmed.match(/([a-z])\s*\)?\s*$/i);
   const exponent = trailing ? getShortcutExponent(trailing[1]) : null;
 
-  const digits = trimmed.replace(
-    new RegExp(`[^0-9\\${DECIMAL_SEPARATOR}]`, 'g'),
-    ''
-  );
+  /*
+      Everything that is not a digit or the configured fraction separator goes,
+      which takes currency symbols, spaces, letters and grouping separators with
+      it. The survivor is canonical once the fraction separator is normalised.
+   */
+  const digits = trimmed
+    .replace(buildDecimalPattern(separators), '')
+    .split(separators.decimal)
+    .join(CANONICAL_DECIMAL);
 
-  if (digits === '' || digits === DECIMAL_SEPARATOR) {
+  if (digits === '' || digits === CANONICAL_DECIMAL) {
     return null;
   }
 
@@ -119,34 +130,40 @@ export const isValidInsert = (
   targetValue: string,
   data: string,
   maxDigits: number,
-  scale: number
+  scale: number,
+  separators: Separators = DEFAULT_SEPARATORS
 ): boolean => {
-  if (hasSeparatorOrSpace(data)) {
+  /*
+      A grouping separator or a space is never typed directly — both are
+      formatter output, so their appearance in `data` means something was
+      pasted or dropped rather than typed.
+   */
+  if (data.includes(separators.group) || /\s/.test(data)) {
     return false;
   }
 
-  const raw = stripGroupSeparators(targetValue);
+  const canonical = toCanonical(targetValue, separators);
 
-  if (raw === '' || raw === '-') {
+  if (canonical === '' || canonical === '-') {
     return true;
   }
 
-  if (raw === DECIMAL_SEPARATOR) {
+  if (canonical === CANONICAL_DECIMAL) {
     return scale > 0;
   }
 
-  if (hasMultipleDecimals(raw)) {
+  if (hasMultipleDecimals(canonical)) {
     return false;
   }
 
-  const [integer, fraction = ''] = raw.split(DECIMAL_SEPARATOR);
+  const [integer, fraction = ''] = canonical.split(CANONICAL_DECIMAL);
 
-  if (raw.includes(DECIMAL_SEPARATOR) && scale === 0) {
+  if (canonical.includes(CANONICAL_DECIMAL) && scale === 0) {
     return false;
   }
 
   return (
-    !hasLeadingZero(raw) &&
+    !hasLeadingZero(canonical) &&
     !isAboveScale(fraction, scale) &&
     !isAboveMaxDigits(integer, maxDigits)
   );
@@ -157,15 +174,15 @@ export const isValidInsert = (
     of applying a shortcut.
  */
 export const isValidNumberString = (
-  value: Nullable<string>,
+  canonical: Nullable<string>,
   maxDigits: number,
   scale: number
 ): boolean => {
-  if (value === null) {
+  if (canonical === null) {
     return false;
   }
 
-  const [integer, fraction = ''] = value.split(DECIMAL_SEPARATOR);
+  const [integer, fraction = ''] = canonical.split(CANONICAL_DECIMAL);
 
   return (
     !isAboveMaxDigits(integer, maxDigits) && !isAboveScale(fraction, scale)

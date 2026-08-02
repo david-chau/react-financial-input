@@ -2,11 +2,12 @@ import {
   InputHTMLAttributes,
   Ref,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState
 } from 'react';
 import { Nullable } from '../../types';
-import { mergeRefs } from '../../utils';
+import { DEFAULT_SEPARATORS, areSeparatorsValid, mergeRefs } from '../../utils';
 import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
 import { InputType } from '../../enums';
 import {
@@ -25,6 +26,10 @@ export interface FinancialInputOptions {
   scale?: number;
   /** Maximum number of integer digits. Defaults to 11. */
   maxDigits?: number;
+  /** Thousands separator. "," by default; "." for de-DE, " " for fr-FR. */
+  groupSeparator?: string;
+  /** Fraction separator. "." by default; "," for de-DE and fr-FR. */
+  decimalSeparator?: string;
   /*
       Which keyboard mobile raises. Defaults to 'text'.
 
@@ -70,12 +75,35 @@ export const useFinancialInput = ({
   const {
     scale = DEFAULT_SCALE,
     maxDigits = DEFAULT_MAX_DIGITS,
-    inputMode = 'text'
+    inputMode = 'text',
+    groupSeparator = DEFAULT_SEPARATORS.group,
+    decimalSeparator = DEFAULT_SEPARATORS.decimal
   } = options;
+
+  /*
+      Rebuilt only when the separators actually change, so the object identity
+      stays stable and does not defeat the comparisons below.
+   */
+  const separators = useMemo(
+    () => ({ group: groupSeparator, decimal: decimalSeparator }),
+    [groupSeparator, decimalSeparator]
+  );
+
+  if (!areSeparatorsValid(separators)) {
+    throw new Error(
+      `react-financial-input: invalid separators { group: ${JSON.stringify(
+        groupSeparator
+      )}, decimal: ${JSON.stringify(decimalSeparator)} }. They must differ, ` +
+        'and neither may be a digit or a minus sign.'
+    );
+  }
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, setState] = useState<FinancialInputState>(() =>
-    createInitialState(value)
+    createInitialState(value, {
+      group: options.groupSeparator ?? DEFAULT_SEPARATORS.group,
+      decimal: options.decimalSeparator ?? DEFAULT_SEPARATORS.decimal
+    })
   );
 
   /*
@@ -127,6 +155,7 @@ export const useFinancialInput = ({
     selectionStart: target.selectionStart ?? target.value.length,
     scale,
     maxDigits,
+    separators,
     isComposing: isComposing.current
   });
 
@@ -158,7 +187,7 @@ export const useFinancialInput = ({
       keypads, which have no letter keys — wire it to a row of tap targets.
    */
   const applyShortcut = (character: string) => {
-    const next = reduceShortcut(state, character, scale, maxDigits);
+    const next = reduceShortcut(state, character, scale, maxDigits, separators);
 
     setState(next);
     inputRef.current?.focus();
@@ -191,7 +220,7 @@ export const useFinancialInput = ({
     setLastValue(value);
 
     if ((value ?? null) !== state.numericValue) {
-      setState(createInitialState(value));
+      setState(createInitialState(value, separators));
     }
   }
 

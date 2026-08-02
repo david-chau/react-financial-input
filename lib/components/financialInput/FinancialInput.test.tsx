@@ -69,6 +69,58 @@ describe('<FinancialInput />', () => {
     expect(input).toHaveValue('1,234,567.5');
   });
 
+  describe('separators', () => {
+    const deDE = { groupSeparator: '.', decimalSeparator: ',' };
+
+    it('groups and parses in the German convention', async () => {
+      const onChange = vi.fn();
+      const { user, input } = setup({ options: deDE, onChange });
+
+      await user.type(input, '1234567');
+      expect(input).toHaveValue('1.234.567');
+
+      await user.type(input, ',5');
+      expect(input).toHaveValue('1.234.567,5');
+      expect(onChange).toHaveBeenLastCalledWith(1234567.5);
+    });
+
+    it('refuses the English decimal point when the comma is the separator', async () => {
+      const onError = vi.fn();
+      const { user, input } = setup({ options: deDE, onError });
+
+      await user.type(input, '1.5');
+
+      // The "." is a grouping separator here, so it is formatter output only.
+      expect(input).toHaveValue('15');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it('renders an initial value with the configured separators', () => {
+      const { input } = setup({ value: 1234567.89, options: deDE });
+
+      expect(input).toHaveValue('1.234.567,89');
+    });
+
+    it('expands shortcuts with the configured separators', async () => {
+      const { user, input } = setup({ options: deDE });
+
+      await user.type(input, '2,5m');
+
+      expect(input).toHaveValue('2.500.000');
+    });
+
+    it('throws when the separators are ambiguous', () => {
+      // Both the same would make "1,234" impossible to interpret.
+      expect(() =>
+        render(
+          <FinancialInput
+            options={{ groupSeparator: ',', decimalSeparator: ',' }}
+          />
+        )
+      ).toThrow(/invalid separators/);
+    });
+  });
+
   describe('controlled mode', () => {
     const Controlled = ({ initial }: { initial: number | null }) => {
       const [value, setValue] = useState<number | null>(initial);
