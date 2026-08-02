@@ -8,7 +8,12 @@ import {
   reduceInput,
   reduceShortcut
 } from './financialInputReducer';
-import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
+import {
+  DEFAULT_MAX_DIGITS,
+  DEFAULT_SCALE,
+  Range,
+  SHORTCUT_EXPONENTS
+} from './financialInputUtils';
 
 const stateOf = (
   displayValue: string,
@@ -29,7 +34,9 @@ const run = (
   scale: number = DEFAULT_SCALE,
   maxDigits: number = DEFAULT_MAX_DIGITS,
   isComposing: boolean = false,
-  separators: Separators = DEFAULT_SEPARATORS
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: Record<string, number> = SHORTCUT_EXPONENTS,
+  range: Range = 'ALL'
 ) =>
   reduceInput(state, {
     inputType,
@@ -39,6 +46,8 @@ const run = (
     scale,
     maxDigits,
     separators,
+    exponents,
+    range,
     isComposing
   });
 
@@ -404,7 +413,9 @@ describe('IME composition', () => {
       selectionStart: 7,
       scale: DEFAULT_SCALE,
       maxDigits: DEFAULT_MAX_DIGITS,
-      separators: DEFAULT_SEPARATORS
+      separators: DEFAULT_SEPARATORS,
+      exponents: SHORTCUT_EXPONENTS,
+      range: 'ALL'
     });
 
     expect(committed.displayValue).toBe('1,234,567');
@@ -441,7 +452,9 @@ describe('IME composition', () => {
       selectionStart: composed.length,
       scale: DEFAULT_SCALE,
       maxDigits: DEFAULT_MAX_DIGITS,
-      separators: DEFAULT_SEPARATORS
+      separators: DEFAULT_SEPARATORS,
+      exponents: SHORTCUT_EXPONENTS,
+      range: 'ALL'
     });
 
     expect(committed.rejected).toBe(true);

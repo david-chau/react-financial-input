@@ -6,9 +6,15 @@ import {
   useRef,
   useState
 } from 'react';
-import { Nullable } from '../../types';
+import { Nullable, StringKeyedMap } from '../../types';
 import { DEFAULT_SEPARATORS, areSeparatorsValid, mergeRefs } from '../../utils';
-import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
+import {
+  DEFAULT_MAX_DIGITS,
+  DEFAULT_SCALE,
+  DEFAULT_SHORTCUTS,
+  Range,
+  toExponents
+} from './financialInputUtils';
 import { InputType } from '../../enums';
 import {
   FinancialInputState,
@@ -30,6 +36,14 @@ export interface FinancialInputOptions {
   groupSeparator?: string;
   /** Fraction separator. "." by default; "," for de-DE and fr-FR. */
   decimalSeparator?: string;
+  /*
+      Characters to multipliers, defaulting to h/k/m/b. Multipliers must be
+      powers of ten — anything else has no exact decimal-shift representation
+      and is dropped.
+   */
+  shortcuts?: StringKeyedMap<number>;
+  /** 'POSITIVE' refuses negatives outright. Defaults to 'ALL'. */
+  range?: Range;
   /*
       Which keyboard mobile raises. Defaults to 'text'.
 
@@ -77,8 +91,12 @@ export const useFinancialInput = ({
     maxDigits = DEFAULT_MAX_DIGITS,
     inputMode = 'text',
     groupSeparator = DEFAULT_SEPARATORS.group,
-    decimalSeparator = DEFAULT_SEPARATORS.decimal
+    decimalSeparator = DEFAULT_SEPARATORS.decimal,
+    shortcuts = DEFAULT_SHORTCUTS,
+    range = 'ALL'
   } = options;
+
+  const exponents = useMemo(() => toExponents(shortcuts), [shortcuts]);
 
   /*
       Rebuilt only when the separators actually change, so the object identity
@@ -156,6 +174,8 @@ export const useFinancialInput = ({
     scale,
     maxDigits,
     separators,
+    exponents,
+    range,
     isComposing: isComposing.current
   });
 
@@ -187,7 +207,15 @@ export const useFinancialInput = ({
       keypads, which have no letter keys — wire it to a row of tap targets.
    */
   const applyShortcut = (character: string) => {
-    const next = reduceShortcut(state, character, scale, maxDigits, separators);
+    const next = reduceShortcut(
+      state,
+      character,
+      scale,
+      maxDigits,
+      separators,
+      exponents,
+      range
+    );
 
     setState(next);
     inputRef.current?.focus();

@@ -1,4 +1,4 @@
-import { Nullable } from '../../types';
+import { Nullable, StringKeyedMap } from '../../types';
 import { InputType } from '../../enums';
 import {
   DEFAULT_SEPARATORS,
@@ -11,6 +11,8 @@ import {
   parseNumber
 } from '../../utils';
 import {
+  Range,
+  SHORTCUT_EXPONENTS,
   applyShortcut,
   isShortcut,
   isValidInsert,
@@ -39,6 +41,9 @@ export interface FinancialInputAction {
   scale: number;
   maxDigits: number;
   separators: Separators;
+  /** Shortcut characters to powers of ten. */
+  exponents: StringKeyedMap<number>;
+  range: Range;
   /*
       True between compositionstart and compositionend. Android soft keyboards
       emit insertCompositionText for every keystroke of a word still being
@@ -108,7 +113,15 @@ const insert = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const { targetValue, selectionStart, scale, maxDigits, separators } = action;
+  const {
+    targetValue,
+    selectionStart,
+    scale,
+    maxDigits,
+    separators,
+    exponents,
+    range
+  } = action;
   const data = action.data ?? '';
 
   /*
@@ -117,17 +130,21 @@ const insert = (
       "1a" never reaches the number parsing.
    */
   if (containsLetters(targetValue)) {
-    if (!isShortcut(data)) {
+    if (!isShortcut(data, exponents)) {
       return reject(state, selectionStart - 1);
     }
 
     const shifted = applyShortcut(
       targetValue.replace(data, ''),
       data,
-      separators
+      separators,
+      exponents
     );
 
-    if (shifted === null || !isValidNumberString(shifted, maxDigits, scale)) {
+    if (
+      shifted === null ||
+      !isValidNumberString(shifted, maxDigits, scale, range)
+    ) {
       return reject(state, selectionStart - 1);
     }
 
@@ -141,7 +158,7 @@ const insert = (
     };
   }
 
-  if (!isValidInsert(targetValue, data, maxDigits, scale, separators)) {
+  if (!isValidInsert(targetValue, data, maxDigits, scale, separators, range)) {
     return reject(state, selectionStart - 1);
   }
 
@@ -201,11 +218,15 @@ const replace = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const { targetValue, scale, maxDigits, separators } = action;
+  const { targetValue, scale, maxDigits, separators, exponents, range } =
+    action;
 
-  const sanitised = sanitiseNumericText(targetValue, separators);
+  const sanitised = sanitiseNumericText(targetValue, separators, exponents);
 
-  if (sanitised === null || !isValidNumberString(sanitised, maxDigits, scale)) {
+  if (
+    sanitised === null ||
+    !isValidNumberString(sanitised, maxDigits, scale, range)
+  ) {
     return reject(state, state.cursor);
   }
 
@@ -274,11 +295,21 @@ export const reduceShortcut = (
   character: string,
   scale: number,
   maxDigits: number,
-  separators: Separators = DEFAULT_SEPARATORS
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS,
+  range: Range = 'ALL'
 ): FinancialInputState => {
-  const shifted = applyShortcut(state.displayValue, character, separators);
+  const shifted = applyShortcut(
+    state.displayValue,
+    character,
+    separators,
+    exponents
+  );
 
-  if (shifted === null || !isValidNumberString(shifted, maxDigits, scale)) {
+  if (
+    shifted === null ||
+    !isValidNumberString(shifted, maxDigits, scale, range)
+  ) {
     return reject(state, state.cursor);
   }
 

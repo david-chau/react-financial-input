@@ -25,20 +25,66 @@ export const SHORTCUT_EXPONENTS: StringKeyedMap<number> = {
   [Shortcut.BILLION]: 9
 };
 
+/** The public shape: characters to multipliers. */
+export const DEFAULT_SHORTCUTS: StringKeyedMap<number> = {
+  [Shortcut.HUNDRED]: 100,
+  [Shortcut.THOUSAND]: 1_000,
+  [Shortcut.MILLION]: 1_000_000,
+  [Shortcut.BILLION]: 1_000_000_000
+};
+
+/** Whether negatives are accepted at all. */
+export type Range = 'ALL' | 'POSITIVE';
+
+/*
+    Consumers configure shortcuts as multipliers, which is the natural way to
+    think about them. Internally they are powers of ten, because that is what
+    shiftDecimal needs to stay exact. A multiplier that is not a power of ten
+    has no exact representation and is refused.
+ */
+export const toExponent = (multiplier: number): Nullable<number> => {
+  if (!Number.isFinite(multiplier) || multiplier <= 0) {
+    return null;
+  }
+
+  const exponent = Math.log10(multiplier);
+
+  return Number.isInteger(exponent) ? exponent : null;
+};
+
+export const toExponents = (
+  shortcuts: StringKeyedMap<number>
+): StringKeyedMap<number> => {
+  const exponents: StringKeyedMap<number> = {};
+
+  Object.entries(shortcuts).forEach(([character, multiplier]) => {
+    const exponent = toExponent(multiplier);
+
+    if (exponent !== null) {
+      exponents[character.toLowerCase()] = exponent;
+    }
+  });
+
+  return exponents;
+};
+
 export const getShortcutExponent = (
-  character: Nullable<string>
+  character: Nullable<string>,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
 ): Nullable<number> => {
   if (character === null || character.length !== 1) {
     return null;
   }
 
-  const exponent = SHORTCUT_EXPONENTS[character.toLowerCase()];
+  const exponent = exponents[character.toLowerCase()];
 
   return exponent === undefined ? null : exponent;
 };
 
-export const isShortcut = (character: Nullable<string>): boolean =>
-  getShortcutExponent(character) !== null;
+export const isShortcut = (
+  character: Nullable<string>,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
+): boolean => getShortcutExponent(character, exponents) !== null;
 
 /*
     Applies a shortcut to the digits typed before it. An empty base means the
@@ -48,9 +94,10 @@ export const isShortcut = (character: Nullable<string>): boolean =>
 export const applyShortcut = (
   base: string,
   character: string,
-  separators: Separators = DEFAULT_SEPARATORS
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
 ): Nullable<string> => {
-  const exponent = getShortcutExponent(character);
+  const exponent = getShortcutExponent(character, exponents);
 
   if (exponent === null) {
     return null;
@@ -71,7 +118,8 @@ export const applyShortcut = (
  */
 export const sanitiseNumericText = (
   text: string,
-  separators: Separators = DEFAULT_SEPARATORS
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
 ): Nullable<string> => {
   const trimmed = text.trim();
 
@@ -87,7 +135,9 @@ export const sanitiseNumericText = (
 
   // A trailing shortcut letter, so pasting "2.5m" behaves like typing it.
   const trailing = trimmed.match(/([a-z])\s*\)?\s*$/i);
-  const exponent = trailing ? getShortcutExponent(trailing[1]) : null;
+  const exponent = trailing
+    ? getShortcutExponent(trailing[1], exponents)
+    : null;
 
   /*
       Everything that is not a digit or the configured fraction separator goes,
@@ -131,7 +181,8 @@ export const isValidInsert = (
   data: string,
   maxDigits: number,
   scale: number,
-  separators: Separators = DEFAULT_SEPARATORS
+  separators: Separators = DEFAULT_SEPARATORS,
+  range: Range = 'ALL'
 ): boolean => {
   /*
       A grouping separator or a space is never typed directly — both are
@@ -143,6 +194,10 @@ export const isValidInsert = (
   }
 
   const canonical = toCanonical(targetValue, separators);
+
+  if (range === 'POSITIVE' && canonical.startsWith('-')) {
+    return false;
+  }
 
   if (canonical === '' || canonical === '-') {
     return true;
@@ -176,9 +231,14 @@ export const isValidInsert = (
 export const isValidNumberString = (
   canonical: Nullable<string>,
   maxDigits: number,
-  scale: number
+  scale: number,
+  range: Range = 'ALL'
 ): boolean => {
   if (canonical === null) {
+    return false;
+  }
+
+  if (range === 'POSITIVE' && canonical.startsWith('-')) {
     return false;
   }
 

@@ -69,6 +69,77 @@ describe('<FinancialInput />', () => {
     expect(input).toHaveValue('1,234,567.5');
   });
 
+  describe('configurable shortcuts', () => {
+    it('uses the given characters and multipliers', async () => {
+      const { user, input } = setup({
+        options: { shortcuts: { t: 1000, l: 100000 } }
+      });
+
+      await user.type(input, '5t');
+      expect(input).toHaveValue('5,000');
+    });
+
+    it('refuses the defaults once shortcuts are overridden', async () => {
+      const onError = vi.fn();
+      const { user, input } = setup({
+        options: { shortcuts: { t: 1000 } },
+        onError
+      });
+
+      await user.type(input, '5k');
+
+      expect(input).toHaveValue('5');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    /*
+        Multipliers are applied by shifting the decimal point, which only has an
+        exact representation for powers of ten. A non-power-of-ten is dropped
+        rather than silently reintroducing floating point error.
+     */
+    it('drops a multiplier that is not a power of ten', async () => {
+      const { user, input } = setup({
+        options: { shortcuts: { d: 12, k: 1000 } }
+      });
+
+      await user.type(input, '5d');
+      expect(input).toHaveValue('5');
+
+      await user.clear(input);
+      await user.type(input, '5k');
+      expect(input).toHaveValue('5,000');
+    });
+  });
+
+  describe('range', () => {
+    it('accepts negatives by default', async () => {
+      const { user, input } = setup();
+
+      await user.type(input, '-1234');
+
+      expect(input).toHaveValue('-1,234');
+    });
+
+    it('refuses negatives when the range is POSITIVE', async () => {
+      const onError = vi.fn();
+      const { user, input } = setup({
+        options: { range: 'POSITIVE' },
+        onError
+      });
+
+      await user.type(input, '-1234');
+
+      expect(input).toHaveValue('1,234');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it('refuses a pasted negative when the range is POSITIVE', async () => {
+      const { input } = setup({ options: { range: 'POSITIVE' }, value: 50 });
+
+      expect(input).toHaveValue('50');
+    });
+  });
+
   describe('separators', () => {
     const deDE = { groupSeparator: '.', decimalSeparator: ',' };
 
