@@ -16,6 +16,11 @@ name: Publish to npm
 on:
   push:
     branches: [main]
+  # Escape hatch: a Release published by hand also publishes. A Release created
+  # by GITHUB_TOKEN cannot trigger this, so it only fires for a human or a PAT
+  # — which is exactly when you want it.
+  release:
+    types: [published]
   workflow_dispatch:
 
 concurrency:
@@ -24,6 +29,8 @@ concurrency:
 
 jobs:
   release-please:
+    # Nothing to work out when a Release was published directly.
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,7 +47,12 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    # always(), because release-please is skipped on the release event and a
+    # skipped dependency would otherwise skip this job too.
+    if: >-
+      ${{ always() &&
+      (needs.release-please.outputs.release_created == 'true' ||
+      github.event_name == 'release') }}
     runs-on: ubuntu-latest
     permissions:
       # Required for npm Trusted Publishing (OIDC) and provenance.
@@ -51,7 +63,9 @@ jobs:
       # the tag rather than the commit that triggered this run.
       - uses: actions/checkout@v5
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: >-
+            ${{ github.event.release.tag_name ||
+            needs.release-please.outputs.tag_name }}
 
       - uses: actions/setup-node@v5
         with:
