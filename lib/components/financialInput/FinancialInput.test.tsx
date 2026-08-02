@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialInput } from './FinancialInput';
+import { useFinancialInput } from './useFinancialInput';
 
 /*
     Deliberately thin. The formatting and validation rules are covered by the
@@ -67,6 +68,258 @@ describe('<FinancialInput />', () => {
     const { input } = setup({ value: 1234567.5 });
 
     expect(input).toHaveValue('1,234,567.5');
+  });
+
+  describe('currency and locale', () => {
+    const Harness = (options: Record<string, unknown>) => {
+      const { getInputProps, symbol, symbolPosition } = useFinancialInput({
+        options
+      });
+
+      return (
+        <>
+          <input {...getInputProps()} />
+          <output>{`${symbolPosition}:${symbol}`}</output>
+        </>
+      );
+    };
+
+    it.each([
+      // locale   currency  -> rendered
+      ['en-US', 'USD', 'prefix:$'],
+      ['en-GB', 'GBP', 'prefix:£'],
+      ['sv-SE', 'SEK', 'suffix:kr']
+    ])('resolves %s / %s to %j', (locale, currency, expected) => {
+      render(<Harness locale={locale} currency={currency} />);
+
+      expect(screen.getByRole('status')).toHaveTextContent(expected);
+    });
+
+    it('has no symbol unless a currency is given', () => {
+      render(<Harness />);
+
+      expect(screen.getByRole('status')).toHaveTextContent('prefix:');
+    });
+
+    it.each([
+      [{ currency: 'USD', symbol: 'US$' }, 'prefix:US$'],
+      [{ currency: 'USD', symbolPosition: 'suffix' }, 'suffix:$'],
+      [{ symbol: '€', symbolPosition: 'suffix' }, 'suffix:€']
+    ])('lets props override Intl (%j)', (options, expected) => {
+      render(<Harness {...options} />);
+
+      expect(screen.getByRole('status')).toHaveTextContent(expected);
+    });
+
+    it('takes the separators from the locale', async () => {
+      const user = userEvent.setup();
+      render(<Harness locale="de-DE" currency="EUR" />);
+
+      await user.type(screen.getByRole('textbox'), '1234567');
+
+      expect(screen.getByRole('textbox')).toHaveValue('1.234.567');
+    });
+
+    it('lets an explicit separator win over the locale', async () => {
+      const user = userEvent.setup();
+      render(<Harness locale="de-DE" groupSeparator=" " />);
+
+      await user.type(screen.getByRole('textbox'), '1234567');
+
+      expect(screen.getByRole('textbox')).toHaveValue('1 234 567');
+    });
+
+    /*
+        The symbol is not part of the value: it is rendered beside the input, so
+        the caret arithmetic never has to skip over it.
+     */
+    it('keeps the symbol out of the input value', async () => {
+      const user = userEvent.setup();
+      render(<Harness locale="en-US" currency="USD" />);
+
+      await user.type(screen.getByRole('textbox'), '1000');
+
+      expect(screen.getByRole('textbox')).toHaveValue('1,000');
+    });
+  });
+
+  describe('configurable shortcuts', () => {
+    it('uses the given characters and multipliers', async () => {
+      const { user, input } = setup({
+        options: { shortcuts: { t: 1000, l: 100000 } }
+      });
+
+      await user.type(input, '5t');
+      expect(input).toHaveValue('5,000');
+    });
+
+    it('refuses the defaults once shortcuts are overridden', async () => {
+      const onError = vi.fn();
+      const { user, input } = setup({
+        options: { shortcuts: { t: 1000 } },
+        onError
+      });
+
+      await user.type(input, '5k');
+
+      expect(input).toHaveValue('5');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    /*
+        Multipliers are applied by shifting the decimal point, which only has an
+        exact representation for powers of ten. A non-power-of-ten is dropped
+        rather than silently reintroducing floating point error.
+     */
+    it('drops a multiplier that is not a power of ten', async () => {
+      const { user, input } = setup({
+        options: { shortcuts: { d: 12, k: 1000 } }
+      });
+
+      await user.type(input, '5d');
+      expect(input).toHaveValue('5');
+
+      await user.clear(input);
+      await user.type(input, '5k');
+      expect(input).toHaveValue('5,000');
+    });
+  });
+
+  describe('range', () => {
+    it('accepts negatives by default', async () => {
+      const { user, input } = setup();
+
+      await user.type(input, '-1234');
+
+      expect(input).toHaveValue('-1,234');
+    });
+
+    it('refuses negatives when the range is POSITIVE', async () => {
+      const onError = vi.fn();
+      const { user, input } = setup({
+        options: { range: 'POSITIVE' },
+        onError
+      });
+
+      await user.type(input, '-1234');
+
+      expect(input).toHaveValue('1,234');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it('refuses a pasted negative when the range is POSITIVE', async () => {
+      const { input } = setup({ options: { range: 'POSITIVE' }, value: 50 });
+
+      expect(input).toHaveValue('50');
+    });
+  });
+
+  describe('separators', () => {
+    const deDE = { groupSeparator: '.', decimalSeparator: ',' };
+
+    it('groups and parses in the German convention', async () => {
+      const onChange = vi.fn();
+      const { user, input } = setup({ options: deDE, onChange });
+
+      await user.type(input, '1234567');
+      expect(input).toHaveValue('1.234.567');
+
+      await user.type(input, ',5');
+      expect(input).toHaveValue('1.234.567,5');
+      expect(onChange).toHaveBeenLastCalledWith(1234567.5);
+    });
+
+    it('refuses the English decimal point when the comma is the separator', async () => {
+      const onError = vi.fn();
+      const { user, input } = setup({ options: deDE, onError });
+
+      await user.type(input, '1.5');
+
+      // The "." is a grouping separator here, so it is formatter output only.
+      expect(input).toHaveValue('15');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it('renders an initial value with the configured separators', () => {
+      const { input } = setup({ value: 1234567.89, options: deDE });
+
+      expect(input).toHaveValue('1.234.567,89');
+    });
+
+    it('expands shortcuts with the configured separators', async () => {
+      const { user, input } = setup({ options: deDE });
+
+      await user.type(input, '2,5m');
+
+      expect(input).toHaveValue('2.500.000');
+    });
+
+    it('throws when the separators are ambiguous', () => {
+      // Both the same would make "1,234" impossible to interpret.
+      expect(() =>
+        render(
+          <FinancialInput
+            options={{ groupSeparator: ',', decimalSeparator: ',' }}
+          />
+        )
+      ).toThrow(/invalid separators/);
+    });
+  });
+
+  describe('controlled mode', () => {
+    const Controlled = ({ initial }: { initial: number | null }) => {
+      const [value, setValue] = useState<number | null>(initial);
+
+      return (
+        <>
+          <FinancialInput value={value} onChange={setValue} />
+          <button onClick={() => setValue(5000)}>set</button>
+          <button onClick={() => setValue(null)}>clear</button>
+          <output>{value === null ? 'null' : value}</output>
+        </>
+      );
+    };
+
+    it('follows the value prop when the parent changes it', async () => {
+      const user = userEvent.setup();
+      render(<Controlled initial={1000} />);
+
+      expect(screen.getByRole('textbox')).toHaveValue('1,000');
+
+      await user.click(screen.getByRole('button', { name: 'set' }));
+      expect(screen.getByRole('textbox')).toHaveValue('5,000');
+
+      await user.click(screen.getByRole('button', { name: 'clear' }));
+      expect(screen.getByRole('textbox')).toHaveValue('');
+    });
+
+    /*
+        The parent echoing back the value this input just emitted is not an
+        external change. Reformatting on it would discard a trailing "." or the
+        zero in "1.50" while the user is still typing.
+     */
+    it('does not reformat while typing when the parent echoes the value back', async () => {
+      const user = userEvent.setup();
+      render(<Controlled initial={null} />);
+
+      const input = screen.getByRole('textbox');
+
+      await user.type(input, '1.50');
+
+      expect(input).toHaveValue('1.50');
+      expect(screen.getByRole('status')).toHaveTextContent('1.5');
+    });
+
+    it('keeps a trailing decimal point while typing', async () => {
+      const user = userEvent.setup();
+      render(<Controlled initial={null} />);
+
+      const input = screen.getByRole('textbox');
+
+      await user.type(input, '12.');
+
+      expect(input).toHaveValue('12.');
+    });
   });
 
   /*

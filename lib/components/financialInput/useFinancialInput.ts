@@ -2,15 +2,31 @@ import {
   InputHTMLAttributes,
   Ref,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState
 } from 'react';
-import { Nullable } from '../../types';
-import { mergeRefs } from '../../utils';
-import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
+import { Nullable, StringKeyedMap } from '../../types';
+import {
+  DEFAULT_SEPARATORS,
+  SymbolPosition,
+  areSeparatorsValid,
+  mergeRefs,
+  resolveCurrency,
+  resolveSeparators
+} from '../../utils';
+import {
+  DEFAULT_MAX_DIGITS,
+  DEFAULT_SCALE,
+  DEFAULT_SHORTCUTS,
+  Range,
+  toExponents
+} from './financialInputUtils';
+import { InputType } from '../../enums';
 import {
   FinancialInputState,
   createInitialState,
+  reduceCompositionEnd,
   reduceInput,
   reduceShortcut
 } from './financialInputReducer';
@@ -23,6 +39,37 @@ export interface FinancialInputOptions {
   scale?: number;
   /** Maximum number of integer digits. Defaults to 11. */
   maxDigits?: number;
+  /** Thousands separator. "," by default; "." for de-DE, " " for fr-FR. */
+  groupSeparator?: string;
+  /** Fraction separator. "." by default; "," for de-DE and fr-FR. */
+  decimalSeparator?: string;
+  /*
+      Characters to multipliers, defaulting to h/k/m/b. Multipliers must be
+      powers of ten — anything else has no exact decimal-shift representation
+      and is dropped.
+   */
+  shortcuts?: StringKeyedMap<number>;
+  /** 'POSITIVE' refuses negatives outright. Defaults to 'ALL'. */
+  range?: Range;
+  /*
+      A BCP 47 locale, used to derive the separators and the currency symbol.
+      Explicit groupSeparator / decimalSeparator win over it.
+   */
+  locale?: string;
+  /*
+      An ISO 4217 code, e.g. 'USD'. Opt-in: with no currency there is no symbol.
+      The symbol and which side it sits on come from Intl, so every code works
+      and suffix currencies ("1 000 kr") are right without special-casing.
+
+      The symbol is *not* put inside the input's value. It is returned from the
+      hook for you to render beside the input, which keeps the caret arithmetic
+      operating on digits alone. See the WithCurrency story.
+   */
+  currency?: string;
+  /** Overrides the symbol Intl resolved. */
+  symbol?: string;
+  /** Overrides the side Intl resolved. */
+  symbolPosition?: SymbolPosition;
   /*
       Which keyboard mobile raises. Defaults to 'text'.
 
@@ -68,12 +115,61 @@ export const useFinancialInput = ({
   const {
     scale = DEFAULT_SCALE,
     maxDigits = DEFAULT_MAX_DIGITS,
-    inputMode = 'text'
+    inputMode = 'text',
+    groupSeparator,
+    decimalSeparator,
+    shortcuts = DEFAULT_SHORTCUTS,
+    range = 'ALL',
+    locale,
+    currency,
+    symbol: symbolOverride,
+    symbolPosition: positionOverride
   } = options;
+
+  /*
+      Intl is resolved once per locale/currency rather than per keystroke: it is
+      comparatively expensive, and none of the typing paths need it.
+   */
+  const resolvedCurrency = useMemo(
+    () => (currency ? resolveCurrency(currency, locale) : null),
+    [currency, locale]
+  );
+
+  const localeSeparators = useMemo(
+    () => (locale ? resolveSeparators(locale) : DEFAULT_SEPARATORS),
+    [locale]
+  );
+
+  const exponents = useMemo(() => toExponents(shortcuts), [shortcuts]);
+
+  /*
+      Rebuilt only when the separators actually change, so the object identity
+      stays stable and does not defeat the comparisons below.
+   */
+  const separators = useMemo(
+    () => ({
+      group: groupSeparator ?? localeSeparators.group,
+      decimal: decimalSeparator ?? localeSeparators.decimal
+    }),
+    [groupSeparator, decimalSeparator, localeSeparators]
+  );
+
+  if (!areSeparatorsValid(separators)) {
+    throw new Error(
+      `react-financial-input: invalid separators { group: ${JSON.stringify(
+        groupSeparator
+      )}, decimal: ${JSON.stringify(decimalSeparator)} }. They must differ, ` +
+        'and neither may be a digit or a minus sign.'
+    );
+  }
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, setState] = useState<FinancialInputState>(() =>
-    createInitialState(value)
+    createInitialState(value, {
+      group: options.groupSeparator ?? resolveSeparators(options.locale).group,
+      decimal:
+        options.decimalSeparator ?? resolveSeparators(options.locale).decimal
+    })
   );
 
   /*
@@ -96,19 +192,15 @@ export const useFinancialInput = ({
     return mergedRef.current.merged;
   };
 
-  const handleInput = (event: InputLikeEvent) => {
-    const { inputType, data } = event.nativeEvent as globalThis.InputEvent;
-    const target = event.currentTarget;
+  /*
+      Android soft keyboards emit insertCompositionText for every keystroke of a
+      word still being composed. Reformatting mid-composition makes the IME
+      fight the input, so the reducer holds the raw text until the composition
+      ends. This ref is the only thing the reducer cannot work out for itself.
+   */
+  const isComposing = useRef(false);
 
-    const next = reduceInput(state, {
-      inputType,
-      data,
-      targetValue: target.value,
-      selectionStart: target.selectionStart ?? target.value.length,
-      scale,
-      maxDigits
-    });
-
+  const commit = (next: FinancialInputState) => {
     setState(next);
 
     if (next.rejected) {
@@ -118,12 +210,60 @@ export const useFinancialInput = ({
     }
   };
 
+  const toAction = (
+    target: HTMLInputElement,
+    inputType: string,
+    data = null
+  ) => ({
+    inputType,
+    data,
+    targetValue: target.value,
+    selectionStart: target.selectionStart ?? target.value.length,
+    scale,
+    maxDigits,
+    separators,
+    exponents,
+    range,
+    isComposing: isComposing.current
+  });
+
+  const handleInput = (event: InputLikeEvent) => {
+    const { inputType, data } = event.nativeEvent as globalThis.InputEvent;
+    const target = event.currentTarget;
+
+    commit(reduceInput(state, { ...toAction(target, inputType), data }));
+  };
+
+  const handleCompositionStart = () => {
+    isComposing.current = true;
+  };
+
+  const handleCompositionEnd = (event: InputLikeEvent) => {
+    isComposing.current = false;
+
+    // The composed text is final now, so validate and format it for real.
+    commit(
+      reduceCompositionEnd(
+        state,
+        toAction(event.currentTarget, InputType.INSERT_COMPOSITION_TEXT)
+      )
+    );
+  };
+
   /*
       Applies a multiplier as if it had been typed. The escape hatch for mobile
       keypads, which have no letter keys — wire it to a row of tap targets.
    */
   const applyShortcut = (character: string) => {
-    const next = reduceShortcut(state, character, scale, maxDigits);
+    const next = reduceShortcut(
+      state,
+      character,
+      scale,
+      maxDigits,
+      separators,
+      exponents,
+      range
+    );
 
     setState(next);
     inputRef.current?.focus();
@@ -134,6 +274,31 @@ export const useFinancialInput = ({
       onChange?.(next.numericValue);
     }
   };
+
+  /*
+      Controlled mode: follow the `value` prop when the parent changes it.
+
+      Adjusted during render rather than in an effect. React documents this as
+      the way to derive state from a changed prop — an effect would render once
+      with a stale value, then again to correct it, and trips the
+      react-hooks/set-state-in-effect rule.
+      https://react.dev/reference/react/useState#storing-information-from-previous-renders
+
+      Guarded on two things. The prop must actually have changed, so an
+      unrelated re-render cannot clobber what is being typed. And it must differ
+      from the committed value, because a parent echoing back the value this
+      input just emitted is not an external change — reformatting on that would
+      discard a trailing "." or the zero in "1.50" mid-edit.
+   */
+  const [lastValue, setLastValue] = useState(value);
+
+  if (value !== lastValue) {
+    setLastValue(value);
+
+    if ((value ?? null) !== state.numericValue) {
+      setState(createInitialState(value, separators));
+    }
+  }
 
   /*
       Puts the caret back after React re-renders with the reformatted value.
@@ -160,6 +325,8 @@ export const useFinancialInput = ({
   const getInputProps = ({
     className,
     onInput,
+    onCompositionStart,
+    onCompositionEnd,
     ref,
     ...rest
   }: InputProps = {}): InputProps => ({
@@ -188,6 +355,14 @@ export const useFinancialInput = ({
     onInput: (event) => {
       handleInput(event);
       onInput?.(event);
+    },
+    onCompositionStart: (event) => {
+      handleCompositionStart();
+      onCompositionStart?.(event);
+    },
+    onCompositionEnd: (event) => {
+      handleCompositionEnd(event);
+      onCompositionEnd?.(event);
     }
   });
 
@@ -196,6 +371,10 @@ export const useFinancialInput = ({
     displayValue: state.displayValue,
     numericValue: state.numericValue,
     getInputProps,
-    applyShortcut
+    applyShortcut,
+    separators,
+    /** Resolved from `currency` unless overridden. Empty when not opted in. */
+    symbol: symbolOverride ?? resolvedCurrency?.symbol ?? '',
+    symbolPosition: positionOverride ?? resolvedCurrency?.position ?? 'prefix'
   };
 };

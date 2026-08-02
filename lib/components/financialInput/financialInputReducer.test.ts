@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { InputType } from '../../enums';
+import { DEFAULT_SEPARATORS, Separators } from '../../utils';
 import {
   FinancialInputState,
   createInitialState,
+  reduceCompositionEnd,
   reduceInput,
   reduceShortcut
 } from './financialInputReducer';
-import { DEFAULT_MAX_DIGITS, DEFAULT_SCALE } from './financialInputUtils';
+import {
+  DEFAULT_MAX_DIGITS,
+  DEFAULT_SCALE,
+  Range,
+  SHORTCUT_EXPONENTS
+} from './financialInputUtils';
 
 const stateOf = (
   displayValue: string,
@@ -25,7 +32,11 @@ const run = (
   targetValue: string,
   selectionStart: number,
   scale: number = DEFAULT_SCALE,
-  maxDigits: number = DEFAULT_MAX_DIGITS
+  maxDigits: number = DEFAULT_MAX_DIGITS,
+  isComposing: boolean = false,
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: Record<string, number> = SHORTCUT_EXPONENTS,
+  range: Range = 'ALL'
 ) =>
   reduceInput(state, {
     inputType,
@@ -33,7 +44,11 @@ const run = (
     targetValue,
     selectionStart,
     scale,
-    maxDigits
+    maxDigits,
+    separators,
+    exponents,
+    range,
+    isComposing
   });
 
 describe('createInitialState', () => {
@@ -269,36 +284,214 @@ describe('deleteContentBackward', () => {
   });
 });
 
-describe('unhandled input types', () => {
+/*
+    Paste, drop and iOS replacement text never passed keystroke validation, so
+    the reducer sanitises the resulting value rather than refusing it outright.
+    `targetValue` is what the input holds after the browser applied the edit.
+ */
+describe.each([
+  InputType.INSERT_FROM_PASTE,
+  InputType.INSERT_FROM_DROP,
+  InputType.INSERT_REPLACEMENT_TEXT
+])('%s', (inputType) => {
+  it.each([
+    // targetValue          -> displayValue   numericValue  note
+    ['1234.56', '1,234.56', 1234.56, 'a plain number'],
+    ['1,234.56', '1,234.56', 1234.56, 'already grouped'],
+    ['$1,234.56', '1,234.56', 1234.56, 'a currency symbol'],
+    ['$1,234.56 USD', '1,234.56', 1234.56, 'symbol and code'],
+    ['  1234  ', '1,234', 1234, 'surrounding whitespace'],
+    ['(1,234.00)', '-1,234.00', -1234, 'accounting negative'],
+    ['-1234', '-1,234', -1234, 'a leading minus'],
+    ['2.5m', '2,500,000', 2500000, 'a shortcut suffix'],
+    ['1 234 567', '1,234,567', 1234567, 'space-grouped'],
+    ['007', '7', 7, 'leading zeros are dropped']
+  ])('accepts %j -> %j (%s)', (targetValue, displayValue, numericValue) => {
+    const next = run(
+      stateOf(''),
+      inputType,
+      null,
+      targetValue as string,
+      (targetValue as string).length
+    );
+
+    expect(next.rejected).toBe(false);
+    expect(next.displayValue).toBe(displayValue);
+    expect(next.numericValue).toBe(numericValue);
+  });
+
+  it.each([
+    ['abc', 'no digits at all'],
+    ['', 'empty'],
+    ['   ', 'whitespace only'],
+    ['.', 'a lone decimal point'],
+    ['1.2.3', 'two decimal points'],
+    ['1.234', 'more decimals than scale allows'],
+    ['123456789012', 'more digits than maxDigits allows']
+  ])('refuses %j (%s)', (targetValue) => {
+    const state = stateOf('1,000', 1000);
+    const next = run(state, inputType, null, targetValue, targetValue.length);
+
+    expect(next.rejected).toBe(true);
+    expect(next.displayValue).toBe('1,000');
+    expect(next.numericValue).toBe(1000);
+  });
+});
+
+describe('range deletes', () => {
+  it.each([
+    // inputType                          targetValue  -> displayValue  numeric
+    [InputType.DELETE_BY_CUT, '1234', '1,234', 1234],
+    [InputType.DELETE_BY_DRAG, '1234', '1,234', 1234],
+    [InputType.DELETE_CONTENT_FORWARD, '1234', '1,234', 1234],
+    [InputType.DELETE_WORD_BACKWARD, '', '', null],
+    [InputType.DELETE_WORD_FORWARD, '', '', null],
+    [InputType.DELETE_SOFT_LINE_BACKWARD, '', '', null],
+    [InputType.DELETE_ENTIRE_SOFT_LINE, '', '', null]
+  ])('%s -> %j', (inputType, targetValue, displayValue, numericValue) => {
+    const next = run(
+      stateOf('1,234,567', 1234567),
+      inputType as string,
+      null,
+      targetValue as string,
+      (targetValue as string).length
+    );
+
+    expect(next.rejected).toBe(false);
+    expect(next.displayValue).toBe(displayValue);
+    expect(next.numericValue).toBe(numericValue);
+  });
+});
+
+/*
+    Android soft keyboards emit insertCompositionText per keystroke while a word
+    is still being composed. Reformatting mid-composition makes the IME fight
+    the input, so the raw text is held until compositionend commits it.
+ */
+describe('IME composition', () => {
+  it.each([
+    // composing text held verbatim, no numeric value committed
+    ['1'],
+    ['12'],
+    ['123'],
+    ['1234']
+  ])('holds %j unformatted while composing', (targetValue) => {
+    const next = run(
+      stateOf(''),
+      InputType.INSERT_COMPOSITION_TEXT,
+      targetValue,
+      targetValue,
+      targetValue.length,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      true
+    );
+
+    expect(next.rejected).toBe(false);
+    expect(next.displayValue).toBe(targetValue);
+    expect(next.numericValue).toBe(null);
+  });
+
+  it('formats and commits once the composition ends', () => {
+    const composing = run(
+      stateOf(''),
+      InputType.INSERT_COMPOSITION_TEXT,
+      '1234567',
+      '1234567',
+      7,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      true
+    );
+
+    expect(composing.displayValue).toBe('1234567');
+
+    const committed = reduceCompositionEnd(composing, {
+      inputType: InputType.INSERT_COMPOSITION_TEXT,
+      data: null,
+      targetValue: '1234567',
+      selectionStart: 7,
+      scale: DEFAULT_SCALE,
+      maxDigits: DEFAULT_MAX_DIGITS,
+      separators: DEFAULT_SEPARATORS,
+      exponents: SHORTCUT_EXPONENTS,
+      range: 'ALL'
+    });
+
+    expect(committed.displayValue).toBe('1,234,567');
+    expect(committed.numericValue).toBe(1234567);
+  });
+
   /*
-      These keep the previous value and stay quiet. They must not set `rejected`,
-      because that would fire onError at the consumer for something the user did
-      nothing wrong to trigger.
+      A refused commit must not leave the IME's raw text on screen. While
+      composing, displayValue holds unvalidated text, so rejecting has to
+      rebuild from the last committed numeric value.
    */
   it.each([
-    [InputType.INSERT_FROM_PASTE],
-    [InputType.INSERT_FROM_DROP],
-    [InputType.INSERT_COMPOSITION_TEXT],
-    [InputType.DELETE_BY_CUT],
-    [InputType.DELETE_CONTENT_FORWARD],
-    ['historyUndo']
+    ['abc', 'letters'],
+    ['1.234', 'more decimals than scale allows'],
+    ['', 'nothing at all']
+  ])('restores the committed value when %j is refused (%s)', (composed) => {
+    const held = run(
+      stateOf('1,000', 1000),
+      InputType.INSERT_COMPOSITION_TEXT,
+      composed,
+      composed,
+      composed.length,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      true
+    );
+
+    expect(held.displayValue).toBe(composed);
+
+    const committed = reduceCompositionEnd(held, {
+      inputType: InputType.INSERT_COMPOSITION_TEXT,
+      data: null,
+      targetValue: composed,
+      selectionStart: composed.length,
+      scale: DEFAULT_SCALE,
+      maxDigits: DEFAULT_MAX_DIGITS,
+      separators: DEFAULT_SEPARATORS,
+      exponents: SHORTCUT_EXPONENTS,
+      range: 'ALL'
+    });
+
+    expect(committed.rejected).toBe(true);
+    expect(committed.displayValue).toBe('1,000');
+    expect(committed.numericValue).toBe(1000);
+  });
+
+  it('treats composition text as a paste when no composition is active', () => {
+    const next = run(
+      stateOf(''),
+      InputType.INSERT_COMPOSITION_TEXT,
+      '1234',
+      '1234',
+      4
+    );
+
+    expect(next.displayValue).toBe('1,234');
+    expect(next.numericValue).toBe(1234);
+  });
+});
+
+describe('history', () => {
+  /*
+      The browser's undo stack holds its own edits, not the reformatted value
+      React rendered, so replaying it would restore something never shown. Left
+      alone, and quiet — the user did nothing wrong.
+   */
+  it.each([
+    [InputType.HISTORY_UNDO],
+    [InputType.HISTORY_REDO],
+    ['insertTranspose']
   ])('%s leaves the value untouched without erroring', (inputType) => {
     const state = stateOf('1,000', 1000);
-    const next = run(state, inputType, '9', '1,0009', 6);
+    const next = run(state, inputType, null, '1,0009', 6);
 
     expect(next.rejected).toBe(false);
     expect(next.displayValue).toBe('1,000');
     expect(next.numericValue).toBe(1000);
   });
-
-  /*
-      Phase 2. Recorded traces from real devices go here, replayed as reducer
-      input. Left as todos so the intent is on record without a false green.
-   */
-  it.todo('android GBoard: insertCompositionText builds up "1", "12", "123"');
-  it.todo('android GBoard: deleteContentBackward arrives with null data');
-  it.todo('ios Safari: insertReplacementText from the QuickType bar');
-  it.todo('paste of "1,234.56" is sanitised and accepted');
-  it.todo('paste of "abc" is refused');
-  it.todo('drag-and-drop text into the input');
 });

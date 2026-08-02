@@ -89,6 +89,61 @@ component, and it is why the component file is a single line of JSX.
 Unhandled input types are _ignored_ rather than rejected: the previous value is
 kept and `onError` stays quiet, because the user did nothing wrong.
 
+## Input event cheatsheet
+
+Every gesture a user can perform produces a different `InputEvent.inputType`,
+and which one you get varies by platform, browser and keyboard app. This is the
+full set the reducer handles, and what it does with each.
+
+| Action                 | `inputType`                                              | Handling                                                |
+| ---------------------- | -------------------------------------------------------- | ------------------------------------------------------- |
+| Type a digit           | `insertText`                                             | validated, then formatted                               |
+| Type `h`/`k`/`m`/`b`   | `insertText`                                             | multiplier applied by decimal shift                     |
+| Backspace              | `deleteContentBackward`                                  | reformatted; a separator only moves the caret           |
+| Delete forward         | `deleteContentForward`                                   | reformatted                                             |
+| Cut                    | `deleteByCut`                                            | reformatted                                             |
+| Drag text out          | `deleteByDrag`                                           | reformatted                                             |
+| Word / line delete     | `deleteWord*`, `deleteSoftLine*`, `deleteEntireSoftLine` | reformatted                                             |
+| Paste                  | `insertFromPaste`                                        | **sanitised**, then validated                           |
+| Drag text in           | `insertFromDrop`                                         | **sanitised**, then validated                           |
+| Autocorrect, QuickType | `insertReplacementText`                                  | **sanitised**, then validated                           |
+| Android soft keyboard  | `insertCompositionText`                                  | held raw while composing, committed on `compositionend` |
+| Undo / redo            | `historyUndo`, `historyRedo`                             | **ignored on purpose**                                  |
+| Anything else          | —                                                        | ignored, value kept, `onError` stays quiet              |
+
+Three behaviours are worth spelling out.
+
+**Sanitised, not refused.** Pasted text never passed through keystroke
+validation, so refusing anything imperfect would reject values users plainly
+meant to enter. Everything that is not a digit or the fraction separator is
+stripped, which takes currency symbols, spaces, letters and grouping separators
+with it:
+
+| Pasted          | Result                            |
+| --------------- | --------------------------------- |
+| `1,234.56`      | `1,234.56`                        |
+| `$1,234.56 USD` | `1,234.56`                        |
+| `(1,234.00)`    | `-1,234.00` — accounting negative |
+| `2.5m`          | `2,500,000` — trailing shortcut   |
+| `1 234 567`     | `1,234,567`                       |
+| `not a number`  | refused, previous value kept      |
+| `1.2.3`         | refused — two fraction separators |
+
+**Composition is held, not formatted.** Android emits
+`insertCompositionText` for every keystroke of a word still being composed, with
+`data` that cannot be trusted until it settles. Reformatting mid-composition
+makes the keyboard fight the input, so the raw text is shown as-is and no
+numeric value is committed until `compositionend`. A refused commit rebuilds
+from the last committed value rather than leaving the IME's raw text on screen.
+
+**Undo is ignored deliberately.** The browser's undo stack holds its own edits
+— the unformatted text it inserted — not the reformatted value React rendered.
+Replaying it would restore something the user never saw.
+
+> The **Event tester** story logs all of this live. Open it on a device,
+> perform the gesture, and read off what actually fired. That is the fastest way
+> to find out what a particular keyboard app really does.
+
 ## Verification layers
 
 Coverage lives in L1. The browser layers confirm reality still matches it.
@@ -113,9 +168,12 @@ Coverage lives in L1. The browser layers confirm reality still matches it.
 | Cut, forward delete                    | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | value preserved, not yet applied          |
 | IME composition                        | 🚧     | 🚧      | 🚧     | 🚧      | 🚧  | L3 harness in place, reducer case pending |
 
-✅ shipped and tested — 🚧 not implemented; the input keeps its previous value
-rather than corrupting it — ⚠️ see [keyboards that ignore
-`inputmode`](#keyboards-that-ignore-inputmode).
+✅ shipped and tested — 🚧 not verified on that platform — ⚠️ see [keyboards
+that ignore `inputmode`](#keyboards-that-ignore-inputmode).
+
+The IME row is honest about its limits: composition is implemented and driven
+for real through CDP, but CDP is Chromium-only, so Firefox and WebKit are
+covered by the unit tables alone, and real Android and iOS need L4.
 
 **Honest caveat.** The Android and iOS columns are Playwright device emulation:
 viewport, touch and user agent. They are _not_ a real soft keyboard or IME.
@@ -217,12 +275,46 @@ The floated label paints a slice of `--rfi-surface` behind itself to sit in the
 border — the CSS-only stand-in for MUI's notched fieldset. Set `--rfi-surface` if
 the field sits on anything other than white.
 
+## Currency
+
+`options.currency` takes an ISO 4217 code; `options.locale` a BCP 47 tag. The
+symbol and the side it belongs on come from `Intl.NumberFormat.formatToParts`,
+so every code works and suffix currencies are right without a symbol table —
+`$1,000` in en-US, `1.000 €` in de-DE, `1 000 kr` in sv-SE. `options.symbol` and
+`options.symbolPosition` override what Intl resolved.
+
+**The symbol is not put inside the input's value.** The hook returns it and you
+render it next to the input:
+
+```tsx
+const { getInputProps, symbol, symbolPosition } = useFinancialInput({
+  options: { locale: 'sv-SE', currency: 'SEK' }
+});
+
+<div className="rfi-field">
+  <input {...getInputProps()} />
+  <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+    {symbol}
+  </span>
+</div>;
+```
+
+Injecting it into the value would mean the caret arithmetic had to skip over
+non-digit characters, and every validation path had to strip them back off.
+Keeping it out means both keep working on digits alone — and rendering it is a
+`<span>` in the wrapper the floating label already needs.
+
+`locale` also supplies the separators, so `locale: 'de-DE'` gives `1.234,56`
+with nothing else configured. Explicit `groupSeparator` / `decimalSeparator`
+win over it.
+
+> Several locales group with **non-ASCII whitespace**: sv-SE and nb-NO use
+> U+00A0, fr-FR uses U+202F. It is invisible in a diff, so a test comparing a
+> formatted value against a literal `" "` will fail confusingly. The library
+> treats the separator as an opaque string, so it works either way.
+
 ## Roadmap
 
-1. Paste, drop, cut and forward-delete
-2. Android `insertCompositionText` handling
-3. Controlled-mode sync when the `value` prop changes externally
-4. `groupSeparator` / `decimalSeparator` props, for `1.000,50`
-5. Opt-in currency symbol via `Intl`, overridable with a prop
-6. Configurable shortcuts and a positive-only range
-7. Real-device CI
+1. Real-device CI (L4) — the only remaining gap in the support matrix
+2. IME composition verified on Firefox and WebKit, which have no CDP equivalent
+3. A string-valued API, for trailing zeros (`1.50`) and values above 2^53

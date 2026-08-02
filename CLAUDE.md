@@ -58,10 +58,32 @@ strength of one.
 
 ## Current state
 
-Phase 1 is done: rename, publish pipeline, dependency prune, restructure,
-Storybook, e2e, GIFs.
+Phase 1 and Phase 2 are both done. Every `InputEvent` type is handled: paste,
+drop and iOS replacement text are sanitised rather than refused; cut, forward
+delete and the word/line deletes reformat what is left; Android IME composition
+holds raw text between `compositionstart` and `compositionend`, then validates
+on commit. `historyUndo`/`historyRedo` stay ignored on purpose — the browser's
+undo stack holds edits React never rendered.
 
-Phase 2 is unstarted and tracked in the README roadmap. The reducer currently
-`ignore`s `insertFromPaste`, `insertFromDrop`, `insertCompositionText`,
-`deleteByCut` and `deleteContentForward` — it keeps the previous value and stays
-quiet rather than firing `onError`, because the user did nothing wrong.
+Also shipped: controlled-mode sync, `groupSeparator`/`decimalSeparator`,
+`locale`, `currency`, configurable `shortcuts`, and `range: 'POSITIVE'`.
+
+Remaining, in the DESIGN.md roadmap: real-device CI (L4), IME on Firefox and
+WebKit (no CDP equivalent), and a possible string-valued API.
+
+## Things that will bite
+
+- **Canonical vs display form.** Display uses the configured separators;
+  canonical has no grouping and always a `.` fraction. Validation, arithmetic
+  and comparison work on canonical. Only `toCanonical` and `formatCanonical`
+  know about separators — keep it that way rather than threading them further.
+- **The currency symbol is never in the input's value.** It is returned from
+  the hook and rendered beside the input. Putting it in the value would force
+  the caret arithmetic to skip non-digits and every validation path to strip
+  them off.
+- **Several locales group with non-ASCII whitespace** — sv-SE and nb-NO use
+  U+00A0, fr-FR uses U+202F. Invisible in a diff; a test comparing against a
+  literal `" "` fails confusingly.
+- **The merged ref is cached on the caller's ref identity.** Rebuilding it per
+  render makes React re-attach every render, and a consumer's state-setting
+  callback ref then loops forever.

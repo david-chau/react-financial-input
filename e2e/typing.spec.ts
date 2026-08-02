@@ -84,16 +84,59 @@ test.describe('typing and formatting', () => {
     so real keys are also the only cross-engine option.
  */
 test.describe('clipboard', () => {
-  test('pasting does not corrupt the value', async ({ page }) => {
+  /*
+      Copy is driven with real key presses rather than a synthetic
+      ClipboardEvent: a dispatched event is isTrusted: false, so the browser
+      skips the default insertion, input.value never changes, and the test would
+      pass while testing nothing. Clipboard permissions are Chromium-only, so
+      real keys are also the only cross-engine option.
+   */
+  const copyFrom = async (page: Page, text: string) => {
+    await page.evaluate((value) => {
+      const source = document.createElement('textarea');
+      source.id = 'copy-source';
+      source.value = value;
+      document.body.appendChild(source);
+      source.select();
+    }, text);
+
+    await page.locator('#copy-source').press('ControlOrMeta+a');
+    await page.locator('#copy-source').press('ControlOrMeta+c');
+    await page.evaluate(() => document.querySelector('#copy-source')?.remove());
+  };
+
+  test('pasting a formatted amount is sanitised and accepted', async ({
+    page
+  }) => {
+    await open(page, STORIES.default);
+    await copyFrom(page, '$1,234.56 USD');
+
+    await input(page).click();
+    await input(page).press('ControlOrMeta+v');
+
+    await expect(input(page)).toHaveValue('1,234.56');
+  });
+
+  test('pasting text with no number in it is refused', async ({ page }) => {
     await open(page, STORIES.withValue);
     await expect(input(page)).toHaveValue('1,234,567.89');
 
+    await copyFrom(page, 'not a number');
+
+    await input(page).click();
     await input(page).press('ControlOrMeta+a');
-    await input(page).press('ControlOrMeta+c');
-    await input(page).press('End');
     await input(page).press('ControlOrMeta+v');
 
     await expect(input(page)).toHaveValue('1,234,567.89');
+  });
+
+  test('cutting the selection clears the value', async ({ page }) => {
+    await open(page, STORIES.withValue);
+
+    await input(page).press('ControlOrMeta+a');
+    await input(page).press('ControlOrMeta+x');
+
+    await expect(input(page)).toHaveValue('');
   });
 });
 

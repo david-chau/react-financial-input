@@ -33,6 +33,12 @@ Zero runtime dependencies. Unstyled by default.
   keyboard, Gboard and iOS. ([how](DESIGN.md#how-input-is-handled))
 - **Exact arithmetic.** `4.35h` is `435`, not the `434.99999999999994` a float
   multiply gives you — with no big-number dependency. ([how](DESIGN.md#why-there-are-no-dependencies))
+- **Handles the messy paths.** Paste is sanitised rather than refused, so
+  `$1,234.56 USD` and `(1,234.00)` become numbers. Cut, drag-drop and Android
+  IME composition are handled explicitly, not ignored.
+- **Speaks your locale.** `locale: 'de-DE'` gives `1.234,56`; `currency: 'SEK'`
+  resolves the symbol _and_ which side it belongs on, from Intl.
+  ([how](DESIGN.md#currency))
 - **Yours to style.** Unstyled by default, an optional Material-UI-flavoured
   stylesheet if you want one, or a headless hook to bring your own input.
   ([tiers](DESIGN.md#styling))
@@ -59,14 +65,20 @@ empty input, or a lone `.` part-way through typing. It is never `NaN`.
 Every native `<input>` prop is passed through (`placeholder`, `disabled`, `name`,
 `onBlur`, `aria-*`), and `ref` is forwarded to the underlying input.
 
-| Prop                | Type                               | Default     | Description                                                        |
-| ------------------- | ---------------------------------- | ----------- | ------------------------------------------------------------------ |
-| `value`             | `number \| null`                   | `undefined` | The numeric value.                                                 |
-| `onChange`          | `(value: number \| null) => void`  | —           | Called with the numeric value, not the formatted string.           |
-| `onError`           | `() => void`                       | —           | Called when a keystroke is refused, such as a third decimal place. |
-| `options.scale`     | `number`                           | `2`         | Maximum decimal places. `0` refuses the decimal point entirely.    |
-| `options.maxDigits` | `number`                           | `11`        | Maximum integer digits.                                            |
-| `options.inputMode` | `'text' \| 'decimal' \| 'numeric'` | `'text'`    | Which keyboard mobile raises.                                      |
+| Prop                       | Type                               | Default         | Description                                                          |
+| -------------------------- | ---------------------------------- | --------------- | -------------------------------------------------------------------- |
+| `value`                    | `number \| null`                   | `undefined`     | The numeric value.                                                   |
+| `onChange`                 | `(value: number \| null) => void`  | —               | Called with the numeric value, not the formatted string.             |
+| `onError`                  | `() => void`                       | —               | Called when a keystroke is refused, such as a third decimal place.   |
+| `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point entirely.      |
+| `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                              |
+| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'` | `'text'`        | Which keyboard mobile raises.                                        |
+| `options.locale`           | `string`                           | —               | BCP 47 tag. Supplies separators and the currency symbol.             |
+| `options.currency`         | `string`                           | —               | ISO 4217 code. Opt-in; the symbol is returned, not put in the value. |
+| `options.groupSeparator`   | `string`                           | `','`           | Thousands separator. Overrides the locale.                           |
+| `options.decimalSeparator` | `string`                           | `'.'`           | Fraction separator. Overrides the locale.                            |
+| `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                    |
+| `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                      |
 
 ### Shortcuts
 
@@ -78,6 +90,18 @@ Every native `<input>` prop is passed through (`placeholder`, `disabled`, `name`
 | `b` | ×1,000,000,000 |
 
 Typing a shortcut on its own reads as one of that unit, so `k` gives `1,000`.
+Override them with `options.shortcuts`, mapping characters to multipliers.
+
+### Currency and locale
+
+```tsx
+<FinancialInput options={{ locale: 'de-DE' }} />                    // 1.234,56
+<FinancialInput options={{ locale: 'sv-SE', currency: 'SEK' }} />   // symbol: "kr", suffix
+```
+
+The symbol and which side it belongs on come from Intl, and the hook returns
+them for you to render beside the input rather than putting them in the value.
+See [DESIGN.md](DESIGN.md#currency).
 
 ### Styling
 

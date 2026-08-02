@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_SEPARATORS,
+  Separators,
+  areSeparatorsValid,
   containsOnlyNumberCharacters,
+  formatCanonical,
+  toCanonical,
   formatNumber,
   formatNumberString,
   groupInteger,
@@ -86,7 +91,7 @@ describe('shiftDecimal', () => {
     ['0', 3, '0', 'zero multiplies out to zero'],
     ['-1.1', 3, '-1100', 'negatives keep their sign'],
     ['1', 0, '1', 'no shift'],
-    ['1,000', 3, '1000000', 'strips grouping separators first']
+    ['1000', 3, '1000000', 'canonical input only — no grouping separators']
   ])('shiftDecimal(%j, %i) -> %j (%s)', (value, places, expected) => {
     expect(shiftDecimal(value, places)).toBe(expected);
   });
@@ -171,7 +176,7 @@ describe('miscellaneous predicates', () => {
 
   it.each([
     ['1234', true],
-    ['1,234.56', true],
+    ['1234.56', true],
     ['-1.5', true],
     ['1e21', false],
     ['1k', false],
@@ -187,5 +192,76 @@ describe('miscellaneous predicates', () => {
     [-1000, '-1,000']
   ])('formatNumber(%d) -> %j', (value, expected) => {
     expect(formatNumber(value)).toBe(expected);
+  });
+});
+
+describe('separators', () => {
+  const deDE = { group: '.', decimal: ',' };
+  const frFR = { group: ' ', decimal: ',' };
+
+  it.each([
+    // display        separators  -> canonical   note
+    ['1,234.56', DEFAULT_SEPARATORS, '1234.56', 'en-US'],
+    ['1.234,56', deDE, '1234.56', 'de-DE'],
+    ['1 234,56', frFR, '1234.56', 'fr-FR'],
+    ['1.234.567', deDE, '1234567', 'de-DE, no fraction'],
+    ['', DEFAULT_SEPARATORS, '', 'empty']
+  ])('toCanonical(%j, %s) -> %j (%s)', (display, separators, expected) => {
+    expect(toCanonical(display as string, separators as Separators)).toBe(
+      expected
+    );
+  });
+
+  it.each([
+    // canonical    separators  -> display      note
+    ['1234.56', DEFAULT_SEPARATORS, '1,234.56', 'en-US'],
+    ['1234.56', deDE, '1.234,56', 'de-DE'],
+    ['1234.56', frFR, '1 234,56', 'fr-FR'],
+    ['1234567', deDE, '1.234.567', 'de-DE, no fraction'],
+    ['-1234.5', deDE, '-1.234,5', 'negative'],
+    ['1.', deDE, '1,', 'a trailing separator survives'],
+    ['1.50', deDE, '1,50', 'trailing zeros survive']
+  ])(
+    'formatCanonical(%j, %s) -> %j (%s)',
+    (canonical, separators, expected) => {
+      expect(
+        formatCanonical(canonical as string, separators as Separators)
+      ).toBe(expected);
+    }
+  );
+
+  it.each([
+    // display      separators  -> parsed
+    ['1.234,56', deDE, 1234.56],
+    ['1 234,56', frFR, 1234.56],
+    ['1.234', deDE, 1234],
+    [',', deDE, null],
+    ['', deDE, null]
+  ])('parseNumber(%j, %s) -> %j', (display, separators, expected) => {
+    expect(parseNumber(display as string, separators as Separators)).toBe(
+      expected
+    );
+  });
+
+  it('round-trips through canonical and back', () => {
+    const display = '1.234.567,89';
+    const canonical = toCanonical(display, deDE);
+
+    expect(canonical).toBe('1234567.89');
+    expect(formatCanonical(canonical, deDE)).toBe(display);
+  });
+
+  it.each([
+    // separators                       valid  note
+    [DEFAULT_SEPARATORS, true, 'the default'],
+    [{ group: '.', decimal: ',' }, true, 'de-DE'],
+    [{ group: ' ', decimal: ',' }, true, 'fr-FR'],
+    [{ group: '', decimal: '.' }, true, 'no grouping at all'],
+    [{ group: ',', decimal: ',' }, false, 'identical would be ambiguous'],
+    [{ group: ',', decimal: '' }, false, 'no fraction separator'],
+    [{ group: '1', decimal: '.' }, false, 'a digit'],
+    [{ group: ',', decimal: '-' }, false, 'the minus sign']
+  ])('areSeparatorsValid(%j) -> %s (%s)', (separators, expected) => {
+    expect(areSeparatorsValid(separators as Separators)).toBe(expected);
   });
 });

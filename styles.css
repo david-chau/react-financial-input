@@ -255,6 +255,48 @@
   left: 0;
 }
 
+/*
+ * Currency symbol. The hook resolves it; you render it. Keeping it out of the
+ * input's value is what lets the caret arithmetic work on digits alone.
+ *
+ *   <div class="rfi-field">
+ *     <span class="rfi-adornment rfi-adornment--prefix">$</span>
+ *     <input class="rfi-input" />
+ *   </div>
+ */
+.rfi-adornment {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--rfi-label-color);
+  font-family: var(--rfi-font-family);
+  font-size: var(--rfi-font-size);
+  /* Clicks fall through to the input, so tapping the symbol focuses it. */
+  pointer-events: none;
+  user-select: none;
+}
+
+.rfi-adornment--prefix {
+  left: var(--rfi-padding-x);
+}
+
+.rfi-adornment--suffix {
+  right: var(--rfi-padding-x);
+}
+
+/* Reserve room so the value never runs underneath the symbol. */
+.rfi-field:has(.rfi-adornment--prefix) .rfi-input {
+  padding-left: var(--rfi-adornment-space, 2rem);
+}
+
+.rfi-field:has(.rfi-adornment--suffix) .rfi-input {
+  padding-right: var(--rfi-adornment-space, 2rem);
+}
+
+.rfi-field:focus-within .rfi-adornment {
+  color: var(--rfi-primary);
+}
+
 .rfi-helper {
   margin: 3px 14px 0;
   color: var(--rfi-label-color);

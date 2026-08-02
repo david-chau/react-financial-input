@@ -1,32 +1,71 @@
 import { Nullable } from '../types';
 
-/*
-    Phase 1 hardcodes the separators. Phase 2 turns these two constants into
-    `groupSeparator` / `decimalSeparator` props, threaded through as parameters.
- */
-export const GROUP_SEPARATOR = ',';
-export const DECIMAL_SEPARATOR = '.';
+export interface Separators {
+  /** Groups thousands. "," in en-US, "." in de-DE, a space in fr-FR. */
+  group: string;
+  /** Separates the fraction. "." in en-US, "," in de-DE. */
+  decimal: string;
+}
+
+export const DEFAULT_SEPARATORS: Separators = { group: ',', decimal: '.' };
 
 /*
-    Removes the grouping separators from a formatted number.
-    Example: "123,456,789" to "123456789"
+    Everything in here works in one of two forms, and keeping them straight is
+    what stops separator support leaking into every function:
+
+      display    what the user sees, using the configured separators
+                 "1.234,50" in de-DE
+      canonical  no grouping, always a "." fraction — what Number() parses
+                 "1234.50"
+
+    Only the boundary functions know about separators. Validation, arithmetic
+    and comparison all work on canonical strings.
  */
-export const stripGroupSeparators = (value: string): string =>
-  value.split(GROUP_SEPARATOR).join('');
+export const CANONICAL_DECIMAL = '.';
+
+const escapeForRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** display -> canonical */
+export const toCanonical = (
+  value: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): string =>
+  value
+    .split(separators.group)
+    .join('')
+    .split(separators.decimal)
+    .join(CANONICAL_DECIMAL);
 
 /*
-    Parses a formatted number to a number. Returns null when there is nothing to
-    parse yet — "", "." and "-" are all legitimate intermediate states while typing.
+    Removes the grouping separators, leaving the fraction separator alone.
+    Example: "123,456.78" to "123456.78"
+ */
+export const stripGroupSeparators = (
+  value: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): string => value.split(separators.group).join('');
+
+/*
+    Parses a displayed number. Returns null when there is nothing to parse yet —
+    "", "." and "-" are all legitimate intermediate states while typing.
     Example: "123,456.78" to 123456.78
  */
-export const parseNumber = (value: string): Nullable<number> => {
-  const raw = stripGroupSeparators(value);
+export const parseNumber = (
+  value: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): Nullable<number> => {
+  const canonical = toCanonical(value, separators);
 
-  if (raw === '' || raw === DECIMAL_SEPARATOR || raw === '-') {
+  if (
+    canonical === '' ||
+    canonical === CANONICAL_DECIMAL ||
+    canonical === '-'
+  ) {
     return null;
   }
 
-  const parsed = Number(raw);
+  const parsed = Number(canonical);
 
   return Number.isNaN(parsed) ? null : parsed;
 };
@@ -36,41 +75,56 @@ export const parseNumber = (value: string): Nullable<number> => {
     grouping the fraction is what turned ".1234" into ".1,234".
     Example: "123456789" to "123,456,789"
  */
-export const groupInteger = (integer: string): string => {
+export const groupInteger = (
+  integer: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): string => {
   const isNegative = integer.startsWith('-');
   const digits = isNegative ? integer.slice(1) : integer;
-  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_SEPARATOR);
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, separators.group);
 
   return isNegative ? `-${grouped}` : grouped;
 };
 
 /*
-    Formats a number string for display, grouping only the integer part and
-    preserving a trailing decimal point and trailing zeros, so that "1.", "1.0"
-    and "1.50" all survive a round trip while being typed.
-    Example: "1234.50" to "1,234.50"
+    canonical -> display. Groups only the integer part and preserves a trailing
+    separator and trailing zeros, so that "1.", "1.0" and "1.50" all survive a
+    round trip while being typed.
  */
-export const formatNumberString = (value: string): string => {
-  const raw = stripGroupSeparators(value);
-  const decimalIndex = raw.indexOf(DECIMAL_SEPARATOR);
+export const formatCanonical = (
+  canonical: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): string => {
+  const decimalIndex = canonical.indexOf(CANONICAL_DECIMAL);
 
   if (decimalIndex === -1) {
-    return groupInteger(raw);
+    return groupInteger(canonical, separators);
   }
 
   return (
-    groupInteger(raw.slice(0, decimalIndex)) +
-    DECIMAL_SEPARATOR +
-    raw.slice(decimalIndex + 1)
+    groupInteger(canonical.slice(0, decimalIndex), separators) +
+    separators.decimal +
+    canonical.slice(decimalIndex + 1)
   );
 };
 
-export const formatNumber = (value: number): string =>
-  formatNumberString(String(value));
+/*
+    Reformats a displayed value: display -> canonical -> display.
+    Example: "1,2,34.5" to "1,234.5"
+ */
+export const formatNumberString = (
+  value: string,
+  separators: Separators = DEFAULT_SEPARATORS
+): string => formatCanonical(toCanonical(value, separators), separators);
+
+export const formatNumber = (
+  value: number,
+  separators: Separators = DEFAULT_SEPARATORS
+): string => formatCanonical(String(value), separators);
 
 /*
-    Maps a caret position in the browser's unformatted value onto the formatted
-    one, by counting the characters that are not grouping separators.
+    Maps a caret position in the browser's raw value onto the formatted one, by
+    counting the characters that are not grouping separators.
 
     Counting rather than adjusting by the change in separator count, because the
     latter only holds for a local edit: select-all then overtype changes the
@@ -80,12 +134,13 @@ export const formatNumber = (value: number): string =>
 export const mapCursorToFormatted = (
   rawValue: string,
   rawCursor: number,
-  formatted: string
+  formatted: string,
+  separators: Separators = DEFAULT_SEPARATORS
 ): number => {
   let significant = 0;
 
   for (let i = 0; i < rawCursor && i < rawValue.length; i += 1) {
-    if (rawValue[i] !== GROUP_SEPARATOR) {
+    if (rawValue[i] !== separators.group) {
       significant += 1;
     }
   }
@@ -97,7 +152,7 @@ export const mapCursorToFormatted = (
   let seen = 0;
 
   for (let i = 0; i < formatted.length; i += 1) {
-    if (formatted[i] !== GROUP_SEPARATOR) {
+    if (formatted[i] !== separators.group) {
       seen += 1;
 
       if (seen === significant) {
@@ -113,26 +168,24 @@ const trimLeadingZeros = (value: string): string =>
   value.replace(/^(-?)0+(?=\d)/, '$1');
 
 const trimTrailingFractionZeros = (value: string): string =>
-  value.includes(DECIMAL_SEPARATOR)
+  value.includes(CANONICAL_DECIMAL)
     ? value.replace(/0+$/, '').replace(/\.$/, '')
     : value;
 
 /*
-    Multiplies by a power of ten by moving the decimal point through the string.
-    Exact by construction: "1.1" shifted 2 places is "110", where 1.1 * 100
-    gives 110.00000000000001 in floating point. This is what replaced the
-    bignumber.js dependency.
+    Multiplies a canonical string by a power of ten by moving the decimal point
+    through it. Exact by construction: "1.1" shifted 2 places is "110", where
+    1.1 * 100 gives 110.00000000000001 in floating point. This is what replaced
+    the bignumber.js dependency.
  */
-export const shiftDecimal = (value: string, places: number): string => {
-  const raw = stripGroupSeparators(value);
-
+export const shiftDecimal = (canonical: string, places: number): string => {
   if (places === 0) {
-    return raw;
+    return canonical;
   }
 
-  const isNegative = raw.startsWith('-');
-  const unsigned = isNegative ? raw.slice(1) : raw;
-  const decimalIndex = unsigned.indexOf(DECIMAL_SEPARATOR);
+  const isNegative = canonical.startsWith('-');
+  const unsigned = isNegative ? canonical.slice(1) : canonical;
+  const decimalIndex = unsigned.indexOf(CANONICAL_DECIMAL);
 
   const digits =
     decimalIndex === -1
@@ -144,12 +197,12 @@ export const shiftDecimal = (value: string, places: number): string => {
   let shifted: string;
 
   if (pointAt <= 0) {
-    shifted = `0${DECIMAL_SEPARATOR}${'0'.repeat(-pointAt)}${digits}`;
+    shifted = `0${CANONICAL_DECIMAL}${'0'.repeat(-pointAt)}${digits}`;
   } else if (pointAt >= digits.length) {
     shifted = digits + '0'.repeat(pointAt - digits.length);
   } else {
     shifted =
-      digits.slice(0, pointAt) + DECIMAL_SEPARATOR + digits.slice(pointAt);
+      digits.slice(0, pointAt) + CANONICAL_DECIMAL + digits.slice(pointAt);
   }
 
   const normalised = trimTrailingFractionZeros(trimLeadingZeros(shifted));
@@ -157,18 +210,32 @@ export const shiftDecimal = (value: string, places: number): string => {
   return isNegative ? `-${normalised}` : normalised;
 };
 
-export const hasMultipleDecimals = (value: string): boolean =>
-  value.split(DECIMAL_SEPARATOR).length > 2;
+/** Operates on canonical strings. */
+export const hasMultipleDecimals = (canonical: string): boolean =>
+  canonical.split(CANONICAL_DECIMAL).length > 2;
 
-export const containsDecimal = (value: string): boolean =>
-  value.includes(DECIMAL_SEPARATOR);
+export const containsDecimal = (canonical: string): boolean =>
+  canonical.includes(CANONICAL_DECIMAL);
 
 /*
     A leading zero is only invalid in front of another digit — "0" and "0.5" are
     both legitimate things to be part-way through typing.
  */
-export const hasLeadingZero = (value: string): boolean =>
-  /^-?0[0-9]/.test(value);
+export const hasLeadingZero = (canonical: string): boolean =>
+  /^-?0[0-9]/.test(canonical);
 
-export const containsOnlyNumberCharacters = (value: string): boolean =>
-  /^-?[0-9]*\.?[0-9]*$/.test(stripGroupSeparators(value));
+export const containsOnlyNumberCharacters = (canonical: string): boolean =>
+  /^-?[0-9]*\.?[0-9]*$/.test(canonical);
+
+/*
+    A group separator equal to the decimal separator would make the value
+    ambiguous, and an empty one would make grouping a no-op the parser could not
+    undo.
+ */
+export const areSeparatorsValid = (separators: Separators): boolean =>
+  separators.group !== separators.decimal &&
+  separators.decimal !== '' &&
+  !/[0-9-]/.test(separators.group + separators.decimal);
+
+export const buildDecimalPattern = (separators: Separators): RegExp =>
+  new RegExp(`[^0-9${escapeForRegExp(separators.decimal)}]`, 'g');
