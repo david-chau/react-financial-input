@@ -69,6 +69,62 @@ describe('<FinancialInput />', () => {
     expect(input).toHaveValue('1,234,567.5');
   });
 
+  describe('controlled mode', () => {
+    const Controlled = ({ initial }: { initial: number | null }) => {
+      const [value, setValue] = useState<number | null>(initial);
+
+      return (
+        <>
+          <FinancialInput value={value} onChange={setValue} />
+          <button onClick={() => setValue(5000)}>set</button>
+          <button onClick={() => setValue(null)}>clear</button>
+          <output>{value === null ? 'null' : value}</output>
+        </>
+      );
+    };
+
+    it('follows the value prop when the parent changes it', async () => {
+      const user = userEvent.setup();
+      render(<Controlled initial={1000} />);
+
+      expect(screen.getByRole('textbox')).toHaveValue('1,000');
+
+      await user.click(screen.getByRole('button', { name: 'set' }));
+      expect(screen.getByRole('textbox')).toHaveValue('5,000');
+
+      await user.click(screen.getByRole('button', { name: 'clear' }));
+      expect(screen.getByRole('textbox')).toHaveValue('');
+    });
+
+    /*
+        The parent echoing back the value this input just emitted is not an
+        external change. Reformatting on it would discard a trailing "." or the
+        zero in "1.50" while the user is still typing.
+     */
+    it('does not reformat while typing when the parent echoes the value back', async () => {
+      const user = userEvent.setup();
+      render(<Controlled initial={null} />);
+
+      const input = screen.getByRole('textbox');
+
+      await user.type(input, '1.50');
+
+      expect(input).toHaveValue('1.50');
+      expect(screen.getByRole('status')).toHaveTextContent('1.5');
+    });
+
+    it('keeps a trailing decimal point while typing', async () => {
+      const user = userEvent.setup();
+      render(<Controlled initial={null} />);
+
+      const input = screen.getByRole('textbox');
+
+      await user.type(input, '12.');
+
+      expect(input).toHaveValue('12.');
+    });
+  });
+
   /*
       Mobile numeric keypads have no letter keys, so inputmode="decimal" would
       make the h/k/m/b shortcuts unreachable on a phone. Defaulting to "text"

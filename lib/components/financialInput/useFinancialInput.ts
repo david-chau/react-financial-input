@@ -171,6 +171,31 @@ export const useFinancialInput = ({
   };
 
   /*
+      Controlled mode: follow the `value` prop when the parent changes it.
+
+      Adjusted during render rather than in an effect. React documents this as
+      the way to derive state from a changed prop — an effect would render once
+      with a stale value, then again to correct it, and trips the
+      react-hooks/set-state-in-effect rule.
+      https://react.dev/reference/react/useState#storing-information-from-previous-renders
+
+      Guarded on two things. The prop must actually have changed, so an
+      unrelated re-render cannot clobber what is being typed. And it must differ
+      from the committed value, because a parent echoing back the value this
+      input just emitted is not an external change — reformatting on that would
+      discard a trailing "." or the zero in "1.50" mid-edit.
+   */
+  const [lastValue, setLastValue] = useState(value);
+
+  if (value !== lastValue) {
+    setLastValue(value);
+
+    if ((value ?? null) !== state.numericValue) {
+      setState(createInitialState(value));
+    }
+  }
+
+  /*
       Puts the caret back after React re-renders with the reformatted value.
       Guarded on focus and on the caret already being in the right place, so it
       cannot steal focus or fight a user who is selecting text.
