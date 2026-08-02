@@ -8,6 +8,7 @@ export const storyUrl = (id: string): string =>
   `/iframe.html?id=${id}&viewMode=story`;
 
 export const STORIES = {
+  debugPlayground: storyUrl('financialinput--debug-playground'),
   default: storyUrl('financialinput--default'),
   shortcuts: storyUrl('financialinput--shortcuts'),
   wholeNumbersOnly: storyUrl('financialinput--whole-numbers-only'),

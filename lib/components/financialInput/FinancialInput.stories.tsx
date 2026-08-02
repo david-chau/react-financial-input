@@ -5,6 +5,8 @@ import { Nullable } from '../../types';
 import { FinancialInput, FinancialInputProps } from './FinancialInput';
 import { listCurrencies, toFlagEmoji } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
+import { EventTesterPanel } from './EventTesterPanel';
+import { KeyboardTesterPanel } from './KeyboardTesterPanel';
 
 /*
     The floating-label stories wrap the input, so their args are wider than the
@@ -65,6 +67,25 @@ const Field = ({ label, helper, error, ...props }: FieldArgs) => {
       )}
     </div>
   );
+};
+
+/*
+    One sidebar entry rather than a folder: Storybook reads "/" in a title as a
+    nesting separator, so "Debug / Playground" would have made a folder.
+ */
+export const DebugPlayground: Story = {
+  name: 'Debug (Playground)',
+  parameters: { layout: 'fullscreen' },
+  render: () => <EventTesterPanel />
+};
+
+export const KeyboardTester: Story = {
+  name: 'Keyboard tester',
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' }
+  },
+  render: () => <KeyboardTesterPanel />
 };
 
 export const Default: Story = {

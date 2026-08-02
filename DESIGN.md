@@ -56,7 +56,7 @@ and iOS Safari both honour it. **Some Android keyboards — Samsung's in
 particular — ignore it and key off `type` alone.** There is no workaround that
 preserves formatting, since `type` cannot change.
 
-The `KeyboardDiagnostics` and `Keyboard tester` stories report what a given
+The **Debug (Playground)** and **Keyboard tester** stories report what a given
 device actually resolves, which separates a library bug from a keyboard that
 does not implement the attribute.
 
@@ -149,7 +149,7 @@ works. Verified on Chromium, Firefox and WebKit.
 
 One step per accepted edit, so a paste or a shortcut expansion undoes in one.
 
-> The **Event tester** story logs all of this live. Open it on a device,
+> The **Debug (Playground)** story logs all of this live. Open it on a device,
 > perform the gesture, and read off what actually fired. That is the fastest way
 > to find out what a particular keyboard app really does.
 

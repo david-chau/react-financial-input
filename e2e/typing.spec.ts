@@ -206,6 +206,26 @@ test.describe('character validation', () => {
   });
 });
 
+/*
+    Regression: the resolved-values panel put the user agent on one line, which
+    pushed the page wider than the phone and made it scroll sideways.
+ */
+test.describe('debug panel on a phone', () => {
+  test.use({ viewport: { width: 393, height: 852 }, hasTouch: true });
+
+  test('fits the viewport without scrolling sideways', async ({ page }) => {
+    await page.goto(STORIES.debugPlayground);
+    await input(page).waitFor();
+
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth
+    }));
+
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+  });
+});
+
 test.describe('shortcut keypad', () => {
   test('spans the input, stays short, and explains itself on hover', async ({
     page
