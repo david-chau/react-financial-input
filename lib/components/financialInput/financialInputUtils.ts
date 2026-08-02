@@ -5,6 +5,7 @@ import {
   DEFAULT_SEPARATORS,
   Separators,
   buildDecimalPattern,
+  containsOnlyNumberCharacters,
   hasLeadingZero,
   hasMultipleDecimals,
   shiftDecimal,
@@ -208,6 +209,17 @@ export const isValidInsert = (
   }
 
   if (hasMultipleDecimals(canonical)) {
+    return false;
+  }
+
+  /*
+      The character check has to come before the length and scale ones.
+      Without it "==12====123" passed: it has no letters, no second decimal
+      separator, eleven characters and no leading zero, so every other rule
+      was satisfied and the value was accepted — then parsed to NaN and
+      reported as null.
+   */
+  if (!containsOnlyNumberCharacters(canonical)) {
     return false;
   }
 

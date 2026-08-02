@@ -9,6 +9,16 @@ import '../styles.css';
 
 const preview: Preview = {
   parameters: {
+    options: {
+      storySort: {
+        order: [
+          'Introduction',
+          'FinancialInput',
+          ['Playground'],
+          'Keyboard tester'
+        ]
+      }
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,

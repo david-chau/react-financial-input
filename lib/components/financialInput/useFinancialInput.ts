@@ -2,6 +2,7 @@ import {
   InputHTMLAttributes,
   KeyboardEvent,
   Ref,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -36,6 +37,12 @@ import {
 /** The class is inert unless `react-financial-input/styles.css` is imported. */
 export const INPUT_CLASS_NAME = 'rfi-input';
 
+/** Added for a moment when a keystroke is refused, so the refusal is visible. */
+export const REJECTED_CLASS_NAME = 'rfi-input--rejected';
+
+/** Matches the animation in styles.css. */
+const REJECTED_FLASH_MS = 400;
+
 export interface FinancialInputOptions {
   /** Maximum number of decimal places. Defaults to 2. Use 0 for whole numbers. */
   scale?: number;
@@ -53,6 +60,12 @@ export interface FinancialInputOptions {
   shortcuts?: StringKeyedMap<number>;
   /** 'POSITIVE' refuses negatives outright. Defaults to 'ALL'. */
   range?: Range;
+  /*
+      Briefly flag the input when a keystroke is refused. On by default: without
+      it a refusal is completely silent, which reads as a dead input. Needs the
+      optional stylesheet, or your own rule for .rfi-input--rejected.
+   */
+  flashOnError?: boolean;
   /*
       A BCP 47 locale, used to derive the separators and the currency symbol.
       Explicit groupSeparator / decimalSeparator win over it.
@@ -122,6 +135,7 @@ export const useFinancialInput = ({
     decimalSeparator,
     shortcuts = DEFAULT_SHORTCUTS,
     range = 'ALL',
+    flashOnError = true,
     locale,
     currency,
     symbol: symbolOverride,
@@ -202,10 +216,45 @@ export const useFinancialInput = ({
    */
   const isComposing = useRef(false);
 
+  /*
+      A refused keystroke is otherwise silent — the value simply does not
+      change, which reads as a dead input. A brief flash says "that was
+      refused" without the consumer having to wire up an error state.
+   */
+  const [isFlashing, setIsFlashing] = useState(false);
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(
+    () => () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    },
+    []
+  );
+
+  const flashRejection = () => {
+    if (!flashOnError) {
+      return;
+    }
+
+    if (flashTimer.current) {
+      clearTimeout(flashTimer.current);
+    }
+
+    // Off then on, so a second refusal restarts the animation.
+    setIsFlashing(false);
+    requestAnimationFrame(() => setIsFlashing(true));
+
+    flashTimer.current = setTimeout(
+      () => setIsFlashing(false),
+      REJECTED_FLASH_MS
+    );
+  };
+
   const commit = (next: FinancialInputState) => {
     setState(next);
 
     if (next.rejected) {
+      flashRejection();
       onError?.();
     } else if (next.numericValue !== state.numericValue) {
       onChange?.(next.numericValue);
@@ -383,9 +432,9 @@ export const useFinancialInput = ({
     ...rest,
     ref: getMergedRef(ref),
     value: state.displayValue,
-    className: className
-      ? `${INPUT_CLASS_NAME} ${className}`
-      : INPUT_CLASS_NAME,
+    className: [INPUT_CLASS_NAME, isFlashing && REJECTED_CLASS_NAME, className]
+      .filter(Boolean)
+      .join(' '),
     onInput: (event) => {
       handleInput(event);
       onInput?.(event);

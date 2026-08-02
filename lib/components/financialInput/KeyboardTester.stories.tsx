@@ -13,7 +13,7 @@ import { FinancialInput } from './FinancialInput';
  */
 
 const meta: Meta = {
-  title: 'Keyboard tester',
+  title: 'FinancialInput/Keyboard tester',
   parameters: {
     layout: 'fullscreen',
     // The whole point is to look at this on a phone.
