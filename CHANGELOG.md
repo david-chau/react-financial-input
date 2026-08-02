@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/david-chau/react-financial-input/compare/v0.3.0...v0.4.0) (2026-08-02)
+
+
+### Features
+
+* implement undo and redo ([#9](https://github.com/david-chau/react-financial-input/issues/9)) ([d604547](https://github.com/david-chau/react-financial-input/commit/d6045476642a1fab62797957cb0c79b57c2f81ae))
+
+
+### Bug fixes
+
+* reject non-numeric characters, and rework the Storybook ([#11](https://github.com/david-chau/react-financial-input/issues/11)) ([ea1828f](https://github.com/david-chau/react-financial-input/commit/ea1828fbc47c5d5ef6d560977ec6a6f2f7a2afa2))
+
 ## [0.3.0](https://github.com/david-chau/react-financial-input/compare/v0.2.1...v0.3.0) (2026-08-02)
 
 
