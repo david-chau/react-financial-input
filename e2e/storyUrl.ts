@@ -7,7 +7,11 @@
 export const storyUrl = (id: string): string =>
   `/iframe.html?id=${id}&viewMode=story`;
 
+/** Same story, without the version badge — for the demo recordings. */
+export const withoutBadge = (url: string) => `${url}&rfiBadge=0`;
+
 export const STORIES = {
+  debugPlayground: storyUrl('financialinput--debug-playground'),
   default: storyUrl('financialinput--default'),
   shortcuts: storyUrl('financialinput--shortcuts'),
   wholeNumbersOnly: storyUrl('financialinput--whole-numbers-only'),

@@ -1,5 +1,5 @@
 import { expect, test, Page } from '@playwright/test';
-import { STORIES } from './storyUrl';
+import { STORIES, withoutBadge } from './storyUrl';
 
 const input = (page: Page) => page.getByRole('textbox');
 
@@ -206,6 +206,73 @@ test.describe('character validation', () => {
   });
 });
 
+/*
+    Regression: the resolved-values panel put the user agent on one line, which
+    pushed the page wider than the phone and made it scroll sideways.
+ */
+/*
+    The deployed Storybook lags whatever is on a branch, and nothing on the page
+    said which build you were looking at — a merged fix and an unmerged one look
+    identical.
+ */
+test.describe('version badge', () => {
+  test('names the version on every story', async ({ page }) => {
+    await open(page, STORIES.default);
+
+    await expect(page.getByTitle(/react-financial-input/)).toBeVisible();
+  });
+
+  test('is suppressed for the demo recordings', async ({ page }) => {
+    await page.goto(withoutBadge(STORIES.default));
+    await input(page).waitFor();
+
+    await expect(page.getByTitle(/react-financial-input/)).toHaveCount(0);
+  });
+});
+
+test.describe('debug panel on a phone', () => {
+  test.use({ viewport: { width: 393, height: 852 }, hasTouch: true });
+
+  test('fits the viewport without scrolling sideways', async ({ page }) => {
+    await page.goto(STORIES.debugPlayground);
+    await input(page).waitFor();
+
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth
+    }));
+
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+  });
+});
+
+test.describe('shortcut keypad', () => {
+  test('spans the input, stays short, and explains itself on hover', async ({
+    page
+  }) => {
+    await page.goto(STORIES.shortcutButtons);
+    await input(page).waitFor();
+
+    const field = await input(page).boundingBox();
+    const keypad = await page.locator('.rfi-keypad').boundingBox();
+    const key = await page.locator('.rfi-key').first().boundingBox();
+
+    // The strip should line up with the field rather than trailing off short.
+    expect(Math.abs((keypad?.width ?? 0) - (field?.width ?? 0))).toBeLessThan(
+      2
+    );
+
+    // An accessory, not a second row of primary controls.
+    expect(key?.height ?? 0).toBeLessThan(36);
+
+    // The unit lives in the tooltip, not printed on every key.
+    await expect(page.locator('.rfi-key').first()).toHaveAttribute(
+      'title',
+      'Multiply by 100'
+    );
+  });
+});
+
 test.describe('currency picker', () => {
   test('re-resolves the symbol, its side and the separators', async ({
     page
@@ -231,6 +298,22 @@ test.describe('currency picker', () => {
     await expect(adornment).toHaveText('€');
     await expect(field).toHaveValue('1.234,5');
   });
+
+  /*
+      The symbol belongs in the field, once. Repeating it in the dropdown is
+      noise, and the flag already identifies the row.
+   */
+  test('labels options with a flag and code, not the symbol again', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withCurrencyPicker);
+    await input(page).waitFor();
+
+    const first = page.locator('option').first();
+
+    await expect(first).toHaveText(/🇺🇸\s*USD/);
+    await expect(first).not.toHaveText(/\$/);
+  });
 });
 
 test.describe('clear button', () => {
@@ -248,6 +331,39 @@ test.describe('clear button', () => {
 
     await field.press('ControlOrMeta+z');
     await expect(field).toHaveValue(SEK);
+  });
+
+  /*
+      Not just "does not overlap" — the first attempt left about two pixels
+      between the symbol and the button, which read as a collision. The insets
+      are derived from the button size now, so this asserts real gaps.
+   */
+  test('leaves room between the symbol, the button and the edge', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withClearButton);
+    await input(page).waitFor();
+
+    const gaps = await page.evaluate(() => {
+      const field = document.querySelector('.rfi-field');
+      const button = field
+        ?.querySelector('.rfi-clear')
+        ?.getBoundingClientRect();
+      const symbol = field
+        ?.querySelector('.rfi-adornment--suffix')
+        ?.getBoundingClientRect();
+      const box = field?.querySelector('.rfi-input')?.getBoundingClientRect();
+
+      if (!button || !symbol || !box) return null;
+
+      return {
+        symbolToButton: button.left - symbol.right,
+        buttonToEdge: box.right - button.right
+      };
+    });
+
+    expect(gaps?.symbolToButton ?? 0).toBeGreaterThanOrEqual(6);
+    expect(gaps?.buttonToEdge ?? 0).toBeGreaterThanOrEqual(6);
   });
 
   test('does not sit on top of a suffix currency symbol', async ({ page }) => {
@@ -362,7 +478,12 @@ test.describe('mobile affordances', () => {
     await expect(input(page)).toHaveAttribute('inputmode', 'decimal');
 
     await input(page).pressSequentially('2.5');
-    await page.getByRole('button', { name: 'M' }).click();
+    /*
+        By accessible name, not the visible "M": the keys carry an aria-label
+        describing the multiplier, and { name: 'M' } substring-matched all four
+        of them.
+     */
+    await page.getByRole('button', { name: 'Multiply by 1 million' }).click();
 
     await expect(input(page)).toHaveValue('2,500,000');
   });

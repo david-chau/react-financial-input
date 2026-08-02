@@ -1,5 +1,4 @@
 import { CSSProperties, InputHTMLAttributes } from 'react';
-import type { Meta, StoryObj } from '@storybook/react-vite';
 import { FinancialInput } from './FinancialInput';
 
 /*
@@ -11,19 +10,6 @@ import { FinancialInput } from './FinancialInput';
     job and any remaining difference is the keyboard app's. Samsung's keyboard,
     for one, ignores `inputmode` entirely and keys off `type`.
  */
-
-const meta: Meta = {
-  title: 'FinancialInput/Keyboard tester',
-  parameters: {
-    layout: 'fullscreen',
-    // The whole point is to look at this on a phone.
-    viewport: { defaultViewport: 'mobile1' }
-  }
-};
-
-export default meta;
-
-type Story = StoryObj;
 
 interface Row {
   label: string;
@@ -107,7 +93,9 @@ const ROWS: Row[] = [
 
 const styles = {
   page: {
-    padding: '1rem',
+    maxWidth: 520,
+    margin: '0 auto',
+    padding: '1.5rem 1rem 3rem',
     background: '#f5f5f7',
     minHeight: '100vh',
     fontFamily:
@@ -146,28 +134,26 @@ const styles = {
   }
 } satisfies Record<string, CSSProperties>;
 
-export const AllKeyboards: Story = {
-  render: () => (
-    <div style={styles.page}>
-      {ROWS.map((row) => (
-        <div key={row.label} style={styles.card}>
-          <label style={styles.label}>{row.label}</label>
+export const KeyboardTesterPanel = () => (
+  <div style={styles.page}>
+    {ROWS.map((row) => (
+      <div key={row.label} style={styles.card}>
+        <label style={styles.label}>{row.label}</label>
 
-          {row.ours ? (
-            <FinancialInput
-              {...row.props}
-              options={
-                row.ours === 'decimal' ? { inputMode: 'decimal' } : undefined
-              }
-              style={{ fontSize: 16 }}
-            />
-          ) : (
-            <input {...row.props} style={styles.bare} />
-          )}
+        {row.ours ? (
+          <FinancialInput
+            {...row.props}
+            options={
+              row.ours === 'decimal' ? { inputMode: 'decimal' } : undefined
+            }
+            style={{ fontSize: 16 }}
+          />
+        ) : (
+          <input {...row.props} style={styles.bare} />
+        )}
 
-          {row.note && <small style={styles.note}>{row.note}</small>}
-        </div>
-      ))}
-    </div>
-  )
-};
+        {row.note && <small style={styles.note}>{row.note}</small>}
+      </div>
+    ))}
+  </div>
+);

@@ -3,8 +3,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
 import { FinancialInput, FinancialInputProps } from './FinancialInput';
-import { listCurrencies } from '../../utils';
+import { listCurrencies, toFlagEmoji } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
+import { EventTesterPanel } from './EventTesterPanel';
+import { KeyboardTesterPanel } from './KeyboardTesterPanel';
 
 /*
     The floating-label stories wrap the input, so their args are wider than the
@@ -67,6 +69,25 @@ const Field = ({ label, helper, error, ...props }: FieldArgs) => {
   );
 };
 
+/*
+    One sidebar entry rather than a folder: Storybook reads "/" in a title as a
+    nesting separator, so "Debug / Playground" would have made a folder.
+ */
+export const DebugPlayground: Story = {
+  name: 'Debug (Playground)',
+  parameters: { layout: 'fullscreen' },
+  render: () => <EventTesterPanel />
+};
+
+export const KeyboardTester: Story = {
+  name: 'Keyboard tester',
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' }
+  },
+  render: () => <KeyboardTesterPanel />
+};
+
 export const Default: Story = {
   args: { placeholder: '' }
 };
@@ -86,7 +107,6 @@ export const WithFloatingLabel: Story = {
     UI's TextField, so these are the same three names.
  */
 export const Variants: Story = {
-  parameters: { layout: 'padded' },
   render: (args) => (
     <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
       <Field {...args} label="Outlined (default)" />
@@ -171,19 +191,20 @@ export const ShortcutButtons: Story = {
         <input {...getInputProps({ placeholder: '0.00' })} />
         <div className="rfi-keypad">
           {[
-            ['h', '100'],
-            ['k', '1K'],
-            ['m', '1M'],
-            ['b', '1B']
-          ].map(([character, label]) => (
+            ['h', 'Multiply by 100'],
+            ['k', 'Multiply by 1,000'],
+            ['m', 'Multiply by 1 million'],
+            ['b', 'Multiply by 1 billion']
+          ].map(([character, description]) => (
             <button
               key={character}
               type="button"
               className="rfi-key"
+              title={description}
+              aria-label={description}
               onClick={() => applyShortcut(character)}
             >
               {character.toUpperCase()}
-              <small>{label}</small>
             </button>
           ))}
         </div>
@@ -325,7 +346,6 @@ const PICKER_LOCALES: Record<string, string> = {
     the symbol and its side.
  */
 export const WithCurrencyPicker: Story = {
-  parameters: { layout: 'padded' },
   render: function WithCurrencyPicker(args) {
     const id = useId();
     const [currency, setCurrency] = useState('USD');
@@ -357,7 +377,7 @@ export const WithCurrencyPicker: Story = {
           >
             {options.map((option) => (
               <option key={option.code} value={option.code}>
-                {option.code} {option.symbol}
+                {toFlagEmoji(option.code)} {option.code}
               </option>
             ))}
           </select>
@@ -386,7 +406,6 @@ export const WithCurrencyPicker: Story = {
     the history, so Ctrl+Z puts back what was cleared.
  */
 export const WithClearButton: Story = {
-  parameters: { layout: 'padded' },
   render: function WithClearButton(args) {
     const id = useId();
     const { getInputProps, clear, numericValue, symbol, symbolPosition } =
@@ -441,7 +460,6 @@ export const WithClearButton: Story = {
     Type a third decimal place into either field.
  */
 export const ErrorFeedback: Story = {
-  parameters: { layout: 'padded' },
   render: (args) => (
     <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
       <Field {...args} label="Flash only (default)" helper="Try 1.234" />
