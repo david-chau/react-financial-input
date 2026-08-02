@@ -206,6 +206,33 @@ test.describe('character validation', () => {
   });
 });
 
+test.describe('shortcut keypad', () => {
+  test('spans the input, stays short, and explains itself on hover', async ({
+    page
+  }) => {
+    await page.goto(STORIES.shortcutButtons);
+    await input(page).waitFor();
+
+    const field = await input(page).boundingBox();
+    const keypad = await page.locator('.rfi-keypad').boundingBox();
+    const key = await page.locator('.rfi-key').first().boundingBox();
+
+    // The strip should line up with the field rather than trailing off short.
+    expect(Math.abs((keypad?.width ?? 0) - (field?.width ?? 0))).toBeLessThan(
+      2
+    );
+
+    // An accessory, not a second row of primary controls.
+    expect(key?.height ?? 0).toBeLessThan(36);
+
+    // The unit lives in the tooltip, not printed on every key.
+    await expect(page.locator('.rfi-key').first()).toHaveAttribute(
+      'title',
+      'Multiply by 100'
+    );
+  });
+});
+
 test.describe('currency picker', () => {
   test('re-resolves the symbol, its side and the separators', async ({
     page
@@ -230,6 +257,22 @@ test.describe('currency picker', () => {
     await select.selectOption('EUR');
     await expect(adornment).toHaveText('€');
     await expect(field).toHaveValue('1.234,5');
+  });
+
+  /*
+      The symbol belongs in the field, once. Repeating it in the dropdown is
+      noise, and the flag already identifies the row.
+   */
+  test('labels options with a flag and code, not the symbol again', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withCurrencyPicker);
+    await input(page).waitFor();
+
+    const first = page.locator('option').first();
+
+    await expect(first).toHaveText(/🇺🇸\s*USD/);
+    await expect(first).not.toHaveText(/\$/);
   });
 });
 

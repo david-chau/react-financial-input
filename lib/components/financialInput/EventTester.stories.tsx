@@ -151,7 +151,10 @@ const CHEATSHEET: {
 
 const styles = {
   page: {
-    padding: '1rem',
+    /* Centred like every other story, rather than pinned to the left edge. */
+    maxWidth: 760,
+    margin: '0 auto',
+    padding: '1.5rem 1rem 3rem',
     fontFamily:
       'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     display: 'grid',
@@ -420,19 +423,20 @@ export const Playground: Story = {
           <p style={styles.heading}>3. Multipliers</p>
           <div className="rfi-keypad" style={{ maxWidth: 260 }}>
             {[
-              ['h', '100'],
-              ['k', '1K'],
-              ['m', '1M'],
-              ['b', '1B']
-            ].map(([character, label]) => (
+              ['h', 'Multiply by 100'],
+              ['k', 'Multiply by 1,000'],
+              ['m', 'Multiply by 1 million'],
+              ['b', 'Multiply by 1 billion']
+            ].map(([character, description]) => (
               <button
                 key={character}
                 type="button"
                 className="rfi-key"
+                title={description}
+                aria-label={description}
                 onClick={() => applyShortcut(character)}
               >
                 {character.toUpperCase()}
-                <small>{label}</small>
               </button>
             ))}
           </div>

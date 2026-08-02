@@ -121,3 +121,37 @@ export const listCurrencies = (
         option !== null
     );
 };
+
+/*
+    A flag emoji for a currency, e.g. "SEK" to a Swedish flag.
+
+    Costs nothing: ISO 4217 codes are the ISO 3166 country code plus a letter,
+    and a flag emoji is just that country code written in regional indicator
+    symbols. No image assets, no lookup table.
+
+    Two caveats worth knowing before you use it.
+
+    Windows does not render flag emoji at all — it shows the two letters
+    instead. That degrades acceptably ("US", "SE") but it is not a flag.
+
+    Supranational and metal codes have no country: EUR maps to the EU flag,
+    which exists, but XAU (gold) maps to "XA", which does not. Returns null for
+    anything that is not a plausible region, so the caller can fall back to the
+    code.
+ */
+export const toFlagEmoji = (currency: string): Nullable<string> => {
+  const region = currency.slice(0, 2).toUpperCase();
+
+  if (!/^[A-Z]{2}$/.test(region) || region.startsWith('X')) {
+    return null;
+  }
+
+  const REGIONAL_INDICATOR_A = 0x1f1e6;
+  const LETTER_A = 'A'.charCodeAt(0);
+
+  return String.fromCodePoint(
+    ...[...region].map(
+      (letter) => REGIONAL_INDICATOR_A + letter.charCodeAt(0) - LETTER_A
+    )
+  );
+};

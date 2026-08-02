@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { listCurrencies, resolveCurrency, resolveSeparators } from './currency';
+import {
+  listCurrencies,
+  resolveCurrency,
+  resolveSeparators,
+  toFlagEmoji
+} from './currency';
 
 describe('resolveCurrency', () => {
   it.each([
@@ -116,5 +121,34 @@ describe('listCurrencies', () => {
 
   it('names currencies in the given locale', () => {
     expect(listCurrencies('de-DE', ['USD'])[0].name).not.toBe('US Dollar');
+  });
+});
+
+describe('toFlagEmoji', () => {
+  it.each([
+    // currency  flag  note
+    ['USD', '🇺🇸', 'the country code is the first two letters'],
+    ['GBP', '🇬🇧', 'United Kingdom'],
+    ['SEK', '🇸🇪', 'Sweden'],
+    ['JPY', '🇯🇵', 'Japan'],
+    ['EUR', '🇪🇺', 'supranational, but the EU flag exists']
+  ])('toFlagEmoji(%j) -> %s (%s)', (currency, flag) => {
+    expect(toFlagEmoji(currency)).toBe(flag);
+  });
+
+  it.each([
+    ['XAU', 'gold has no country'],
+    ['XDR', 'special drawing rights'],
+    ['', 'empty'],
+    ['1SD', 'not letters']
+  ])('returns null for %j (%s)', (currency) => {
+    expect(toFlagEmoji(currency)).toBeNull();
+  });
+
+  it('builds the flag from regional indicator symbols, not an asset', () => {
+    // U+1F1FA U+1F1F8 — two code points, no image, no table.
+    expect(
+      [...(toFlagEmoji('USD') ?? '')].map((c) => c.codePointAt(0))
+    ).toEqual([0x1f1fa, 0x1f1f8]);
   });
 });

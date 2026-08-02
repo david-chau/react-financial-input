@@ -107,7 +107,9 @@ const ROWS: Row[] = [
 
 const styles = {
   page: {
-    padding: '1rem',
+    maxWidth: 520,
+    margin: '0 auto',
+    padding: '1.5rem 1rem 3rem',
     background: '#f5f5f7',
     minHeight: '100vh',
     fontFamily:
