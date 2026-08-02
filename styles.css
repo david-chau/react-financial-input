@@ -256,6 +256,42 @@
 }
 
 /*
+ * A refused keystroke flashes rather than doing nothing at all. The component
+ * adds .rfi-input--rejected for the duration; prefers-reduced-motion gets a
+ * static tint instead of a shake.
+ */
+@keyframes rfi-reject {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-2px);
+  }
+  40%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+.rfi-input--rejected {
+  border-color: var(--rfi-error);
+  animation: rfi-reject 0.3s ease-in-out;
+}
+
+.rfi-input--rejected:focus {
+  box-shadow: inset 0 0 0 1px var(--rfi-error);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rfi-input--rejected {
+    animation: none;
+    background: var(--rfi-error-tint, rgba(217, 45, 32, 0.08));
+  }
+}
+
+/*
  * Currency symbol. The hook resolves it; you render it. Keeping it out of the
  * input's value is what lets the caret arithmetic work on digits alone.
  *
@@ -295,6 +331,28 @@
 
 .rfi-field:focus-within .rfi-adornment {
   color: var(--rfi-primary);
+}
+
+/*
+ * The resting label sits at the same inset as a prefix symbol, so without this
+ * they overlap and read as "$United States".
+ */
+.rfi-field:has(.rfi-adornment--prefix) .rfi-label {
+  left: var(--rfi-adornment-space, 2rem);
+}
+
+/* Floated, the label clears the symbol, so it returns to the border inset. */
+.rfi-field:has(.rfi-adornment--prefix):focus-within .rfi-label,
+.rfi-field:has(.rfi-adornment--prefix)
+  .rfi-input:not(:placeholder-shown)
+  + .rfi-label {
+  left: var(--rfi-padding-x);
+}
+
+/* A suffix symbol never collides with the label, only with the value. */
+.rfi-adornment--prefix,
+.rfi-adornment--suffix {
+  z-index: 1;
 }
 
 .rfi-helper {

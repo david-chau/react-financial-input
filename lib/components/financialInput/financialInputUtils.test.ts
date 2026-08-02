@@ -124,3 +124,48 @@ describe('isValidNumberString', () => {
     }
   );
 });
+
+/*
+    Regression. isValidInsert checked leading zeros, scale and digit count but
+    never that the value was actually numeric, so any short run of punctuation
+    was accepted — then parsed to NaN and reported as null. "==12====123" got
+    through because it has no letters, no second separator, eleven characters
+    and no leading zero.
+ */
+describe('isValidInsert rejects non-numeric characters', () => {
+  it.each([
+    ['==12====123', 'the reported case'],
+    ['1=2', 'an equals sign'],
+    ['12$34', 'a currency symbol'],
+    ['1_000', 'an underscore'],
+    ['1+2', 'a plus'],
+    ['1/2', 'a slash'],
+    ['1e5', 'scientific notation'],
+    ['(123)', 'parentheses, which only paste understands'],
+    ['1 2', 'an embedded space'],
+    ['#1', 'a hash']
+  ])('refuses %j (%s)', (targetValue) => {
+    expect(
+      isValidInsert(targetValue, targetValue.slice(-1), DEFAULT_MAX_DIGITS, 2)
+    ).toBe(false);
+  });
+
+  it.each([
+    ['123', 'plain digits'],
+    ['1.5', 'a fraction'],
+    ['-42', 'a negative'],
+    ['1,234', 'grouping separators the formatter added'],
+    ['', 'empty'],
+    ['.', 'a lone separator'],
+    ['-', 'a lone minus']
+  ])('still accepts %j (%s)', (targetValue) => {
+    expect(
+      isValidInsert(
+        targetValue,
+        targetValue.slice(-1) || '1',
+        DEFAULT_MAX_DIGITS,
+        2
+      )
+    ).toBe(true);
+  });
+});

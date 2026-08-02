@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
@@ -80,27 +80,33 @@ export const WithFloatingLabel: Story = {
   render: (args) => <Field {...args} />
 };
 
-export const Filled: Story = {
-  args: { label: 'Amount', className: 'rfi-input--filled' },
-  render: (args) => <Field {...args} />
-};
-
-export const Standard: Story = {
-  args: { label: 'Amount', className: 'rfi-input--standard' },
-  render: (args) => <Field {...args} />
-};
-
-export const Small: Story = {
-  args: { label: 'Amount', className: 'rfi-input--small' },
-  render: (args) => <Field {...args} />
-};
-
-export const AllVariants: Story = {
+/*
+    Every variant on one page. The stylesheet is opt-in and modelled on Material
+    UI's TextField, so these are the same three names.
+ */
+export const Variants: Story = {
+  parameters: { layout: 'padded' },
   render: (args) => (
-    <div style={{ display: 'grid', gap: '1.75rem' }}>
-      <Field {...args} label="Outlined" />
+    <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
+      <Field {...args} label="Outlined (default)" />
       <Field {...args} label="Filled" className="rfi-input--filled" />
       <Field {...args} label="Standard" className="rfi-input--standard" />
+      <Field {...args} label="Small" className="rfi-input--small" />
+      <div
+        className="rfi-dark"
+        style={{ background: '#121212', padding: '1.5rem', borderRadius: 8 }}
+      >
+        <Field {...args} label="Dark (opt-in)" />
+      </div>
+      <div>
+        <style>{'.rfi-unstyled { all: revert; }'}</style>
+        <FinancialInput
+          {...args}
+          className="rfi-unstyled"
+          placeholder="Unstyled"
+        />
+        <p className="rfi-helper">No stylesheet at all — the default</p>
+      </div>
     </div>
   )
 };
@@ -292,117 +298,7 @@ export const WithErrorState: Story = {
   }
 };
 
-/*
-    The stylesheet is opt-in. Storybook imports it globally in preview.ts, so
-    this story strips the styling back off to show what consumers get by
-    default: a bare, unstyled input.
- */
-export const Unstyled: Story = {
-  args: { className: 'rfi-unstyled' },
-  decorators: [
-    (Story) => (
-      <>
-        <style>{'.rfi-unstyled { all: revert; }'}</style>
-        <Story />
-      </>
-    )
-  ]
-};
-
-/*
-    Dark is opt-in — put `rfi-dark` on the input or any ancestor. It is not tied
-    to prefers-color-scheme, because the outlined field is transparent and
-    inherits the host page's background: switching on the OS setting alone put
-    white text on a white page.
- */
-export const Dark: Story = {
-  args: { label: 'Amount', helper: 'Two decimal places' },
-  decorators: [
-    (Story) => (
-      <div
-        className="rfi-dark"
-        style={{ background: '#121212', padding: '1.5rem', borderRadius: 8 }}
-      >
-        <Story />
-      </div>
-    )
-  ],
-  render: (args) => <Field {...args} />
-};
-
 export const MobileViewport: Story = {
   args: { placeholder: '0.00' },
   globals: { viewport: { value: 'mobile2', isRotated: false } }
-};
-
-/*
-    Open this story on a real phone to see what the device actually does.
-
-    `inputmode` is what asks for a numeric keypad. Every major browser honours
-    it, but some Android keyboards — Samsung's most notably — ignore it and key
-    off `type` alone. `type` cannot be "number" here, because a number input
-    refuses to hold a value containing grouping separators.
-
-    So if the keypad is wrong, read off the resolved values below: that is the
-    difference between a library bug and a keyboard that does not implement the
-    attribute.
- */
-export const KeyboardDiagnostics: Story = {
-  render: function KeyboardDiagnostics(args) {
-    const [resolved, setResolved] = useState<Record<string, string>>({});
-    const ref = useRef<HTMLInputElement>(null);
-
-    // Read after mount rather than from a ref callback, so this never depends
-    // on how often React attaches the ref.
-    useEffect(() => {
-      const node = ref.current;
-
-      if (!node) return;
-
-      setResolved({
-        type: node.type,
-        inputMode: node.inputMode || '(empty)',
-        'attr inputmode': node.getAttribute('inputmode') ?? '(absent)',
-        touch: 'ontouchstart' in window ? 'yes' : 'no',
-        'screen width': `${window.screen.width}px`,
-        'user agent': navigator.userAgent
-      });
-    }, []);
-
-    return (
-      <div style={{ display: 'grid', gap: '1rem' }}>
-        <FinancialInput {...args} ref={ref} placeholder="tap me" />
-        <dl
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'auto 1fr',
-            gap: '0.25rem 1rem',
-            margin: 0,
-            fontFamily: 'monospace',
-            fontSize: '0.7rem',
-            wordBreak: 'break-word'
-          }}
-        >
-          {Object.entries(resolved).map(([key, value]) => (
-            <Fragment key={key}>
-              <dt style={{ opacity: 0.6 }}>{key}</dt>
-              <dd style={{ margin: 0 }}>{value}</dd>
-            </Fragment>
-          ))}
-        </dl>
-        <small style={{ opacity: 0.7, lineHeight: 1.5, fontSize: '0.7rem' }}>
-          Expected <code>type=text</code>. <code>inputmode</code> is{' '}
-          <code>text</code> by default, so the shortcut letters stay typeable.
-          If you opt into a keypad and it still is not numeric, the keyboard app
-          is ignoring <code>inputmode</code> — switch to Gboard to confirm.
-        </small>
-      </div>
-    );
-  }
-};
-
-/** Opted into the numeric keypad, for comparing what a device raises. */
-export const KeyboardDiagnosticsKeypad: Story = {
-  ...KeyboardDiagnostics,
-  args: { options: { inputMode: 'decimal' } }
 };

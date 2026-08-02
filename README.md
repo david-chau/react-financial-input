@@ -79,6 +79,7 @@ Every native `<input>` prop is passed through (`placeholder`, `disabled`, `name`
 | `options.decimalSeparator` | `string`                           | `'.'`           | Fraction separator. Overrides the locale.                            |
 | `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                    |
 | `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                      |
+| `options.flashOnError`     | `boolean`                          | `true`          | Briefly flag the input when a keystroke is refused.                  |
 
 ### Shortcuts
 

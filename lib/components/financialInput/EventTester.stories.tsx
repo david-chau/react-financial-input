@@ -1,4 +1,11 @@
-import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  CSSProperties,
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState
+} from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Nullable } from '../../types';
 import { useFinancialInput } from './useFinancialInput';
@@ -18,7 +25,7 @@ import { useFinancialInput } from './useFinancialInput';
  */
 
 const meta: Meta = {
-  title: 'Event tester',
+  title: 'FinancialInput/Playground',
   parameters: { layout: 'fullscreen' }
 };
 
@@ -188,6 +195,20 @@ const styles = {
   },
   code: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace'
+  },
+  definitions: {
+    display: 'grid',
+    gridTemplateColumns: 'auto 1fr',
+    gap: '0.25rem 1rem',
+    margin: 0,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    fontSize: '0.7rem',
+    wordBreak: 'break-word' as const
+  },
+  note: {
+    fontSize: '0.7rem',
+    opacity: 0.75,
+    lineHeight: 1.5
   }
 } satisfies Record<string, CSSProperties>;
 
@@ -198,6 +219,7 @@ export const Playground: Story = {
     const [copied, setCopied] = useState('');
     const nextId = useRef(0);
     const before = useRef('');
+    const [device, setDevice] = useState<Record<string, string>>({});
 
     const { getInputProps, inputRef, applyShortcut } = useFinancialInput({
       onChange: setNumeric
@@ -224,6 +246,22 @@ export const Playground: Story = {
       },
       [inputRef]
     );
+
+    // Read once after mount, so it never depends on ref-attachment timing.
+    useEffect(() => {
+      const node = inputRef.current;
+
+      if (!node) return;
+
+      setDevice({
+        type: node.type,
+        inputMode: node.inputMode || '(empty)',
+        'attr inputmode': node.getAttribute('inputmode') ?? '(absent)',
+        touch: 'ontouchstart' in window ? 'yes' : 'no',
+        'screen width': `${window.screen.width}px`,
+        'user agent': navigator.userAgent
+      });
+    }, [inputRef]);
 
     /*
         Listening natively rather than through React, so the log shows exactly
@@ -303,6 +341,27 @@ export const Playground: Story = {
 
     return (
       <div style={styles.page}>
+        <div style={styles.panel}>
+          <p style={styles.heading}>What this device resolved</p>
+          <dl style={styles.definitions}>
+            {Object.entries(device).map(([key, value]) => (
+              <Fragment key={key}>
+                <dt style={{ opacity: 0.6 }}>{key}</dt>
+                <dd style={{ margin: 0 }}>{value}</dd>
+              </Fragment>
+            ))}
+          </dl>
+          <small
+            style={{ ...styles.note, display: 'block', marginTop: '0.5rem' }}
+          >
+            Expected <code>type=text</code> and <code>inputmode=text</code>, so
+            the h/k/m/b letters stay typeable. If you opt into a keypad and it
+            is still not numeric, the keyboard app is ignoring{' '}
+            <code>inputmode</code> — Samsung&rsquo;s does. Switch to Gboard to
+            confirm.
+          </small>
+        </div>
+
         <div style={styles.panel}>
           <p style={styles.heading}>Input</p>
           <input {...getInputProps({ placeholder: '0.00' })} />

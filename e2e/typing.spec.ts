@@ -152,6 +152,31 @@ test.describe('clipboard', () => {
     as soon as React overwrites the value — so only the first Ctrl+Z ever
     arrived. This caught that.
  */
+/*
+    Regression: isValidInsert checked leading zeros, scale and digit count but
+    never that the value was numeric, so "==12====123" was accepted and then
+    parsed to NaN.
+ */
+test.describe('character validation', () => {
+  test('refuses punctuation that is not part of a number', async ({ page }) => {
+    await open(page, STORIES.default);
+    await input(page).pressSequentially('==12====123');
+
+    await expect(input(page)).toHaveValue('12,123');
+  });
+
+  test('flags a refused keystroke, then clears it', async ({ page }) => {
+    await open(page, STORIES.default);
+    await input(page).pressSequentially('1.23');
+    await input(page).press('4');
+
+    await expect(input(page)).toHaveClass(/rfi-input--rejected/);
+    await expect(input(page)).not.toHaveClass(/rfi-input--rejected/, {
+      timeout: 3000
+    });
+  });
+});
+
 test.describe('undo and redo', () => {
   test('steps back repeatedly, then forward again', async ({ page }) => {
     await open(page, STORIES.default);
