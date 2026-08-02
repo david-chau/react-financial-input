@@ -151,6 +151,14 @@ export const Shortcuts: Story = {
  */
 export const ShortcutButtons: Story = {
   args: { options: { inputMode: 'decimal' } },
+  // Wider than the shared decorator, so the four keys sit on one row.
+  decorators: [
+    (Story) => (
+      <div style={{ width: 320 }}>
+        <Story />
+      </div>
+    )
+  ],
   render: function ShortcutButtons(args) {
     const { getInputProps, applyShortcut, numericValue } = useFinancialInput({
       options: args.options,
@@ -163,10 +171,10 @@ export const ShortcutButtons: Story = {
         <input {...getInputProps({ placeholder: '0.00' })} />
         <div className="rfi-keypad">
           {[
-            ['h', '×100'],
-            ['k', '×1K'],
-            ['m', '×1M'],
-            ['b', '×1B']
+            ['h', '100'],
+            ['k', '1K'],
+            ['m', '1M'],
+            ['b', '1B']
           ].map(([character, label]) => (
             <button
               key={character}

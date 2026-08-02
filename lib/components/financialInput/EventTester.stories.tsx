@@ -420,10 +420,10 @@ export const Playground: Story = {
           <p style={styles.heading}>3. Multipliers</p>
           <div className="rfi-keypad" style={{ maxWidth: 260 }}>
             {[
-              ['h', '×100'],
-              ['k', '×1K'],
-              ['m', '×1M'],
-              ['b', '×1B']
+              ['h', '100'],
+              ['k', '1K'],
+              ['m', '1M'],
+              ['b', '1B']
             ].map(([character, label]) => (
               <button
                 key={character}

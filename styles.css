@@ -372,113 +372,91 @@
 }
 
 /*
- * Keypad. For multiplier tap targets, and anything else you want to sit under
- * the input — styled like a calculator key rather than a form button, because
- * that is what it is.
+ * Keypad. For multiplier tap targets, and anything else that sits under the
+ * input — flat pill keys, in the manner of a phone or desktop calculator.
  *
  *   <div class="rfi-keypad">
  *     <button class="rfi-key" onClick={() => applyShortcut('k')}>
- *       K<small>×1K</small>
+ *       K<small>1K</small>
  *     </button>
  *   </div>
  */
 .rfi-keypad {
+  /*
+      A flowing row by default, so each key is as wide as its label needs and
+      reads as a capsule. Forcing equal columns in a narrow field turns them
+      into ovals.
+   */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rfi-keypad-gap, 0.5rem);
+}
+
+/* Equal columns, when you do want a calculator-style grid. */
+.rfi-keypad--grid {
   display: grid;
   grid-template-columns: repeat(var(--rfi-keypad-columns, 4), 1fr);
-  gap: var(--rfi-keypad-gap, 0.4rem);
 }
 
 .rfi-key {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: inline-flex;
+  align-items: baseline;
   justify-content: center;
-  gap: 0.1rem;
-  min-height: var(--rfi-key-height, 2.75rem);
-  padding: 0.35rem 0.25rem;
-  border: 1px solid var(--rfi-key-border, #c7ccd4);
-  border-radius: var(--rfi-key-radius, 6px);
-  /* The faint top highlight is what reads as a moulded key rather than a tile. */
-  background: var(
-    --rfi-key-background,
-    linear-gradient(180deg, #fdfdfe 0%, #eceef2 100%)
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 1px rgba(16, 24, 40, 0.12);
-  color: var(--rfi-key-color, #1d2939);
-  font-family: var(
-    --rfi-key-font-family,
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace
-  );
+  gap: 0.35rem;
+  min-height: var(--rfi-key-height, 2.5rem);
+  min-width: var(--rfi-key-min-width, 3.25rem);
+  padding: 0 var(--rfi-key-padding-x, 1rem);
+  border: none;
+  /* A pill, not a rounded rectangle — the whole point of the look. */
+  border-radius: var(--rfi-key-radius, 999px);
+  background: var(--rfi-key-background, #f1f3f4);
+  color: var(--rfi-key-color, #202124);
+  font-family: var(--rfi-font-family);
   font-size: var(--rfi-key-font-size, 0.95rem);
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   cursor: pointer;
   user-select: none;
-  transition:
-    background-color 80ms ease,
-    box-shadow 80ms ease,
-    transform 80ms ease;
+  transition: background-color 120ms ease;
 }
 
+/* The unit, e.g. the "1K" beside "K". Quieter than the key itself. */
 .rfi-key small {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 400;
-  opacity: 0.6;
-  letter-spacing: 0.02em;
+  opacity: 0.55;
 }
 
 .rfi-key:hover {
-  background: var(
-    --rfi-key-background-hover,
-    linear-gradient(180deg, #fff 0%, #e4e7ec 100%)
-  );
+  background: var(--rfi-key-background-hover, #e8eaed);
 }
 
-/* Travel on press — a key that does not move does not feel like a key. */
 .rfi-key:active {
-  transform: translateY(1px);
-  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.2);
-  background: var(--rfi-key-background-active, #e4e7ec);
+  background: var(--rfi-key-background-active, #dadce0);
 }
 
 .rfi-key:focus-visible {
   outline: 2px solid var(--rfi-primary);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .rfi-key:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* The accent key, for a clear or an equals. */
+/* The selected key in a segmented group, and any key you want to stand out. */
 .rfi-key--accent {
-  border-color: var(--rfi-primary);
   color: var(--rfi-primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rfi-key:active {
-    transform: none;
-  }
 }
 
 .rfi-dark .rfi-key,
 [data-rfi-theme='dark'] .rfi-key {
-  --rfi-key-border: #475467;
-  --rfi-key-background: linear-gradient(180deg, #344054 0%, #1d2939 100%);
-  --rfi-key-background-hover: linear-gradient(180deg, #475467 0%, #344054 100%);
-  --rfi-key-background-active: #1d2939;
-  --rfi-key-color: #f9fafb;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 1px 1px rgba(0, 0, 0, 0.4);
+  --rfi-key-background: #2b2e3b;
+  --rfi-key-background-hover: #383b4a;
+  --rfi-key-background-active: #22242e;
+  --rfi-key-color: #e8eaed;
 }
 
 /*
