@@ -387,6 +387,20 @@ export const reduceCompositionEnd = (
 };
 
 /*
+    Empties the value. Goes through the history like any other edit, so Ctrl+Z
+    puts back what was cleared — which is the whole reason a clear button is
+    safe to offer.
+ */
+export const reduceClear = (state: FinancialInputState): FinancialInputState =>
+  remember(state, {
+    ...state,
+    displayValue: '',
+    numericValue: null,
+    cursor: 0,
+    rejected: false
+  });
+
+/*
     Applies a shortcut to the current value without anything having been typed.
 
     Mobile numeric keypads have no letter keys, so on a phone the h/k/m/b

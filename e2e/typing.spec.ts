@@ -165,6 +165,35 @@ test.describe('character validation', () => {
     await expect(input(page)).toHaveValue('12,123');
   });
 
+  /*
+      Colour by default, motion only when asked for. Asserted on the computed
+      animation-name rather than by eye, because "it looked fine" is how the
+      dark-mode bug shipped.
+   */
+  const FEEDBACK: [number, string, string][] = [
+    [0, 'rfi-flash', 'default is colour only'],
+    [1, 'rfi-flash, rfi-shake', 'rfi-input--shake opts into motion']
+  ];
+
+  for (const [index, expected, note] of FEEDBACK) {
+    test(`error feedback on field ${index} is ${expected} (${note})`, async ({
+      page
+    }) => {
+      await page.goto(STORIES.errorFeedback);
+      const field = page.getByRole('textbox').nth(index);
+      await field.waitFor();
+      await field.click();
+      await field.pressSequentially('1.234');
+
+      await expect(field).toHaveClass(/rfi-input--rejected/);
+      expect(
+        await field.evaluate(
+          (element) => getComputedStyle(element).animationName
+        )
+      ).toBe(expected);
+    });
+  }
+
   test('flags a refused keystroke, then clears it', async ({ page }) => {
     await open(page, STORIES.default);
     await input(page).pressSequentially('1.23');
@@ -174,6 +203,71 @@ test.describe('character validation', () => {
     await expect(input(page)).not.toHaveClass(/rfi-input--rejected/, {
       timeout: 3000
     });
+  });
+});
+
+test.describe('currency picker', () => {
+  test('re-resolves the symbol, its side and the separators', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withCurrencyPicker);
+    const field = input(page);
+    const select = page.getByRole('combobox', { name: 'Currency' });
+    const adornment = page.locator('.rfi-adornment');
+    await field.waitFor();
+
+    await field.click();
+    await field.pressSequentially('1234.5');
+    await expect(field).toHaveValue('1,234.5');
+    await expect(adornment).toHaveText('$');
+
+    // sv-SE trails with "kr" and groups with U+00A0.
+    await select.selectOption('SEK');
+    await expect(adornment).toHaveText('kr');
+    await expect(adornment).toHaveClass(/suffix/);
+    await expect(field).toHaveValue('1\u00a0234,5');
+
+    await select.selectOption('EUR');
+    await expect(adornment).toHaveText('€');
+    await expect(field).toHaveValue('1.234,5');
+  });
+});
+
+test.describe('clear button', () => {
+  // sv-SE groups with U+00A0, not a plain space.
+  const SEK = '1\u00a0234,56';
+
+  test('empties the value, and undo puts it back', async ({ page }) => {
+    await page.goto(STORIES.withClearButton);
+    const field = input(page);
+    await field.waitFor();
+    await expect(field).toHaveValue(SEK);
+
+    await page.getByRole('button', { name: 'Clear the amount' }).click();
+    await expect(field).toHaveValue('');
+
+    await field.press('ControlOrMeta+z');
+    await expect(field).toHaveValue(SEK);
+  });
+
+  test('does not sit on top of a suffix currency symbol', async ({ page }) => {
+    await page.goto(STORIES.withClearButton);
+    await input(page).waitFor();
+
+    const overlap = await page.evaluate(() => {
+      const field = document.querySelector('.rfi-field');
+      const button = field?.querySelector('.rfi-clear');
+      const symbol = field?.querySelector('.rfi-adornment--suffix');
+
+      if (!button || !symbol) return 'missing';
+
+      return symbol.getBoundingClientRect().right <=
+        button.getBoundingClientRect().left + 1
+        ? 'clear'
+        : 'overlap';
+    });
+
+    expect(overlap).toBe('clear');
   });
 });
 

@@ -13,9 +13,11 @@ import {
   DEFAULT_SEPARATORS,
   SymbolPosition,
   areSeparatorsValid,
+  formatCanonical,
   mergeRefs,
   resolveCurrency,
-  resolveSeparators
+  resolveSeparators,
+  toCanonical
 } from '../../utils';
 import {
   DEFAULT_MAX_DIGITS,
@@ -28,6 +30,7 @@ import { InputType } from '../../enums';
 import {
   FinancialInputState,
   createInitialState,
+  reduceClear,
   reduceCompositionEnd,
   reduceHistory,
   reduceInput,
@@ -40,8 +43,8 @@ export const INPUT_CLASS_NAME = 'rfi-input';
 /** Added for a moment when a keystroke is refused, so the refusal is visible. */
 export const REJECTED_CLASS_NAME = 'rfi-input--rejected';
 
-/** Matches the animation in styles.css. */
-const REJECTED_FLASH_MS = 400;
+/** Must outlast the longest animation in styles.css. */
+const REJECTED_FLASH_MS = 450;
 
 export interface FinancialInputOptions {
   /** Maximum number of decimal places. Defaults to 2. Use 0 for whole numbers. */
@@ -61,9 +64,12 @@ export interface FinancialInputOptions {
   /** 'POSITIVE' refuses negatives outright. Defaults to 'ALL'. */
   range?: Range;
   /*
-      Briefly flag the input when a keystroke is refused. On by default: without
-      it a refusal is completely silent, which reads as a dead input. Needs the
-      optional stylesheet, or your own rule for .rfi-input--rejected.
+      Briefly flag the input when a keystroke is refused. On by default:
+      without it a refusal is completely silent, which reads as a dead input.
+
+      The stylesheet flashes colour only. Add the `rfi-input--shake` class for
+      motion as well; it is opt-in because some people find the movement
+      unpleasant, and it is suppressed under prefers-reduced-motion regardless.
    */
   flashOnError?: boolean;
   /*
@@ -333,6 +339,15 @@ export const useFinancialInput = ({
   };
 
   /*
+      Empties the value and returns focus, for a clear button. Undoable, since
+      it goes through the history like any other edit.
+   */
+  const clear = () => {
+    commit(reduceClear(state));
+    inputRef.current?.focus();
+  };
+
+  /*
       Applies a multiplier as if it had been typed. The escape hatch for mobile
       keypads, which have no letter keys — wire it to a row of tap targets.
    */
@@ -379,6 +394,31 @@ export const useFinancialInput = ({
 
     if ((value ?? null) !== state.numericValue) {
       setState(createInitialState(value, separators));
+    }
+  }
+
+  /*
+      Reformat when the separators change — a locale or currency switch, or
+      explicit separator props. Without this the value keeps the old locale's
+      punctuation until the next keystroke: picking sv-SE left "1,234" on
+      screen instead of "1 234".
+
+      Converted through canonical rather than rebuilt from numericValue, so a
+      value still being typed keeps its shape: "1." becomes "1," rather than
+      collapsing to "1".
+   */
+  const [lastSeparators, setLastSeparators] = useState(separators);
+
+  if (separators !== lastSeparators) {
+    setLastSeparators(separators);
+
+    if (state.displayValue !== '') {
+      const displayValue = formatCanonical(
+        toCanonical(state.displayValue, lastSeparators),
+        separators
+      );
+
+      setState({ ...state, displayValue, cursor: displayValue.length });
     }
   }
 
@@ -459,6 +499,7 @@ export const useFinancialInput = ({
     numericValue: state.numericValue,
     getInputProps,
     applyShortcut,
+    clear,
     separators,
     /** Resolved from `currency` unless overridden. Empty when not opted in. */
     symbol: symbolOverride ?? resolvedCurrency?.symbol ?? '',

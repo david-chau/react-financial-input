@@ -65,21 +65,21 @@ empty input, or a lone `.` part-way through typing. It is never `NaN`.
 Every native `<input>` prop is passed through (`placeholder`, `disabled`, `name`,
 `onBlur`, `aria-*`), and `ref` is forwarded to the underlying input.
 
-| Prop                       | Type                               | Default         | Description                                                          |
-| -------------------------- | ---------------------------------- | --------------- | -------------------------------------------------------------------- |
-| `value`                    | `number \| null`                   | `undefined`     | The numeric value.                                                   |
-| `onChange`                 | `(value: number \| null) => void`  | —               | Called with the numeric value, not the formatted string.             |
-| `onError`                  | `() => void`                       | —               | Called when a keystroke is refused, such as a third decimal place.   |
-| `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point entirely.      |
-| `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                              |
-| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'` | `'text'`        | Which keyboard mobile raises.                                        |
-| `options.locale`           | `string`                           | —               | BCP 47 tag. Supplies separators and the currency symbol.             |
-| `options.currency`         | `string`                           | —               | ISO 4217 code. Opt-in; the symbol is returned, not put in the value. |
-| `options.groupSeparator`   | `string`                           | `','`           | Thousands separator. Overrides the locale.                           |
-| `options.decimalSeparator` | `string`                           | `'.'`           | Fraction separator. Overrides the locale.                            |
-| `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                    |
-| `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                      |
-| `options.flashOnError`     | `boolean`                          | `true`          | Briefly flag the input when a keystroke is refused.                  |
+| Prop                       | Type                               | Default         | Description                                                                                  |
+| -------------------------- | ---------------------------------- | --------------- | -------------------------------------------------------------------------------------------- |
+| `value`                    | `number \| null`                   | `undefined`     | The numeric value.                                                                           |
+| `onChange`                 | `(value: number \| null) => void`  | —               | Called with the numeric value, not the formatted string.                                     |
+| `onError`                  | `() => void`                       | —               | Called when a keystroke is refused, such as a third decimal place.                           |
+| `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point entirely.                              |
+| `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                                                      |
+| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'` | `'text'`        | Which keyboard mobile raises.                                                                |
+| `options.locale`           | `string`                           | —               | BCP 47 tag. Supplies separators and the currency symbol.                                     |
+| `options.currency`         | `string`                           | —               | ISO 4217 code. Opt-in; the symbol is returned, not put in the value.                         |
+| `options.groupSeparator`   | `string`                           | `','`           | Thousands separator. Overrides the locale.                                                   |
+| `options.decimalSeparator` | `string`                           | `'.'`           | Fraction separator. Overrides the locale.                                                    |
+| `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                                            |
+| `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                                              |
+| `options.flashOnError`     | `boolean`                          | `true`          | Flash the input when a keystroke is refused. Colour only; add `rfi-input--shake` for motion. |
 
 ### Shortcuts
 
@@ -122,7 +122,10 @@ Keep the formatting and validation, bring your own input:
 ```tsx
 import { useFinancialInput } from 'react-financial-input';
 
-const { getInputProps } = useFinancialInput({ value, onChange: setValue });
+const { getInputProps, clear, applyShortcut } = useFinancialInput({
+  value,
+  onChange: setValue
+});
 
 <TextField slotProps={{ htmlInput: getInputProps() }} />; // MUI
 <Input {...getInputProps()} />; // Chakra

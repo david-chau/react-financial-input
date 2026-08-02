@@ -1,8 +1,9 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
 import { FinancialInput, FinancialInputProps } from './FinancialInput';
+import { listCurrencies } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
 
 /*
@@ -150,6 +151,14 @@ export const Shortcuts: Story = {
  */
 export const ShortcutButtons: Story = {
   args: { options: { inputMode: 'decimal' } },
+  // Wider than the shared decorator, so the four keys sit on one row.
+  decorators: [
+    (Story) => (
+      <div style={{ width: 320 }}>
+        <Story />
+      </div>
+    )
+  ],
   render: function ShortcutButtons(args) {
     const { getInputProps, applyShortcut, numericValue } = useFinancialInput({
       options: args.options,
@@ -160,24 +169,21 @@ export const ShortcutButtons: Story = {
     return (
       <div style={{ display: 'grid', gap: '0.75rem' }}>
         <input {...getInputProps({ placeholder: '0.00' })} />
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {['h', 'k', 'm', 'b'].map((character) => (
+        <div className="rfi-keypad">
+          {[
+            ['h', '100'],
+            ['k', '1K'],
+            ['m', '1M'],
+            ['b', '1B']
+          ].map(([character, label]) => (
             <button
               key={character}
               type="button"
+              className="rfi-key"
               onClick={() => applyShortcut(character)}
-              style={{
-                flex: 1,
-                padding: '0.6rem 0',
-                border: '1px solid rgba(0,0,0,0.23)',
-                borderRadius: 4,
-                background: 'transparent',
-                color: 'inherit',
-                font: 'inherit',
-                cursor: 'pointer'
-              }}
             >
               {character.toUpperCase()}
+              <small>{label}</small>
             </button>
           ))}
         </div>
@@ -296,6 +302,163 @@ export const WithErrorState: Story = {
       />
     );
   }
+};
+
+/*
+    Each currency is paired with the locale that actually uses it. Both the
+    symbol and which side it belongs on are properties of the locale, not the
+    currency: SEK is "kr" trailing in sv-SE but "SEK" leading in en-US.
+ */
+const PICKER_LOCALES: Record<string, string> = {
+  USD: 'en-US',
+  GBP: 'en-GB',
+  EUR: 'de-DE',
+  JPY: 'ja-JP',
+  SEK: 'sv-SE',
+  INR: 'en-IN'
+};
+
+/*
+    A currency picker is off by default — the component never renders one.
+    `listCurrencies()` enumerates what the runtime knows from Intl, so there is
+    no bundled table to go stale, and changing the selection re-resolves both
+    the symbol and its side.
+ */
+export const WithCurrencyPicker: Story = {
+  parameters: { layout: 'padded' },
+  render: function WithCurrencyPicker(args) {
+    const id = useId();
+    const [currency, setCurrency] = useState('USD');
+
+    const locale = PICKER_LOCALES[currency];
+
+    const options = useMemo(
+      () =>
+        Object.keys(PICKER_LOCALES).map(
+          (code) => listCurrencies(PICKER_LOCALES[code], [code])[0]
+        ),
+      []
+    );
+
+    const { getInputProps, symbol, symbolPosition, numericValue } =
+      useFinancialInput({
+        onChange: args.onChange,
+        options: { currency, locale, scale: currency === 'JPY' ? 0 : 2 }
+      });
+
+    return (
+      <div style={{ maxWidth: 320 }}>
+        <div className="rfi-group">
+          <select
+            className="rfi-select"
+            value={currency}
+            onChange={(event) => setCurrency(event.target.value)}
+            aria-label="Currency"
+          >
+            {options.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.code} {option.symbol}
+              </option>
+            ))}
+          </select>
+          <div className="rfi-field">
+            <input {...getInputProps({ id, placeholder: ' ' })} />
+            <label className="rfi-label" htmlFor={id}>
+              Amount
+            </label>
+            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+              {symbol}
+            </span>
+          </div>
+        </div>
+        <p className="rfi-helper">
+          {locale} · {symbolPosition} · scale {currency === 'JPY' ? 0 : 2} ·{' '}
+          {numericValue === null ? 'null' : numericValue}
+        </p>
+      </div>
+    );
+  }
+};
+
+/*
+    A clear button is off by default — the component renders a bare input and
+    never adds one. `clear()` from the hook does the work, and it goes through
+    the history, so Ctrl+Z puts back what was cleared.
+ */
+export const WithClearButton: Story = {
+  parameters: { layout: 'padded' },
+  render: function WithClearButton(args) {
+    const id = useId();
+    const { getInputProps, clear, numericValue, symbol, symbolPosition } =
+      useFinancialInput({
+        value: 1234.56,
+        onChange: args.onChange,
+        options: { locale: 'sv-SE', currency: 'SEK' }
+      });
+
+    return (
+      <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
+        <div>
+          <div className="rfi-field">
+            <input {...getInputProps({ id, placeholder: ' ' })} />
+            <label className="rfi-label" htmlFor={id}>
+              Amount
+            </label>
+            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+              {symbol}
+            </span>
+            {numericValue !== null && (
+              <button
+                type="button"
+                className="rfi-clear"
+                onClick={clear}
+                aria-label="Clear the amount"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <p className="rfi-helper">
+            Clear, then press Ctrl/Cmd+Z — the value comes back
+          </p>
+        </div>
+        <p className="rfi-helper">
+          Deliberately shown with a suffix symbol ({symbol}), since that is the
+          case where the button and the symbol would otherwise sit on top of
+          each other.
+        </p>
+      </div>
+    );
+  }
+};
+
+/*
+    A refused keystroke flashes colour by default — a silent refusal reads as a
+    dead input. Motion is opt-in via `rfi-input--shake`, because some people
+    find it unpleasant; it is suppressed under prefers-reduced-motion either
+    way.
+
+    Type a third decimal place into either field.
+ */
+export const ErrorFeedback: Story = {
+  parameters: { layout: 'padded' },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: '2rem', maxWidth: 280 }}>
+      <Field {...args} label="Flash only (default)" helper="Try 1.234" />
+      <Field
+        {...args}
+        label="Flash and shake"
+        helper="Add rfi-input--shake"
+        className="rfi-input--shake"
+      />
+      <Field
+        {...args}
+        label="No feedback"
+        helper="options.flashOnError: false"
+        options={{ flashOnError: false }}
+      />
+    </div>
+  )
 };
 
 export const MobileViewport: Story = {

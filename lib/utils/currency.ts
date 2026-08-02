@@ -68,3 +68,56 @@ export const resolveSeparators = (locale?: string): Separators => {
     return DEFAULT_SEPARATORS;
   }
 };
+
+export interface CurrencyOption extends ResolvedCurrency {
+  /** ISO 4217 code, e.g. "SEK". */
+  code: string;
+  /** The currency's name in the given locale, e.g. "Swedish Krona". */
+  name: string;
+}
+
+/*
+    Every currency the runtime knows about, for a picker. The list comes from
+    Intl rather than a bundled table, so it stays a few hundred bytes of code
+    instead of a few kilobytes of data that goes stale.
+
+    Intl.supportedValuesOf is ES2022; where it is missing the caller gets
+    whatever codes it passed, or nothing.
+ */
+export const listCurrencies = (
+  locale?: string,
+  codes?: string[]
+): CurrencyOption[] => {
+  const available =
+    codes ??
+    (typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('currency')
+      : []);
+
+  const names =
+    typeof Intl.DisplayNames === 'function'
+      ? new Intl.DisplayNames(locale ? [locale] : undefined, {
+          type: 'currency'
+        })
+      : null;
+
+  return available
+    .map((code) => {
+      const resolved = resolveCurrency(code, locale);
+
+      if (!resolved) {
+        return null;
+      }
+
+      return {
+        code,
+        name: names?.of(code) ?? code,
+        symbol: resolved.symbol,
+        position: resolved.position
+      };
+    })
+    .filter(
+      (option: CurrencyOption | null): option is CurrencyOption =>
+        option !== null
+    );
+};

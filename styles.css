@@ -257,10 +257,30 @@
 
 /*
  * A refused keystroke flashes rather than doing nothing at all. The component
- * adds .rfi-input--rejected for the duration; prefers-reduced-motion gets a
- * static tint instead of a shake.
+ * adds .rfi-input--rejected for the duration of the animation.
+ *
+ * Colour only by default. Because the keyframes declare `from` and nothing
+ * else, the browser animates back to whatever the element's real style is —
+ * so this fades out correctly on every variant, focused or not, without
+ * hard-coding the resting colours.
  */
-@keyframes rfi-reject {
+@keyframes rfi-flash {
+  from {
+    border-color: var(--rfi-error);
+    background-color: var(--rfi-error-tint, rgba(217, 45, 32, 0.1));
+  }
+}
+
+.rfi-input--rejected {
+  animation: rfi-flash var(--rfi-flash-duration, 450ms) ease-out;
+}
+
+/*
+ * Motion is opt-in: add `rfi-input--shake` alongside your own classes and the
+ * flash gains a shake. Some people find the movement unpleasant, and a colour
+ * change alone is enough to say "refused".
+ */
+@keyframes rfi-shake {
   0%,
   100% {
     transform: translateX(0);
@@ -275,20 +295,229 @@
   }
 }
 
-.rfi-input--rejected {
-  border-color: var(--rfi-error);
-  animation: rfi-reject 0.3s ease-in-out;
+.rfi-input--shake.rfi-input--rejected {
+  animation:
+    rfi-flash var(--rfi-flash-duration, 450ms) ease-out,
+    rfi-shake 0.3s ease-in-out;
 }
 
-.rfi-input--rejected:focus {
-  box-shadow: inset 0 0 0 1px var(--rfi-error);
-}
-
+/* Never shake when the user has asked for less motion — the flash still runs. */
 @media (prefers-reduced-motion: reduce) {
-  .rfi-input--rejected {
-    animation: none;
-    background: var(--rfi-error-tint, rgba(217, 45, 32, 0.08));
+  .rfi-input--shake.rfi-input--rejected {
+    animation: rfi-flash var(--rfi-flash-duration, 450ms) ease-out;
   }
+}
+
+/*
+ * Currency picker. Off by default — the component never renders one. The
+ * options come from `listCurrencies()`, which reads Intl rather than a bundled
+ * table, so it does not go stale.
+ *
+ *   <div class="rfi-group">
+ *     <select class="rfi-select">…</select>
+ *     <div class="rfi-field"><input class="rfi-input" /></div>
+ *   </div>
+ */
+.rfi-group {
+  display: flex;
+  align-items: stretch;
+  width: var(--rfi-width, 100%);
+}
+
+/* The two controls read as one, so only the outer corners stay round. */
+.rfi-group > .rfi-select {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: -1px;
+}
+
+.rfi-group > .rfi-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.rfi-group > .rfi-field .rfi-input {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Raise the focused control so its ring is not clipped by its neighbour. */
+.rfi-group > .rfi-select:focus,
+.rfi-group > .rfi-field:focus-within {
+  position: relative;
+  z-index: 2;
+}
+
+.rfi-select {
+  box-sizing: border-box;
+  height: var(--rfi-height);
+  padding: 0 var(--rfi-padding-x);
+  border: 1px solid var(--rfi-border-color);
+  border-radius: var(--rfi-radius);
+  background: var(--rfi-background);
+  color: var(--rfi-color);
+  font-family: var(--rfi-font-family);
+  font-size: var(--rfi-font-size);
+  cursor: pointer;
+}
+
+.rfi-select:hover {
+  border-color: var(--rfi-border-color-hover);
+}
+
+.rfi-select:focus {
+  outline: none;
+  border-color: var(--rfi-primary);
+  box-shadow: inset 0 0 0 1px var(--rfi-primary);
+}
+
+/*
+ * Keypad. For multiplier tap targets, and anything else that sits under the
+ * input — flat pill keys, in the manner of a phone or desktop calculator.
+ *
+ *   <div class="rfi-keypad">
+ *     <button class="rfi-key" onClick={() => applyShortcut('k')}>
+ *       K<small>1K</small>
+ *     </button>
+ *   </div>
+ */
+.rfi-keypad {
+  /*
+      A flowing row by default, so each key is as wide as its label needs and
+      reads as a capsule. Forcing equal columns in a narrow field turns them
+      into ovals.
+   */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rfi-keypad-gap, 0.5rem);
+}
+
+/* Equal columns, when you do want a calculator-style grid. */
+.rfi-keypad--grid {
+  display: grid;
+  grid-template-columns: repeat(var(--rfi-keypad-columns, 4), 1fr);
+}
+
+.rfi-key {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: var(--rfi-key-height, 2.5rem);
+  min-width: var(--rfi-key-min-width, 3.25rem);
+  padding: 0 var(--rfi-key-padding-x, 1rem);
+  border: none;
+  /* A pill, not a rounded rectangle — the whole point of the look. */
+  border-radius: var(--rfi-key-radius, 999px);
+  background: var(--rfi-key-background, #f1f3f4);
+  color: var(--rfi-key-color, #202124);
+  font-family: var(--rfi-font-family);
+  font-size: var(--rfi-key-font-size, 0.95rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 120ms ease;
+}
+
+/* The unit, e.g. the "1K" beside "K". Quieter than the key itself. */
+.rfi-key small {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.55;
+}
+
+.rfi-key:hover {
+  background: var(--rfi-key-background-hover, #e8eaed);
+}
+
+.rfi-key:active {
+  background: var(--rfi-key-background-active, #dadce0);
+}
+
+.rfi-key:focus-visible {
+  outline: 2px solid var(--rfi-primary);
+  outline-offset: 2px;
+}
+
+.rfi-key:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The selected key in a segmented group, and any key you want to stand out. */
+.rfi-key--accent {
+  color: var(--rfi-primary);
+}
+
+.rfi-dark .rfi-key,
+[data-rfi-theme='dark'] .rfi-key {
+  --rfi-key-background: #2b2e3b;
+  --rfi-key-background-hover: #383b4a;
+  --rfi-key-background-active: #22242e;
+  --rfi-key-color: #e8eaed;
+}
+
+/*
+ * Clear button. Off by default — the component never renders one; you do, and
+ * the hook gives you `clear()`. Same arrangement as the currency symbol and the
+ * floating label.
+ *
+ *   const { getInputProps, clear, numericValue } = useFinancialInput();
+ *
+ *   <div class="rfi-field">
+ *     <input class="rfi-input" />
+ *     {numericValue !== null && (
+ *       <button class="rfi-clear" onClick={clear} aria-label="Clear">×</button>
+ *     )}
+ *   </div>
+ */
+.rfi-clear {
+  position: absolute;
+  top: 50%;
+  right: var(--rfi-padding-x);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rfi-clear-size, 1.25rem);
+  height: var(--rfi-clear-size, 1.25rem);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--rfi-clear-background, rgba(0, 0, 0, 0.26));
+  color: var(--rfi-clear-color, #fff);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.rfi-clear:hover {
+  background: var(--rfi-clear-background-hover, rgba(0, 0, 0, 0.45));
+}
+
+.rfi-clear:focus-visible {
+  outline: 2px solid var(--rfi-primary);
+  outline-offset: 1px;
+}
+
+/* Keep the value from running underneath the button. */
+.rfi-field:has(.rfi-clear) .rfi-input {
+  padding-right: var(--rfi-clear-space, 2.25rem);
+}
+
+/*
+ * With a suffix currency symbol as well, the symbol moves inboard so the two
+ * do not stack on top of each other.
+ */
+.rfi-field:has(.rfi-clear) .rfi-adornment--suffix {
+  right: var(--rfi-clear-space, 2.25rem);
+}
+
+.rfi-field:has(.rfi-clear):has(.rfi-adornment--suffix) .rfi-input {
+  padding-right: var(--rfi-clear-suffix-space, 4rem);
 }
 
 /*

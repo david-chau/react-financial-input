@@ -25,7 +25,7 @@ import { useFinancialInput } from './useFinancialInput';
  */
 
 const meta: Meta = {
-  title: 'FinancialInput/Playground',
+  title: 'FinancialInput/Debug',
   parameters: { layout: 'fullscreen' }
 };
 
@@ -174,6 +174,10 @@ const styles = {
     fontSize: '0.8rem',
     cursor: 'pointer'
   },
+  buttonAccent: {
+    borderColor: '#d92d20',
+    color: '#d92d20'
+  },
   log: {
     margin: 0,
     maxHeight: 220,
@@ -221,9 +225,16 @@ export const Playground: Story = {
     const before = useRef('');
     const [device, setDevice] = useState<Record<string, string>>({});
 
-    const { getInputProps, inputRef, applyShortcut } = useFinancialInput({
-      onChange: setNumeric
-    });
+    const { getInputProps, inputRef, applyShortcut, clear } = useFinancialInput(
+      { onChange: setNumeric }
+    );
+
+    // Back to a clean slate: value, log and clipboard hint together.
+    const resetAll = () => {
+      clear();
+      setLog([]);
+      setCopied('');
+    };
 
     const record = useCallback(
       (type: string, inputType: string, data: string, isComposing: boolean) => {
@@ -406,7 +417,27 @@ export const Playground: Story = {
             $9,876.54
           </span>
 
-          <p style={styles.heading}>3. Other gestures</p>
+          <p style={styles.heading}>3. Multipliers</p>
+          <div className="rfi-keypad" style={{ maxWidth: 260 }}>
+            {[
+              ['h', '100'],
+              ['k', '1K'],
+              ['m', '1M'],
+              ['b', '1B']
+            ].map(([character, label]) => (
+              <button
+                key={character}
+                type="button"
+                className="rfi-key"
+                onClick={() => applyShortcut(character)}
+              >
+                {character.toUpperCase()}
+                <small>{label}</small>
+              </button>
+            ))}
+          </div>
+
+          <p style={styles.heading}>4. Other gestures</p>
           <div style={styles.row}>
             <button
               type="button"
@@ -435,22 +466,20 @@ export const Playground: Story = {
             >
               Select all
             </button>
-            {['h', 'k', 'm', 'b'].map((character) => (
-              <button
-                key={character}
-                type="button"
-                style={styles.button}
-                onClick={() => applyShortcut(character)}
-              >
-                {character.toUpperCase()}
-              </button>
-            ))}
+
             <button
               type="button"
               style={styles.button}
               onClick={() => setLog([])}
             >
               Clear log
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.button, ...styles.buttonAccent }}
+              onClick={resetAll}
+            >
+              Reset all
             </button>
           </div>
         </div>
@@ -462,7 +491,7 @@ export const Playground: Story = {
               Nothing yet — type, paste, drag or undo above.
             </p>
           ) : (
-            <ol style={styles.log}>
+            <ol style={styles.log} data-rfi-log>
               {log.map((entry) => (
                 <li key={entry.id}>
                   <strong>{entry.inputType}</strong>

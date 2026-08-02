@@ -447,3 +447,51 @@ describe('<FinancialInput />', () => {
     expect(onInput).toHaveBeenCalled();
   });
 });
+
+/*
+    Regression: changing the locale left the previous locale's punctuation on
+    screen until the next keystroke — picking sv-SE showed "1,234" instead of
+    "1 234". Only a browser test caught it, so it is pinned here too.
+ */
+describe('reformatting when the separators change', () => {
+  const Switchable = () => {
+    const [locale, setLocale] = useState('en-US');
+    const { getInputProps } = useFinancialInput({ options: { locale } });
+
+    return (
+      <>
+        <input {...getInputProps()} />
+        <button onClick={() => setLocale('de-DE')}>de</button>
+        <button onClick={() => setLocale('en-US')}>us</button>
+      </>
+    );
+  };
+
+  it('reformats the existing value', async () => {
+    const user = userEvent.setup();
+    render(<Switchable />);
+
+    const input = screen.getByRole('textbox');
+    await user.type(input, '1234.5');
+    expect(input).toHaveValue('1,234.5');
+
+    await user.click(screen.getByRole('button', { name: 'de' }));
+    expect(input).toHaveValue('1.234,5');
+
+    await user.click(screen.getByRole('button', { name: 'us' }));
+    expect(input).toHaveValue('1,234.5');
+  });
+
+  it('keeps a value that is still being typed', async () => {
+    const user = userEvent.setup();
+    render(<Switchable />);
+
+    const input = screen.getByRole('textbox');
+    await user.type(input, '12.');
+    expect(input).toHaveValue('12.');
+
+    // Converted through canonical, so the trailing separator survives.
+    await user.click(screen.getByRole('button', { name: 'de' }));
+    expect(input).toHaveValue('12,');
+  });
+});
