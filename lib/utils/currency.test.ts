@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCurrency, resolveSeparators } from './currency';
+import { listCurrencies, resolveCurrency, resolveSeparators } from './currency';
 
 describe('resolveCurrency', () => {
   it.each([
@@ -73,5 +73,48 @@ describe('resolveSeparators', () => {
 
     expect(group.codePointAt(0)).toBe(codePoint);
     expect(group).not.toBe(' ');
+  });
+});
+
+describe('listCurrencies', () => {
+  it('enumerates the runtime currencies with symbols and names', () => {
+    const all = listCurrencies('en-US');
+
+    expect(all.length).toBeGreaterThan(50);
+
+    const usd = all.find((option) => option.code === 'USD');
+
+    expect(usd).toEqual({
+      code: 'USD',
+      name: 'US Dollar',
+      symbol: '$',
+      position: 'prefix'
+    });
+  });
+
+  /*
+      Position is a property of the locale, not the currency: SEK trails in
+      sv-SE and leads in en-GB. A hand-written symbol table gets this wrong.
+   */
+  it.each([
+    ['SEK', 'sv-SE', 'suffix'],
+    ['SEK', 'en-GB', 'prefix'],
+    ['EUR', 'de-DE', 'suffix'],
+    ['EUR', 'en-IE', 'prefix'],
+    ['GBP', 'en-GB', 'prefix']
+  ])('%s in %s sits as a %s', (code, locale, position) => {
+    expect(listCurrencies(locale as string, [code as string])[0].position).toBe(
+      position
+    );
+  });
+
+  it('honours an explicit shortlist, in order', () => {
+    const codes = ['GBP', 'USD', 'JPY'];
+
+    expect(listCurrencies('en-US', codes).map((o) => o.code)).toEqual(codes);
+  });
+
+  it('names currencies in the given locale', () => {
+    expect(listCurrencies('de-DE', ['USD'])[0].name).not.toBe('US Dollar');
   });
 });

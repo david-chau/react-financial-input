@@ -13,9 +13,11 @@ import {
   DEFAULT_SEPARATORS,
   SymbolPosition,
   areSeparatorsValid,
+  formatCanonical,
   mergeRefs,
   resolveCurrency,
-  resolveSeparators
+  resolveSeparators,
+  toCanonical
 } from '../../utils';
 import {
   DEFAULT_MAX_DIGITS,
@@ -392,6 +394,31 @@ export const useFinancialInput = ({
 
     if ((value ?? null) !== state.numericValue) {
       setState(createInitialState(value, separators));
+    }
+  }
+
+  /*
+      Reformat when the separators change — a locale or currency switch, or
+      explicit separator props. Without this the value keeps the old locale's
+      punctuation until the next keystroke: picking sv-SE left "1,234" on
+      screen instead of "1 234".
+
+      Converted through canonical rather than rebuilt from numericValue, so a
+      value still being typed keeps its shape: "1." becomes "1," rather than
+      collapsing to "1".
+   */
+  const [lastSeparators, setLastSeparators] = useState(separators);
+
+  if (separators !== lastSeparators) {
+    setLastSeparators(separators);
+
+    if (state.displayValue !== '') {
+      const displayValue = formatCanonical(
+        toCanonical(state.displayValue, lastSeparators),
+        separators
+      );
+
+      setState({ ...state, displayValue, cursor: displayValue.length });
     }
   }
 

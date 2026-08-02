@@ -1,8 +1,9 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
 import { FinancialInput, FinancialInputProps } from './FinancialInput';
+import { listCurrencies } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
 
 /*
@@ -160,24 +161,21 @@ export const ShortcutButtons: Story = {
     return (
       <div style={{ display: 'grid', gap: '0.75rem' }}>
         <input {...getInputProps({ placeholder: '0.00' })} />
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {['h', 'k', 'm', 'b'].map((character) => (
+        <div className="rfi-keypad">
+          {[
+            ['h', '×100'],
+            ['k', '×1K'],
+            ['m', '×1M'],
+            ['b', '×1B']
+          ].map(([character, label]) => (
             <button
               key={character}
               type="button"
+              className="rfi-key"
               onClick={() => applyShortcut(character)}
-              style={{
-                flex: 1,
-                padding: '0.6rem 0',
-                border: '1px solid rgba(0,0,0,0.23)',
-                borderRadius: 4,
-                background: 'transparent',
-                color: 'inherit',
-                font: 'inherit',
-                cursor: 'pointer'
-              }}
             >
               {character.toUpperCase()}
+              <small>{label}</small>
             </button>
           ))}
         </div>
@@ -294,6 +292,82 @@ export const WithErrorState: Story = {
           setHasError(false);
         }}
       />
+    );
+  }
+};
+
+/*
+    Each currency is paired with the locale that actually uses it. Both the
+    symbol and which side it belongs on are properties of the locale, not the
+    currency: SEK is "kr" trailing in sv-SE but "SEK" leading in en-US.
+ */
+const PICKER_LOCALES: Record<string, string> = {
+  USD: 'en-US',
+  GBP: 'en-GB',
+  EUR: 'de-DE',
+  JPY: 'ja-JP',
+  SEK: 'sv-SE',
+  INR: 'en-IN'
+};
+
+/*
+    A currency picker is off by default — the component never renders one.
+    `listCurrencies()` enumerates what the runtime knows from Intl, so there is
+    no bundled table to go stale, and changing the selection re-resolves both
+    the symbol and its side.
+ */
+export const WithCurrencyPicker: Story = {
+  parameters: { layout: 'padded' },
+  render: function WithCurrencyPicker(args) {
+    const id = useId();
+    const [currency, setCurrency] = useState('USD');
+
+    const locale = PICKER_LOCALES[currency];
+
+    const options = useMemo(
+      () =>
+        Object.keys(PICKER_LOCALES).map(
+          (code) => listCurrencies(PICKER_LOCALES[code], [code])[0]
+        ),
+      []
+    );
+
+    const { getInputProps, symbol, symbolPosition, numericValue } =
+      useFinancialInput({
+        onChange: args.onChange,
+        options: { currency, locale, scale: currency === 'JPY' ? 0 : 2 }
+      });
+
+    return (
+      <div style={{ maxWidth: 320 }}>
+        <div className="rfi-group">
+          <select
+            className="rfi-select"
+            value={currency}
+            onChange={(event) => setCurrency(event.target.value)}
+            aria-label="Currency"
+          >
+            {options.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.code} {option.symbol}
+              </option>
+            ))}
+          </select>
+          <div className="rfi-field">
+            <input {...getInputProps({ id, placeholder: ' ' })} />
+            <label className="rfi-label" htmlFor={id}>
+              Amount
+            </label>
+            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+              {symbol}
+            </span>
+          </div>
+        </div>
+        <p className="rfi-helper">
+          {locale} · {symbolPosition} · scale {currency === 'JPY' ? 0 : 2} ·{' '}
+          {numericValue === null ? 'null' : numericValue}
+        </p>
+      </div>
     );
   }
 };
