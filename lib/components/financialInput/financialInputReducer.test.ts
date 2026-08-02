@@ -3,6 +3,7 @@ import { InputType } from '../../enums';
 import { DEFAULT_SEPARATORS, Separators } from '../../utils';
 import {
   FinancialInputState,
+  HISTORY_LIMIT,
   createInitialState,
   reduceCompositionEnd,
   reduceInput,
@@ -22,7 +23,9 @@ const stateOf = (
   displayValue,
   numericValue,
   cursor: displayValue.length,
-  rejected: false
+  rejected: false,
+  past: [],
+  future: []
 });
 
 const run = (
@@ -493,5 +496,108 @@ describe('history', () => {
     expect(next.rejected).toBe(false);
     expect(next.displayValue).toBe('1,000');
     expect(next.numericValue).toBe(1000);
+  });
+});
+
+describe('undo and redo', () => {
+  const type = (state: FinancialInputState, digit: string, target: string) =>
+    run(state, InputType.INSERT_TEXT, digit, target, target.length);
+
+  it('walks back through each edit, then forward again', () => {
+    const one = type(stateOf(''), '1', '1');
+    const two = type(one, '2', '12');
+    const three = type(two, '3', '123');
+
+    expect(three.displayValue).toBe('123');
+
+    const back1 = run(three, InputType.HISTORY_UNDO, null, '123', 3);
+    expect(back1.displayValue).toBe('12');
+    expect(back1.numericValue).toBe(12);
+
+    const back2 = run(back1, InputType.HISTORY_UNDO, null, '12', 2);
+    expect(back2.displayValue).toBe('1');
+
+    const back3 = run(back2, InputType.HISTORY_UNDO, null, '1', 1);
+    expect(back3.displayValue).toBe('');
+    expect(back3.numericValue).toBe(null);
+
+    const forward = run(back3, InputType.HISTORY_REDO, null, '', 0);
+    expect(forward.displayValue).toBe('1');
+
+    const forward2 = run(forward, InputType.HISTORY_REDO, null, '1', 1);
+    expect(forward2.displayValue).toBe('12');
+  });
+
+  it.each([
+    [InputType.HISTORY_UNDO, 'undo'],
+    [InputType.HISTORY_REDO, 'redo']
+  ])('%s at the boundary is a no-op, not an error (%s)', (inputType) => {
+    const state = stateOf('1,000', 1000);
+    const next = run(state, inputType, null, '1,000', 5);
+
+    expect(next.rejected).toBe(false);
+    expect(next.displayValue).toBe('1,000');
+  });
+
+  it('discards the redo stack once a fresh edit lands', () => {
+    const two = type(type(stateOf(''), '1', '1'), '2', '12');
+    const undone = run(two, InputType.HISTORY_UNDO, null, '12', 2);
+
+    expect(undone.displayValue).toBe('1');
+    expect(undone.future).toHaveLength(1);
+
+    const edited = type(undone, '9', '19');
+
+    expect(edited.displayValue).toBe('19');
+    expect(edited.future).toHaveLength(0);
+
+    const redone = run(edited, InputType.HISTORY_REDO, null, '19', 2);
+    expect(redone.displayValue).toBe('19');
+  });
+
+  it('undoes a shortcut expansion in one step', () => {
+    const base = type(stateOf(''), '2', '2');
+    const expanded = run(base, InputType.INSERT_TEXT, 'k', '2k', 2);
+
+    expect(expanded.displayValue).toBe('2,000');
+
+    const undone = run(expanded, InputType.HISTORY_UNDO, null, '2,000', 5);
+    expect(undone.displayValue).toBe('2');
+  });
+
+  it('undoes a paste in one step', () => {
+    const typed = type(stateOf(''), '5', '5');
+    const pasted = run(
+      typed,
+      InputType.INSERT_FROM_PASTE,
+      null,
+      '$1,234.56',
+      9
+    );
+
+    expect(pasted.displayValue).toBe('1,234.56');
+
+    const undone = run(pasted, InputType.HISTORY_UNDO, null, '1,234.56', 8);
+    expect(undone.displayValue).toBe('5');
+  });
+
+  it('does not record a refused keystroke', () => {
+    const typed = type(stateOf(''), '1', '1');
+    const refused = run(typed, InputType.INSERT_TEXT, 'z', '1z', 2);
+
+    expect(refused.rejected).toBe(true);
+    expect(refused.past).toHaveLength(typed.past.length);
+  });
+
+  it(`keeps at most ${HISTORY_LIMIT} snapshots`, () => {
+    let state = stateOf('');
+
+    for (let i = 1; i <= HISTORY_LIMIT + 20; i += 1) {
+      const target = '1'.repeat(Math.min(i, 11));
+      state = { ...type(state, '1', target), displayValue: `${i}` };
+      state = { ...state, past: state.past };
+    }
+
+    expect(state.past.length).toBeLessThanOrEqual(HISTORY_LIMIT);
   });
 });

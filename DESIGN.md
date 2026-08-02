@@ -136,9 +136,18 @@ makes the keyboard fight the input, so the raw text is shown as-is and no
 numeric value is committed until `compositionend`. A refused commit rebuilds
 from the last committed value rather than leaving the IME's raw text on screen.
 
-**Undo is ignored deliberately.** The browser's undo stack holds its own edits
-— the unformatted text it inserted — not the reformatted value React rendered.
-Replaying it would restore something the user never saw.
+**Undo is the component's own.** The browser's stack holds its own edits — the
+unformatted text it inserted — not the reformatted value React rendered, so
+replaying it would restore something the user never saw. Instead every accepted
+edit pushes a snapshot, and a fresh edit clears the redo stack.
+
+It is driven from the **keystroke**, not the `historyUndo` input type. The
+browser only emits `historyUndo` while its own stack has entries, and that stack
+is exhausted the moment React overwrites the value — so the first Ctrl+Z arrives
+and the second never does. Intercepting the key is the only way repeated undo
+works. Verified on Chromium, Firefox and WebKit.
+
+One step per accepted edit, so a paste or a shortcut expansion undoes in one.
 
 > The **Event tester** story logs all of this live. Open it on a device,
 > perform the gesture, and read off what actually fired. That is the fastest way

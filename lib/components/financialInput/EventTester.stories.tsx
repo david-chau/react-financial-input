@@ -130,14 +130,15 @@ const CHEATSHEET: {
   {
     action: 'Undo (Ctrl/Cmd+Z)',
     inputType: 'historyUndo',
-    handling: 'ignored on purpose',
-    notes: "The browser's undo stack holds text React never rendered"
+    handling: 'steps back through the component\u2019s own history',
+    notes:
+      "The browser's stack holds raw text React never rendered, so it is not used"
   },
   {
-    action: 'Redo',
+    action: 'Redo (Ctrl/Cmd+Shift+Z)',
     inputType: 'historyRedo',
-    handling: 'ignored on purpose',
-    notes: 'Same reason as undo'
+    handling: 'steps forward again; cleared by any fresh edit',
+    notes: 'One step per accepted edit — a paste or shortcut undoes in one'
   }
 ];
 
@@ -220,8 +221,6 @@ export const Playground: Story = {
             ...entries
           ].slice(0, 40)
         );
-
-        before.current = after;
       },
       [inputRef]
     );
@@ -238,14 +237,26 @@ export const Playground: Story = {
 
       before.current = node.value;
 
-      const onBeforeInput = (event: Event) => {
-        const input = event as InputEvent;
+      /*
+          beforeinput only captures the value *before* the edit — recording
+          there made every row read "x → x". The result is only known once the
+          input event has fired, and that event carries inputType too.
+       */
+      const onBeforeInput = () => {
         before.current = node.value;
-        record(
-          'beforeinput',
-          input.inputType,
-          input.data ?? '(null)',
-          input.isComposing
+      };
+
+      const onInput = (event: Event) => {
+        const input = event as InputEvent;
+        const { inputType, data, isComposing } = input;
+
+        /*
+            React has not re-rendered yet, so node.value here is still the raw
+            value the browser produced. Reading it after paint is what shows
+            the formatted result the user actually sees.
+         */
+        requestAnimationFrame(() =>
+          record('input', inputType, data ?? '(null)', isComposing)
         );
       };
 
@@ -261,6 +272,7 @@ export const Playground: Story = {
         );
 
       node.addEventListener('beforeinput', onBeforeInput);
+      node.addEventListener('input', onInput);
       ['compositionstart', 'compositionupdate', 'compositionend'].forEach((t) =>
         node.addEventListener(t, onComposition)
       );
@@ -270,6 +282,7 @@ export const Playground: Story = {
 
       return () => {
         node.removeEventListener('beforeinput', onBeforeInput);
+        node.removeEventListener('input', onInput);
         ['compositionstart', 'compositionupdate', 'compositionend'].forEach(
           (t) => node.removeEventListener(t, onComposition)
         );
