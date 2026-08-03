@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.3](https://github.com/david-chau/react-financial-input/compare/v0.6.2...v0.6.3) (2026-08-03)
+
+
+### Bug fixes
+
+* drop the blank line that broke prettier on main ([79abde4](https://github.com/david-chau/react-financial-input/commit/79abde4b3c4554e1eb3e67457495fe0978a7f966))
+
+
+### Documentation
+
+* trim the quick start, and record what 0.6.2 actually shipped ([#23](https://github.com/david-chau/react-financial-input/issues/23)) ([448ac5d](https://github.com/david-chau/react-financial-input/commit/448ac5d8ed88daeca7d26819fda573245165ae63))
+* update playground link in README to include file context ([4ad886a](https://github.com/david-chau/react-financial-input/commit/4ad886acef09444ea3f63ea6bb61bbd0cc594528))
+
 ## [0.6.2](https://github.com/david-chau/react-financial-input/compare/v0.6.1...v0.6.2) (2026-08-03)
 
 > **This release contains features, despite the patch version.** The release
