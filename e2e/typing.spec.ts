@@ -273,6 +273,61 @@ test.describe('shortcut keypad', () => {
   });
 });
 
+/*
+    Two fixes that were written, reviewed and then lost: they sat on a branch
+    whose pull request had already merged, so they never reached main. Pinned
+    here so their absence is a failing test rather than a silent regression.
+ */
+test.describe('recovered fixes', () => {
+  test('full-width panels are centred, not pinned left', async ({ page }) => {
+    for (const url of [STORIES.debugPlayground, STORIES.keyboardTester]) {
+      await page.goto(url);
+      await page.locator('input').first().waitFor();
+
+      const gaps = await page.evaluate(() => {
+        const root = document
+          .querySelector('#storybook-root')
+          ?.getBoundingClientRect();
+        const panel = document
+          .querySelector('#storybook-root > *')
+          ?.getBoundingClientRect();
+
+        if (!root || !panel) return null;
+
+        return {
+          left: panel.left - root.left,
+          right: root.right - panel.right
+        };
+      });
+
+      expect(Math.abs((gaps?.left ?? 0) - (gaps?.right ?? 0))).toBeLessThan(4);
+    }
+  });
+
+  /*
+      The select draws its own chevron, because a native one sits inside the
+      right padding by a different amount per browser. The first attempt put
+      `background:` shorthand after `background-image`, which resets it — so
+      the image silently never rendered and the native arrow was still showing.
+   */
+  test('the select draws its own chevron', async ({ page }) => {
+    await page.goto(STORIES.withCurrencyPicker);
+    await page.locator('.rfi-select').waitFor();
+
+    const style = await page.locator('.rfi-select').evaluate((element) => {
+      const computed = getComputedStyle(element);
+
+      return {
+        appearance: computed.appearance,
+        image: computed.backgroundImage
+      };
+    });
+
+    expect(style.appearance).toBe('none');
+    expect(style.image).toContain('url(');
+  });
+});
+
 test.describe('currency search', () => {
   test('filters, selects by keyboard, and applies', async ({ page }) => {
     await page.goto(STORIES.withCurrencySearch);

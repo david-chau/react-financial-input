@@ -12,6 +12,7 @@ export const withoutBadge = (url: string) => `${url}&rfiBadge=0`;
 
 export const STORIES = {
   debugPlayground: storyUrl('financialinput--debug-playground'),
+  keyboardTester: storyUrl('financialinput--keyboard-tester'),
   default: storyUrl('financialinput--default'),
   shortcuts: storyUrl('financialinput--shortcuts'),
   wholeNumbersOnly: storyUrl('financialinput--whole-numbers-only'),
