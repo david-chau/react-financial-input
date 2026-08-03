@@ -459,6 +459,46 @@ export const reduceShortcut = (
 };
 
 /*
+    Composition, which is where the branching lived. Split out of reduceInput,
+    whose switch had grown to a cyclomatic complexity of 21 — most of it here,
+    and none of it about the other seventeen input types.
+ */
+const reduceComposing = (
+  state: FinancialInputState,
+  action: FinancialInputAction
+): FinancialInputState => {
+  if (action.isComposing) {
+    /*
+          Refuse now rather than at a compositionend that may never come. A
+          pinyin keyboard composes "ni hao" and then Chinese characters
+          directly into the field, and iOS fires no compositionend for it, so
+          holding left CJK text in a numeric input indefinitely.
+       */
+    if (
+      !isComposableNumericText(
+        action.targetValue,
+        action.separators,
+        action.exponents
+      )
+    ) {
+      return reject(state, state.cursor);
+    }
+
+    if (
+      !isCompleteShortcutToken(
+        action.targetValue,
+        action.separators,
+        action.exponents
+      )
+    ) {
+      return hold(state, action);
+    }
+  }
+
+  return remember(state, replace(state, action));
+};
+
+/*
     Pure. Every platform quirk becomes a row in the reducer's test table rather
     than a branch in the component.
  */
@@ -528,35 +568,7 @@ export const reduceInput = (
         needs no further input to interpret.
      */
     case InputType.INSERT_COMPOSITION_TEXT:
-      if (action.isComposing) {
-        /*
-            Refuse now rather than at a compositionend that may never come. A
-            pinyin keyboard composes "ni hao" and then Chinese characters
-            directly into the field, and iOS fires no compositionend for it, so
-            holding left CJK text in a numeric input indefinitely.
-         */
-        if (
-          !isComposableNumericText(
-            action.targetValue,
-            action.separators,
-            action.exponents
-          )
-        ) {
-          return reject(state, state.cursor);
-        }
-
-        if (
-          !isCompleteShortcutToken(
-            action.targetValue,
-            action.separators,
-            action.exponents
-          )
-        ) {
-          return hold(state, action);
-        }
-      }
-
-      return remember(state, replace(state, action));
+      return reduceComposing(state, action);
 
     case InputType.HISTORY_UNDO:
       return undo(state);

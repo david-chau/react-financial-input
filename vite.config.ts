@@ -34,8 +34,30 @@ export default defineConfig({
       exclude: [
         'lib/**/*.test.{ts,tsx}',
         'lib/**/*.stories.tsx',
-        'lib/**/index.ts'
-      ]
+        'lib/**/index.ts',
+        /*
+            Storybook demo components, not library code. None of them is
+            exported and none is in the bundle — checked, not assumed — so
+            counting them only made the number describe something the package
+            does not contain. What they do is covered by Playwright, against a
+            real browser, which is the only place they exist.
+         */
+        'lib/components/inputEvents/**',
+        'lib/components/financialInput/EventTesterPanel.tsx',
+        'lib/components/financialInput/KeyboardTesterPanel.tsx',
+        'lib/components/financialInput/CurrencyCombobox.tsx',
+        'lib/Introduction.stories.tsx'
+      ],
+      /*
+          A floor, not a target. It is here so coverage cannot quietly slide;
+          raising it is a decision, and lowering it should need an argument.
+       */
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90
+      }
     }
   }
 });

@@ -230,6 +230,14 @@ before copying anything.
 
 ## Cost
 
-None of this is bundled data. The component alone is about 4.1 kB gzipped;
-adding the search, presets and flags takes it to roughly 4.6 kB, and it all
-drops out again if unused.
+Measured, not estimated — these are gzipped, from an actual build:
+
+|                                                                        | gzip       |
+| ---------------------------------------------------------------------- | ---------- |
+| `FinancialInput` alone, tree-shaken                                    | **4.7 kB** |
+| Everything: hook, parsing, currency lists, search, flags, input events | **6.2 kB** |
+| `flags.woff2`, only if you import `flags.css`                          | 78 kB      |
+
+None of it is bundled data — the currency lists come from `Intl`, and the flags
+are computed from the code rather than looked up in a table. Anything you do not
+import is not in your bundle.

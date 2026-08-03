@@ -112,6 +112,45 @@ export const applyShortcut = (
 };
 
 /*
+    The exponent a trailing run of shortcut letters adds up to, or null when
+    the run is currency text rather than multipliers.
+
+    Split out of sanitiseNumericText, which had reached a cyclomatic complexity
+    of 14 doing this and the digit extraction in one function. The two rules
+    here are subtle enough to deserve their own name.
+
+    A trailing run so that pasting "2.5m" behaves like typing it, and "1kk"
+    multiplies twice for 1,000,000 — typing has always chained, because each
+    keystroke multiplies what is already there.
+
+    Every letter in the run must be a shortcut, which excludes "kr" and "USD".
+    And the run must sit against the digits or be the whole text, because
+    plenty of currencies are spelled with h/k/m/b: without it "1 000 KM" is
+    Bosnian marks read as a thousand billion, and "1 MMK" is Myanmar kyat read
+    as 1e15.
+
+    Written as (?:^|\d) rather than a lookbehind, which older WebKit does not
+    support.
+ */
+const trailingShortcutExponent = (
+  trimmed: string,
+  exponents: StringKeyedMap<number>
+): Nullable<number> => {
+  const trailing = trimmed.match(/(?:^|\d)([a-z]+)\s*\)?\s*$/i);
+  const letters = trailing ? trailing[1].split('') : [];
+
+  if (letters.length === 0) {
+    return null;
+  }
+
+  const found = letters.map((letter) => getShortcutExponent(letter, exponents));
+
+  return found.every((value) => value !== null)
+    ? found.reduce((total: number, value) => total + (value as number), 0)
+    : null;
+};
+
+/*
     Extracts a number from arbitrary text — a paste, a drop, or an iOS
     autocorrect replacement. Unlike typing, this text was not filtered
     keystroke by keystroke, so it can be anything the clipboard held:
@@ -136,36 +175,7 @@ export const sanitiseNumericText = (
    */
   const isNegative = trimmed.startsWith('-') || /^\(.*\)$/.test(trimmed);
 
-  /*
-      A trailing run of shortcut letters, so pasting "2.5m" behaves like typing
-      it — and so does "1kk", which multiplies twice for 1,000,000. Typing has
-      always chained, because each keystroke multiplies what is already there;
-      the paste path used to keep only the last letter, so "2.5mk" came out as
-      2,500 instead of 2.5 billion.
-
-      Two guards stop currency text being read as a multiplier, and both are
-      needed because plenty of currencies are spelled with h/k/m/b:
-
-      Every letter in the run must be a shortcut. "1 234,56 kr" ends in a run
-      containing "k", and "$1,234.56 USD" ends in one containing "D" — one
-      unknown letter and the whole run is currency text, to be stripped.
-
-      And the run must sit against the digits, or be the whole of the text. A
-      shortcut is typed onto a number; a currency code follows a space. Without
-      that, "1 000 KM" is Bosnian marks read as a thousand billion, and
-      "1 MMK" is Myanmar kyat read as 1e15.
-
-      Written as (?:^|\d) rather than a lookbehind, which older WebKit does
-      not support.
-   */
-  const trailing = trimmed.match(/(?:^|\d)([a-z]+)\s*\)?\s*$/i);
-  const letters = trailing ? trailing[1].split('') : [];
-  const found = letters.map((letter) => getShortcutExponent(letter, exponents));
-
-  const exponent =
-    found.length > 0 && found.every((value) => value !== null)
-      ? found.reduce((total: number, value) => total + (value as number), 0)
-      : null;
+  const exponent = trailingShortcutExponent(trimmed, exponents);
 
   /*
       Everything that is not a digit or the configured fraction separator goes,

@@ -11,7 +11,7 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-financial-input": "^0.6.1"
+    "react-financial-input": "latest"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

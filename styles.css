@@ -399,7 +399,6 @@
   margin: 0;
   padding: 0.25rem;
   overflow-y: auto;
-  list-style: none;
   border: 1px solid var(--rfi-border-color);
   border-radius: var(--rfi-radius);
   background: var(--rfi-surface);
@@ -427,8 +426,13 @@
   background: var(--rfi-combobox-active, rgba(25, 118, 210, 0.1));
 }
 
+/*
+ * A defined colour rather than opacity. At 0.6 on 12px text this failed axe's
+ * contrast check — and dimming secondary text is exactly where that happens,
+ * because it looks deliberate.
+ */
 .rfi-combobox__option small {
-  opacity: 0.6;
+  color: var(--rfi-muted, #5f6368);
   font-size: 0.75rem;
   /* The name is the least important part; let it go rather than wrap. */
   overflow: hidden;
@@ -438,7 +442,7 @@
 
 .rfi-combobox__empty {
   padding: 0.5rem;
-  opacity: 0.6;
+  color: var(--rfi-muted, #5f6368);
   font-family: var(--rfi-font-family);
   font-size: 0.85rem;
 }

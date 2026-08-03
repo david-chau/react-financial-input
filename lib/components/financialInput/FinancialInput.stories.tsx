@@ -38,7 +38,15 @@ const meta: Meta<FieldArgs> = {
   component: FinancialInput,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
-  args: { onChange: fn(), onError: fn() },
+  /*
+      Every input needs an accessible name, and the bare stories have no
+      visible label to supply one. axe rates a nameless input critical, and it
+      was right to: the Default story was modelling markup the quick start
+      explicitly does not use.
+
+      Stories that render their own <label> override this with a real one.
+   */
+  args: { onChange: fn(), onError: fn(), 'aria-label': 'Amount' },
   /*
       The full-width panels opt out of the shared frame. A meta decorator wraps
       outside a story's own, so without this the 260px box squeezed them to a

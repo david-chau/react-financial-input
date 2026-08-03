@@ -44,6 +44,12 @@ export default defineConfig({
 
   projects: [
     {
+      // Accessibility runs on one engine: axe reports the DOM, not the renderer.
+      name: 'accessibility',
+      testMatch: /accessibility\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] }
+    },
+    {
       name: 'chromium',
       testMatch: /typing\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] }

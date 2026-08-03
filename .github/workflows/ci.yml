@@ -74,7 +74,8 @@ jobs:
           # cannot stand in for real Windows or macOS key handling.
           - os: ubuntu-latest
             browsers: chromium firefox
-            projects: --project=chromium --project=firefox --project=mobile-chrome --project=chromium-ime
+            # accessibility runs here only: axe reads the DOM, not the renderer.
+            projects: --project=chromium --project=firefox --project=mobile-chrome --project=chromium-ime --project=accessibility
           - os: windows-latest
             browsers: chromium firefox
             projects: --project=chromium --project=firefox

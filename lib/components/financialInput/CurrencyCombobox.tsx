@@ -97,6 +97,11 @@ export const CurrencyCombobox = ({
         aria-controls={listId}
         aria-autocomplete="list"
         aria-label={label}
+        aria-activedescendant={
+          isOpen && results[active]
+            ? `${listId}-${results[active].code}`
+            : undefined
+        }
         value={isOpen ? query : `${toFlagEmoji(value) ?? ''} ${value}`.trim()}
         placeholder="Search"
         onFocus={() => {
@@ -112,38 +117,51 @@ export const CurrencyCombobox = ({
       />
 
       {isOpen && (
-        <ul className="rfi-combobox__list" id={listId} role="listbox">
+        /*
+            role="option" sits on the direct children of the listbox, with no
+            element in between.
+
+            It used to be <ul role="listbox"><li><button role="option">, which
+            axe rejects on two counts: a listbox must own its options, and the
+            option's parent was an <li> rather than the listbox. Both are
+            critical, and this component is the markup the docs tell people to
+            copy — so it was propagating them.
+
+            A <div> rather than a <ul>, because role="listbox" overrides list
+            semantics anyway and the <li> was only ever there to satisfy the
+            <ul>.
+         */
+        <div className="rfi-combobox__list" id={listId} role="listbox">
           {results.length === 0 && (
-            <li className="rfi-combobox__empty">No match</li>
+            <div className="rfi-combobox__empty">No match</div>
           )}
 
           {results.map((option, index) => (
-            <li key={option.code}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={option.code === value}
-                className={`rfi-combobox__option${
-                  index === active ? ' rfi-combobox__option--active' : ''
-                }`}
-                // Pointer down, not click: the input's blur would close the
-                // list before a click ever landed.
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  choose(option);
-                }}
-                onPointerEnter={() => setActive(index)}
-              >
-                {/* rfi-flag lets a consumer's flag font reach the glyph. */}
-                <span className="rfi-flag" aria-hidden>
-                  {toFlagEmoji(option.code) ?? '  '}
-                </span>
-                <strong>{option.code}</strong>
-                <small>{option.name}</small>
-              </button>
-            </li>
+            <div
+              key={option.code}
+              role="option"
+              id={`${listId}-${option.code}`}
+              aria-selected={option.code === value}
+              className={`rfi-combobox__option${
+                index === active ? ' rfi-combobox__option--active' : ''
+              }`}
+              // Pointer down, not click: the input's blur would close the list
+              // before a click ever landed.
+              onPointerDown={(event) => {
+                event.preventDefault();
+                choose(option);
+              }}
+              onPointerEnter={() => setActive(index)}
+            >
+              {/* rfi-flag lets a consumer's flag font reach the glyph. */}
+              <span className="rfi-flag" aria-hidden>
+                {toFlagEmoji(option.code) ?? '  '}
+              </span>
+              <strong>{option.code}</strong>
+              <small>{option.name}</small>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

@@ -532,6 +532,47 @@ keyframes declare `from` and nothing else, so the browser animates back to
 whatever the element's real style is — which fades out correctly on every
 variant, focused or not, without hard-coding the resting colours.
 
+## Limits
+
+What this library does not do, stated plainly, because finding out later is
+worse than reading it here.
+
+### Numbers above 2^53
+
+Values are carried as JavaScript `number`, so anything past
+`Number.MAX_SAFE_INTEGER` — 9,007,199,254,740,991 — loses precision. That is
+about nine quadrillion, so it is unreachable for most money, but it is a real
+ceiling and this is a financial library.
+
+`valueType: 'string'` gets you the canonical text rather than a number, which
+preserves what was typed — including the trailing zero in `1.50`, which a
+number cannot hold. But the arithmetic behind the multiplier shortcuts still
+goes through a `number`, so `9007199254740991k` is not exact. Fixing that
+properly means the reducer holding a decimal string end to end.
+
+If you are handling amounts near that bound, `parseAmount` returning a number
+is the wrong tool, and so is this input.
+
+### Devices nobody has tested
+
+The support matrix marks rows 🚧 where they are not verified, and there are six
+of them. That is not modesty; it is that the verification does not exist:
+
+- **Real-device CI (L4)** needs a device farm. Everything currently runs on
+  emulated viewports or GitHub's runners, and a `devices['Pixel 7']` descriptor
+  emulates viewport, touch and user agent — not a soft keyboard, and not an IME.
+- **IME on Firefox and WebKit** has no equivalent of Chromium's
+  `Input.imeSetComposition`, so composition cannot be driven there at all.
+
+Several bugs in this library were found only because someone typed into a real
+phone. It follows that more are waiting on devices nobody has held.
+
+### One flat reserve in the stylesheet
+
+The space kept clear for a suffix currency symbol is a fixed `3.5rem`, sized for
+the widest common symbol. CSS cannot measure text, so a symbol past about four
+characters will still collide; `--rfi-adornment-space` is the way out.
+
 ## Roadmap
 
 1. Real-device CI (L4) — the only remaining gap in the support matrix
