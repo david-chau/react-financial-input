@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.0](https://github.com/david-chau/react-financial-input/compare/v0.10.0...v0.11.0) (2026-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* parseAmount, formatNumber, shiftDecimal, toCanonical, formatCanonical and DEFAULT_SHORTCUTS moved to react-financial-input/parse. The root now exports the component and the hook, and nothing else.
+
+### Bug fixes
+
+* keep parsing off the client boundary, so it runs on a server ([#42](https://github.com/david-chau/react-financial-input/issues/42)) ([e70fb13](https://github.com/david-chau/react-financial-input/commit/e70fb13ee78015595ff6adefd5479f595d821fd4))
+
 ## [0.10.0](https://github.com/david-chau/react-financial-input/compare/v0.9.0...v0.10.0) (2026-08-03)
 
 
