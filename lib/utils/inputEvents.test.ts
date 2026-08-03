@@ -173,3 +173,42 @@ describe('describeEdit with an event', () => {
     expect(edit.at).toBe(1);
   });
 });
+
+/*
+    The boundary itself: one character is a keystroke, two is bulk.
+
+    Found by mutation testing rather than by coverage. Every line and branch
+    here was already executed, but changing `length > 1` to `length > 2` broke
+    nothing — the tables used one character and long strings, and nothing sat
+    on the edge between them.
+
+    That edge is the whole rule. The Android clipboard chip sends `insertText`
+    carrying an entire string, so the length is what separates a paste from a
+    keystroke. A two-character paste is the smallest case where getting it
+    wrong means validating a paste as though someone had typed it.
+ */
+describe('one character is a keystroke, two is bulk', () => {
+  it.each([
+    // data   kind          note
+    ['1', 'insert', 'a single digit is typing'],
+    ['ab', 'insertBulk', 'two characters cannot have been one keystroke'],
+    ['12', 'insertBulk', 'including two digits'],
+    ['1234', 'insertBulk', 'and anything longer']
+  ])('insertText with %j is %s (%s)', (data, kind) => {
+    const edit = describeEdit('', data as string, {
+      inputType: InputType.INSERT_TEXT,
+      data: data as string
+    });
+
+    expect(edit.kind).toBe(kind);
+    expect(edit.isBulk).toBe(kind === 'insertBulk');
+  });
+
+  // Same boundary with no event, where the diff alone has to decide.
+  it.each([
+    ['12', '123', 'insert', 'one character appeared'],
+    ['12', '1234', 'insertBulk', 'two did']
+  ])('%j -> %j from the strings alone is %s (%s)', (before, after, kind) => {
+    expect(describeEdit(before as string, after as string).kind).toBe(kind);
+  });
+});
