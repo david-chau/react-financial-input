@@ -10,6 +10,11 @@ shortcuts that work on **every device, including phones**.
 
 Zero runtime dependencies. Unstyled by default.
 
+**[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground)**
+· **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
+· **[Framework examples →](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md)**
+
+
 ## Quick start
 
 ```bash
@@ -47,10 +52,6 @@ React 18 or newer (`>=18.0.0`). Nothing else.
 > **Submitting a native `<form>`?** Do not put `name` on the input — it submits
 > the formatted `"1,234.56"`.
 > [Use a hidden field](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md#a-plain-form-no-library).
-
-**[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground)**
-· **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
-· **[Framework examples →](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md)**
 
 ## What it does
 
