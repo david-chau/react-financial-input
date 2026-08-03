@@ -188,6 +188,8 @@ All of it is in **[UTILS.md](https://github.com/david-chau/react-financial-input
   event cheatsheet, the device support matrix, styling.
 - **[CONTRIBUTING.md](https://github.com/david-chau/react-financial-input/blob/main/CONTRIBUTING.md)** — architecture rules and local setup.
 - **[CI.md](https://github.com/david-chau/react-financial-input/blob/main/CI.md)** — what each workflow does, and how to publish.
+- **[HISTORY.md](https://github.com/david-chau/react-financial-input/blob/main/HISTORY.md)** — where it came from, why it stalled for two
+  years, and what real devices taught it.
 
 ## License
 

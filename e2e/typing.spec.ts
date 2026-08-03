@@ -547,14 +547,28 @@ test.describe('the flag font', () => {
 test.describe('the font paints a real flag', () => {
   const paint = (page: Page, family: string) =>
     page.evaluate(async (fontFamily) => {
+      /*
+          Canvas does not trigger a webfont download, and document.fonts.ready
+          only settles what the document already asked for. Without this
+          explicit load the canvas silently falls back to system fonts — which
+          made this pass on macOS, where the system has flags of its own, while
+          proving nothing. Windows, having none, is what exposed it.
+       */
+      const faces = await document.fonts.load(
+        `24px ${fontFamily}`,
+        '\u{1F1E8}\u{1F1E6}'
+      );
       await document.fonts.ready;
+
+      // Empty for a system family, which is fine; non-empty must have loaded.
+      const loaded = faces.every((face) => face.status === 'loaded');
 
       const canvas = document.createElement('canvas');
       canvas.width = 32;
       canvas.height = 32;
 
       const context = canvas.getContext('2d');
-      if (!context) return null;
+      if (!context) return { coloured: false, loaded: false, faces: 0 };
 
       context.font = `24px ${fontFamily}`;
       context.fillStyle = '#000';
@@ -562,7 +576,9 @@ test.describe('the font paints a real flag', () => {
 
       const { data } = context.getImageData(0, 0, 32, 32);
 
-      for (let index = 0; index < data.length; index += 4) {
+      let coloured = false;
+
+      for (let index = 0; index < data.length && !coloured; index += 4) {
         const [red, green, blue, alpha] = [
           data[index],
           data[index + 1],
@@ -570,22 +586,25 @@ test.describe('the font paints a real flag', () => {
           data[index + 3]
         ];
 
-        if (
+        // A flag is painted in several hues; letters are one flat colour.
+        coloured =
           alpha > 0 &&
-          (Math.abs(red - green) > 24 || Math.abs(green - blue) > 24)
-        ) {
-          return true;
-        }
+          (Math.abs(red - green) > 24 || Math.abs(green - blue) > 24);
       }
 
-      return false;
+      return { coloured, loaded, faces: faces.length };
     }, family);
 
   test('renders in colour wherever it is loaded', async ({ page }) => {
     await page.goto(STORIES.withCurrencySearch);
     await input(page).waitFor();
 
-    expect(await paint(page, '"Twemoji Country Flags"')).toBe(true);
+    const result = await paint(page, '"Twemoji Country Flags"');
+
+    // The webfont itself resolved, rather than the canvas quietly falling back.
+    expect(result.faces).toBeGreaterThan(0);
+    expect(result.loaded).toBe(true);
+    expect(result.coloured).toBe(true);
   });
 
   /*
@@ -609,7 +628,7 @@ test.describe('the font paints a real flag', () => {
     await input(page).waitFor();
 
     // If this ever passes, Windows grew flag glyphs and the 80 kB can go.
-    expect(await paint(page, 'system-ui, sans-serif')).toBe(false);
+    expect((await paint(page, 'system-ui, sans-serif')).coloured).toBe(false);
   });
 });
 
