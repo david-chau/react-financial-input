@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.4](https://github.com/david-chau/react-financial-input/compare/v0.6.3...v0.6.4) (2026-08-03)
+
+
+### Bug fixes
+
+* stop the value running under a suffix currency symbol ([#26](https://github.com/david-chau/react-financial-input/issues/26)) ([6e9808d](https://github.com/david-chau/react-financial-input/commit/6e9808d861bf7426a5f8c86cdf307d7f6ece0c3f))
+
 ## [0.6.3](https://github.com/david-chau/react-financial-input/compare/v0.6.2...v0.6.3) (2026-08-03)
 
 
