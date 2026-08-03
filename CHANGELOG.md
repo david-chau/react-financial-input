@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.5](https://github.com/david-chau/react-financial-input/compare/v0.6.4...v0.6.5) (2026-08-03)
+
+
+### Bug fixes
+
+* accept a paste that arrives as insertText ([#28](https://github.com/david-chau/react-financial-input/issues/28)) ([62fce1f](https://github.com/david-chau/react-financial-input/commit/62fce1fbbf071a17aa57635cc2a32fc600a4b4c3))
+
 ## [0.6.4](https://github.com/david-chau/react-financial-input/compare/v0.6.3...v0.6.4) (2026-08-03)
 
 
