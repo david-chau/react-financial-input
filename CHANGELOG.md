@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/david-chau/react-financial-input/compare/v0.6.1...v0.6.2) (2026-08-03)
+
+
+### Documentation
+
+* record the approve-then-merge order for release PRs ([#20](https://github.com/david-chau/react-financial-input/issues/20)) ([4e4b059](https://github.com/david-chau/react-financial-input/commit/4e4b05962722d77887cc9f7498445186b3153e07))
+
 ## [0.6.1](https://github.com/david-chau/react-financial-input/compare/v0.6.0...v0.6.1) (2026-08-03)
 
 
