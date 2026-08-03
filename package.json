@@ -88,7 +88,7 @@
   ],
   "scripts": {
     "build": "vite build && tsc -p ./tsconfig-build.json && node scripts/fixDeclarationImports.mjs",
-    "typecheck": "tsc --noEmit -p ./tsconfig.json",
+    "typecheck": "tsc --noEmit -p ./tsconfig.json && tsc --noEmit -p ./tsconfig-examples.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
