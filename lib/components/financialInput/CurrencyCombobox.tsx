@@ -134,7 +134,10 @@ export const CurrencyCombobox = ({
                 }}
                 onPointerEnter={() => setActive(index)}
               >
-                <span aria-hidden>{toFlagEmoji(option.code) ?? '  '}</span>
+                {/* rfi-flag lets a consumer's flag font reach the glyph. */}
+                <span className="rfi-flag" aria-hidden>
+                  {toFlagEmoji(option.code) ?? '  '}
+                </span>
                 <strong>{option.code}</strong>
                 <small>{option.name}</small>
               </button>

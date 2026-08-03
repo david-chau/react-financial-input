@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Edit, describeEdit } from '../../utils';
+import { Edit, describeEdit, supportsFlagEmoji } from '../../utils';
 
 /*
     A deliberately plain <input>. No FinancialInput, no formatting, no currency
@@ -173,6 +173,21 @@ export const InputEventsPanel = () => {
             paste, an IME still composing, an undo.
           </p>
         </div>
+      </div>
+
+      <div style={styles.card}>
+        <p style={styles.heading}>This platform</p>
+        <pre style={styles.code}>
+          {`flag emoji: ${
+            supportsFlagEmoji() ? 'drawn' : 'not drawn — letters instead'
+          }`}
+        </pre>
+        <p style={styles.note}>
+          Windows ships no glyphs for regional indicator pairs, so the currency
+          search shows <code>SE</code> rather than a Swedish flag.{' '}
+          <code>supportsFlagEmoji()</code> reports it, so a flag font can be
+          downloaded on the platforms that need one and nowhere else.
+        </p>
       </div>
 
       <div style={styles.card}>

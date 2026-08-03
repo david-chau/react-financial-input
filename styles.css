@@ -342,6 +342,31 @@
 }
 
 /*
+ * Flag glyphs, for platforms that have none.
+ *
+ * Windows ships no glyphs for regional indicator pairs, so a browser draws the
+ * two letters instead — "SE" rather than the Swedish flag. No amount of CSS
+ * conjures a glyph that is not installed, so the only real fix is a font that
+ * carries them, and that is a few hundred kilobytes nobody should download
+ * without asking for it.
+ *
+ * So this library ships the hook, not the font. Point --rfi-flag-font at
+ * whatever you choose to load and the flags appear; leave it alone and the
+ * letters stay, which is a perfectly readable fallback.
+ *
+ *   @font-face { font-family: 'Your Flags'; src: url(...) format('woff2'); }
+ *   :root { --rfi-flag-font: 'Your Flags'; }
+ *
+ * `supportsFlagEmoji()` reports whether the platform needs it, so the download
+ * can be skipped everywhere except Windows.
+ */
+.rfi-flag {
+  font-family: var(--rfi-flag-font), var(--rfi-font-family);
+  /* Never let a flag stretch the row it sits in. */
+  line-height: 1;
+}
+
+/*
  * The search itself: a text input that filters, a listbox, and arrow keys —
  * the WAI-ARIA combobox pattern.
  */

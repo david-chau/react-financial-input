@@ -78,9 +78,58 @@ toFlagEmoji('XAU'); // null — gold has no country
 
 Free, with no image assets: an ISO 4217 code is the ISO 3166 country code plus a
 letter, and a flag emoji is that country code written in regional indicator
-symbols. Two caveats — **Windows renders no flag emoji at all**, showing the two
-letters instead, and codes with no country return `null`, so fall back to the
-code.
+symbols. Codes with no country return `null`, so fall back to the code.
+
+### Windows draws letters, not flags
+
+Windows ships no glyphs for regional indicator pairs, so a browser renders the
+two letters — `SE` instead of 🇸🇪. This is a missing font on the machine, not
+something CSS or JavaScript can work around. Every other major platform is fine.
+
+`supportsFlagEmoji()` tells you which you are on. It draws one and looks for
+colour: a real flag has several hues, the letter fallback has one.
+
+```ts
+import { supportsFlagEmoji } from 'react-financial-input';
+
+supportsFlagEmoji(); // false on Windows, true on macOS, iOS, Android, most Linux
+```
+
+It returns `false` during server rendering and anywhere without a canvas,
+because the honest answer is then "cannot tell" and the fallback is the safe
+branch. The result is cached — it cannot change mid-session.
+
+### Making them appear anyway
+
+The only real fix is a font carrying the glyphs, and that is a few hundred
+kilobytes. **This library ships the hook, not the font** — a package that
+advertises 4.6 kB has no business quietly adding a webfont. You choose whether
+the download is worth it, and pay for it only where it is needed:
+
+```ts
+if (supportsFlagEmoji()) return; // nothing to do on most platforms
+
+await import('./flag-font.css'); // your font, loaded on Windows alone
+```
+
+```css
+@font-face {
+  font-family: 'Your Flags';
+  src: url('/fonts/flags.woff2') format('woff2');
+  font-display: swap;
+}
+:root {
+  --rfi-flag-font: 'Your Flags';
+}
+```
+
+`styles.css` puts `--rfi-flag-font` in front of the normal stack on `.rfi-flag`,
+which the currency search already carries, so setting the variable is the whole
+integration. Leave it unset and the letters stay, which reads perfectly well.
+
+Fonts that work, none of them ours to recommend over the others: Noto Color
+Emoji subset to the regional indicator range, Twemoji Country Flags, or any
+flag-only webfont you already license.
 
 ## Reading input events
 
