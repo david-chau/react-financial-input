@@ -3,15 +3,26 @@
 These are exported from the package root and work without React. Each one
 tree-shakes away if you do not import it.
 
+Three entry points, so that importing one does not measure as importing all
+three:
+
 ```ts
+// Parsing and formatting — no React, no currency data
+import { parseAmount, formatNumber } from 'react-financial-input';
+
+// Currency lists, search and flags, all read from Intl
 import {
-  parseAmount,
-  formatNumber,
   listCurrencies,
-  searchCurrencies,
-  toFlagEmoji
-} from 'react-financial-input';
+  searchCurrencies
+} from 'react-financial-input/currency';
+
+// Reading input events, useful on any text field
+import { describeEdit } from 'react-financial-input/events';
 ```
+
+Real bundlers tree-shake either way — the split is worth about 0.9 kB gzipped
+to them. It matters because a size report measures the whole entry rather than
+what you used, and that is the number people judge a package by.
 
 ## Parsing and formatting
 
@@ -127,7 +138,7 @@ ships nothing.
 If you would rather decide yourself, or load something else entirely:
 
 ```ts
-import { supportsFlagEmoji } from 'react-financial-input';
+import { supportsFlagEmoji } from 'react-financial-input/currency';
 
 supportsFlagEmoji(); // false on Windows, true on macOS, iOS, Android, most Linux
 ```
@@ -152,7 +163,7 @@ detail at all.
 every quirk encoded here was found by a real device failing.
 
 ```ts
-import { classifyInputType, describeEdit } from 'react-financial-input';
+import { classifyInputType, describeEdit } from 'react-financial-input/events';
 ```
 
 ### From an event

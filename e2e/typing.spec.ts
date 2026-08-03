@@ -515,6 +515,20 @@ test.describe('the flag font', () => {
     expect(range).not.toContain('U+0030');
   });
 
+  /*
+      The selected flag lives inside the combobox's own input value, so it
+      cannot carry .rfi-flag. Missing it meant the dropdown drew flags on
+      Windows while the selected one beside it drew letters — which reads as
+      broken rather than unsupported.
+   */
+  test('reaches the selected flag in the combobox input', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    await combobox.waitFor();
+
+    await expect(combobox).toHaveCSS('font-family', /Twemoji Country Flags/);
+  });
+
   test('reaches the flag and not the text beside it', async ({ page }) => {
     await page.goto(STORIES.withCurrencySearch);
     const combobox = page.getByRole('combobox', { name: 'Currency' });

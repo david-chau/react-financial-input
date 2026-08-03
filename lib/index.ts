@@ -52,37 +52,15 @@ export {
 export type { Separators } from './utils/number';
 
 /*
-    Currency data, read from Intl rather than a bundled table.
-    `supportsFlagEmoji` reports whether this platform draws flags at all.
- */
-export {
-  listCurrencies,
-  searchCurrencies,
-  toFlagEmoji,
-  supportsFlagEmoji,
-  CURRENCY_PRESETS,
-  DEFAULT_CURRENCY_PRESET
-} from './utils/currency';
-export type {
-  CurrencyOption,
-  CurrencyPreset,
-  CurrencySearchOptions,
-  ResolvedCurrency,
-  SymbolPosition
-} from './utils/currency';
+    Currency data and input-event reading live at their own entry points, so
+    that importing the input does not measure as importing them:
 
-/*
-    Reading input events — the part of this library that is about browsers
-    rather than about money, and useful on any text field.
- */
-export {
-  classifyInputType,
-  describeEdit,
-  isDeleteInputType
-} from './utils/inputEvents';
-export type { Edit, EditKind } from './utils/inputEvents';
+      react-financial-input/currency
+      react-financial-input/events
 
-export { InputType } from './enums/InputType';
+    Real bundlers already tree-shook them — 0.9 kB gzipped between the two —
+    but a size report measures the whole entry, not what you used.
+ */
 
 /** `T | null`, which is what every value in this API means by "empty". */
 export type { Nullable } from './types/Nullable';

@@ -274,7 +274,7 @@ The last three are why a "digits only" input still ends up holding
 
 ```tsx
 import { useRef, useState } from 'react';
-import { describeEdit } from 'react-financial-input';
+import { describeEdit } from 'react-financial-input/events';
 
 const DigitsOnly = () => {
   const [value, setValue] = useState('');
@@ -337,7 +337,8 @@ Refusing a paste outright annoys people who copied a price from a spreadsheet.
 Take the number out of it instead:
 
 ```tsx
-import { describeEdit, parseAmount } from 'react-financial-input';
+import { parseAmount } from 'react-financial-input';
+import { describeEdit } from 'react-financial-input/events';
 
 if (edit.kind === 'insertBulk') {
   const amount = parseAmount(edit.text); // "$1,234.56 USD" -> 1234.56

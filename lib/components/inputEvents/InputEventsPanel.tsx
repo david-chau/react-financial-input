@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Edit, describeEdit, supportsFlagEmoji } from '../../utils';
+import { supportsFlagEmoji } from '../../currency';
+import { Edit, describeEdit } from '../../events';
 
 /*
     A deliberately plain <input>. No FinancialInput, no formatting, no currency

@@ -46,6 +46,15 @@
  *
  *   body { font-family: 'Twemoji Country Flags', system-ui, sans-serif; }
  */
-.rfi-flag {
+.rfi-flag,
+/*
+    The combobox input, which holds the selected flag as part of its own value
+    and so cannot carry .rfi-flag on it.
+
+    Missing this meant the dropdown drew flags on Windows while the selected
+    one beside it drew letters — worse than either alone, because it looks
+    broken rather than unsupported.
+ */
+.rfi-combobox__input {
   font-family: 'Twemoji Country Flags', var(--rfi-font-family);
 }

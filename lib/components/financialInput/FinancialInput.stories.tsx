@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
@@ -416,6 +416,48 @@ export const WithErrorState: Story = {
     Search rather than a dropdown, because 'all' is 162 and a native <select>
     stops being usable long before that.
  */
+/*
+    Which font is painting the flags, reported on screen.
+
+    Storybook imports flags.css, so the answer is normally "Twemoji" — but on
+    macOS the system draws flags too, and the two are hard to tell apart at a
+    glance. Without saying so, there is no way to know whether the file is
+    doing anything, which is exactly the question it kept prompting.
+ */
+const useFlagFont = () => {
+  const [state, setState] = useState('checking');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    /*
+        Asked for explicitly. A font is only fetched once a glyph in its range
+        renders, so waiting on fonts.ready alone reports "not loaded" purely
+        because nothing has needed it yet — which is what this said before the
+        dropdown was opened.
+     */
+    document.fonts
+      .load('16px "Twemoji Country Flags"', '\u{1F1F8}\u{1F1EA}')
+      .then((faces) => {
+        if (cancelled) {
+          return;
+        }
+
+        setState(
+          faces.length > 0 && faces.every((face) => face.status === 'loaded')
+            ? 'Twemoji Country Flags — the same on every OS'
+            : "this platform's own glyphs, or letters where it has none"
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return state;
+};
+
 export const WithCurrencySearch: Story = {
   args: { codes: 'g10', customCodes: ['NZD', 'THB', 'ZAR'], locale: '' },
   argTypes: {
@@ -448,6 +490,7 @@ export const WithCurrencySearch: Story = {
   render: function WithCurrencySearch(args) {
     const id = useId();
     const [currency, setCurrency] = useState('USD');
+    const flagFont = useFlagFont();
 
     // 'custom' is a story control, not a preset — swap in the array it stands for.
     const codes = args.codes === 'custom' ? args.customCodes : args.codes;
@@ -481,6 +524,11 @@ export const WithCurrencySearch: Story = {
         <p className="rfi-helper">
           {args.codes} · {locale ?? 'app locale'} · {symbolPosition} · {symbol}{' '}
           · {numericValue === null ? 'null' : numericValue}
+        </p>
+        <p className="rfi-helper">
+          Flags drawn with: <strong>{flagFont}</strong>. Storybook imports{' '}
+          <code>react-financial-input/flags.css</code>; without it Windows shows
+          the two letters instead.
         </p>
         <p className="rfi-helper">
           Symbols follow the <strong>locale</strong>, not the currency: SEK
