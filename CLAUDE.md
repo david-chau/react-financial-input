@@ -71,6 +71,29 @@ Also shipped: controlled-mode sync, `groupSeparator`/`decimalSeparator`,
 Remaining, in the DESIGN.md roadmap: real-device CI (L4), IME on Firefox and
 WebKit (no CDP equivalent), and a possible string-valued API.
 
+## Working with this repo
+
+**Check origin before starting anything.** `git fetch origin`, then look at
+whether `main` has moved and whether the pull request you were last pushing to
+is still open:
+
+```bash
+git fetch -q origin
+git log --oneline -1 origin/main
+gh pr list --state open
+```
+
+The maintainer merges with admin bypass, since a solo committer cannot approve
+their own pull request — so a merge can land at any moment, including in the
+middle of a run of pushes. Continuing to push to a branch whose pull request has
+already merged strands the commits: they sit on a closed branch, never reach
+`main`, and the deployed Storybook keeps showing the old build. That has
+happened twice.
+
+If the pull request has merged, branch fresh from `origin/main` and cherry-pick
+anything outstanding. A plain rebase will conflict, because git cannot match a
+squashed commit against the commits it came from.
+
 ## Things that will bite
 
 - **Canonical vs display form.** Display uses the configured separators;
@@ -84,6 +107,20 @@ WebKit (no CDP equivalent), and a possible string-valued API.
 - **Several locales group with non-ASCII whitespace** — sv-SE and nb-NO use
   U+00A0, fr-FR uses U+202F. Invisible in a diff; a test comparing against a
   literal `" "` fails confusingly.
+- **Never trust `selectionStart` for a delete.** Android reports 0 for a
+  backspace at the end of the value. Derive the deletion point from the
+  before/after strings instead.
+- **Samsung defers `compositionend` until blur.** A finished shortcut token has
+  to commit while still composing, or the shortcut appears broken on Samsung
+  alone.
+- **Storybook shows the library version in the corner of every story.** The
+  deployed site lags whatever is on a branch, and without it a merged fix and
+  an unmerged one look identical. `?rfiBadge=0` hides it for the GIF recorder.
+- **Playwright's `reuseExistingServer` will attach to a Storybook dev server
+  you already have open on 6006** and test that instead of the build. Set
+  `RFI_PORT` when it matters.
+- **Never pipe a Playwright run through `tail -3`.** The failure count sits
+  above the pass count, so a truncated summary reads as green when it is not.
 - **The merged ref is cached on the caller's ref identity.** Rebuilding it per
   render makes React re-attach every render, and a consumer's state-setting
   callback ref then loops forever.

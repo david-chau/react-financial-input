@@ -21,5 +21,6 @@ export const STORIES = {
   errorFeedback: storyUrl('financialinput--error-feedback'),
   withClearButton: storyUrl('financialinput--with-clear-button'),
   withCurrencyPicker: storyUrl('financialinput--with-currency-picker'),
+  withCurrencySearch: storyUrl('financialinput--with-currency-search'),
   shortcutButtons: storyUrl('financialinput--shortcut-buttons')
 };

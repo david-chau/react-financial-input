@@ -10,48 +10,11 @@ shortcuts that work on **every device, including phones**.
 
 Zero runtime dependencies. Unstyled by default.
 
-```
-1234567  ->  1,234,567
-2.5m     ->  2,500,000
-```
-
-|                                |                                                   |
-| ------------------------------ | ------------------------------------------------- |
-| Digits group as you type       | ![](docs/demo-digits-group-as-you-type.gif)       |
-| Shortcuts expand               | ![](docs/demo-shortcuts-expand.gif)               |
-| Backspacing across a separator | ![](docs/demo-backspacing-across-a-separator.gif) |
-
-**[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
-
-## Why
-
-- **Shortcuts work on mobile.** Most currency inputs ask for a numeric keypad,
-  which has no letter keys — so `2.5m` is impossible to type on a phone. This one
-  keeps the multipliers reachable everywhere. ([why](DESIGN.md#why-the-keyboard-defaults-to-text-on-mobile))
-- **Built on `InputEvent`, not key codes.** Soft keyboards often send no key code
-  at all. Reading `inputType` is what makes the same code path work on a desktop
-  keyboard, Gboard and iOS. ([how](DESIGN.md#how-input-is-handled))
-- **Exact arithmetic.** `4.35h` is `435`, not the `434.99999999999994` a float
-  multiply gives you — with no big-number dependency. ([how](DESIGN.md#why-there-are-no-dependencies))
-- **Handles the messy paths.** Paste is sanitised rather than refused, so
-  `$1,234.56 USD` and `(1,234.00)` become numbers. Cut, drag-drop and Android
-  IME composition are handled explicitly, not ignored.
-- **Speaks your locale.** `locale: 'de-DE'` gives `1.234,56`; `currency: 'SEK'`
-  resolves the symbol _and_ which side it belongs on, from Intl.
-  ([how](DESIGN.md#currency))
-- **Yours to style.** Unstyled by default, an optional Material-UI-flavoured
-  stylesheet if you want one, or a headless hook to bring your own input.
-  ([tiers](DESIGN.md#styling))
-
-## Install
+## Quick start
 
 ```bash
 npm install react-financial-input
 ```
-
-React 18 or 19 is required as a peer dependency. There are no other dependencies.
-
-## Usage
 
 ```tsx
 import { FinancialInput } from 'react-financial-input';
@@ -59,27 +22,106 @@ import { FinancialInput } from 'react-financial-input';
 <FinancialInput value={amount} onChange={setAmount} />;
 ```
 
-`onChange` receives a `number`, or `null` while the value is incomplete — an
-empty input, or a lone `.` part-way through typing. It is never `NaN`.
+That is the whole API for the common case. `onChange` receives a `number`, or
+`null` while the value is incomplete — an empty input, or a lone `.` part-way
+through typing. Never `NaN`.
 
-Every native `<input>` prop is passed through (`placeholder`, `disabled`, `name`,
-`onBlur`, `aria-*`), and `ref` is forwarded to the underlying input.
+React 18 or 19 as a peer dependency. Nothing else.
 
-| Prop                       | Type                               | Default         | Description                                                                                  |
-| -------------------------- | ---------------------------------- | --------------- | -------------------------------------------------------------------------------------------- |
-| `value`                    | `number \| null`                   | `undefined`     | The numeric value.                                                                           |
-| `onChange`                 | `(value: number \| null) => void`  | —               | Called with the numeric value, not the formatted string.                                     |
-| `onError`                  | `() => void`                       | —               | Called when a keystroke is refused, such as a third decimal place.                           |
-| `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point entirely.                              |
-| `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                                                      |
-| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'` | `'text'`        | Which keyboard mobile raises.                                                                |
-| `options.locale`           | `string`                           | —               | BCP 47 tag. Supplies separators and the currency symbol.                                     |
-| `options.currency`         | `string`                           | —               | ISO 4217 code. Opt-in; the symbol is returned, not put in the value.                         |
-| `options.groupSeparator`   | `string`                           | `','`           | Thousands separator. Overrides the locale.                                                   |
-| `options.decimalSeparator` | `string`                           | `'.'`           | Fraction separator. Overrides the locale.                                                    |
-| `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                                            |
-| `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                                              |
-| `options.flashOnError`     | `boolean`                          | `true`          | Flash the input when a keystroke is refused. Colour only; add `rfi-input--shake` for motion. |
+Want it styled? One import, opt-in:
+
+```tsx
+import 'react-financial-input/styles.css';
+```
+
+**[Try it in Storybook →](https://david-chau.github.io/react-financial-input/)**
+
+## What it does
+
+### Typing
+
+|                            |                                             |
+| -------------------------- | ------------------------------------------- |
+| Digits group as you type   | ![](docs/demo-digits-group-as-you-type.gif) |
+| `2.5m` expands to millions | ![](docs/demo-shortcuts-expand.gif)         |
+
+Multipliers are applied by shifting the decimal point, so `4.35h` is exactly
+`435` — not the `434.99999999999994` a float multiply gives you, and with no
+big-number dependency.
+
+### Editing
+
+|                                 |                                                   |
+| ------------------------------- | ------------------------------------------------- |
+| Backspace across a separator    | ![](docs/demo-backspacing-across-a-separator.gif) |
+| Paste is sanitised, not refused | ![](docs/demo-paste-is-sanitised.gif)             |
+| Undo, one step per edit         | ![](docs/demo-undo-restores-in-one-step.gif)      |
+
+`$1,234.56 USD`, `(1,234.00)` and `2.5m` all paste as numbers; text with no
+number in it is refused and the previous value kept. Undo is the component's
+own, so a paste or an expansion comes back in a single step rather than
+unwinding character by character.
+
+### Currency
+
+|                                   |                                          |
+| --------------------------------- | ---------------------------------------- |
+| Symbol and separators from `Intl` | ![](docs/demo-currency-picker.gif)       |
+| Search, for when 162 is the list  | ![](docs/demo-search-162-currencies.gif) |
+
+`locale: 'de-DE'` gives `1.234,56`. `currency: 'SEK'` resolves the symbol **and**
+which side it belongs on — `1 234,56 kr`, not `kr 1 234,56`.
+
+Symbols follow the **locale**, not the currency: SEK reads `SEK` in `en-US` and
+`kr` only in `sv-SE`.
+
+### Feedback and extras
+
+|                                      |                                                         |
+| ------------------------------------ | ------------------------------------------------------- |
+| Refused keystrokes flash             | ![](docs/demo-a-refused-keystroke-flashes.gif)          |
+| Clear button, undoable               | ![](docs/demo-clear-button-and-undo-brings-it-back.gif) |
+| Multiplier keys for a numeric keypad | ![](docs/demo-multiplier-keys-for-a-numeric-keypad.gif) |
+
+The clear button, the keys, the currency picker and the floating label are all
+**off by default** — the component renders a bare `<input>`. The hook gives you
+the behaviour; you render the markup.
+See [the extras](DESIGN.md#off-by-default-extras).
+
+## Why this one
+
+- **Shortcuts work on mobile.** Most currency inputs ask for a numeric keypad,
+  which has no letter keys — so `2.5m` is impossible to type on a phone.
+  ([why](DESIGN.md#why-the-keyboard-defaults-to-text-on-mobile))
+- **Built on `InputEvent`, not key codes.** Soft keyboards often send no key
+  code at all. ([how](DESIGN.md#how-input-is-handled))
+- **The awkward paths are handled.** Paste, drag-drop, cut, word delete and
+  Android IME composition each have a case, not a shrug.
+  ([cheatsheet](DESIGN.md#input-event-cheatsheet))
+- **Tested on real hardware.** Two bugs — an Android caret jump and Samsung
+  deferring `compositionend` — only appeared on physical phones, and are now
+  recorded traces in the test table.
+
+## Props
+
+Every native `<input>` prop is passed through (`placeholder`, `disabled`,
+`name`, `onBlur`, `aria-*`), and `ref` is forwarded.
+
+| Prop                       | Type                               | Default         | Description                                                                   |
+| -------------------------- | ---------------------------------- | --------------- | ----------------------------------------------------------------------------- |
+| `value`                    | `number \| null`                   | `undefined`     | The numeric value.                                                            |
+| `onChange`                 | `(value: number \| null) => void`  | —               | Called with the number, not the formatted string.                             |
+| `onError`                  | `() => void`                       | —               | Called when a keystroke is refused.                                           |
+| `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point.                        |
+| `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                                       |
+| `options.locale`           | `string`                           | —               | BCP 47 tag. Supplies separators and the currency symbol.                      |
+| `options.currency`         | `string`                           | —               | ISO 4217 code. The symbol is returned, not put in the value.                  |
+| `options.groupSeparator`   | `string`                           | `','`           | Overrides the locale.                                                         |
+| `options.decimalSeparator` | `string`                           | `'.'`           | Overrides the locale.                                                         |
+| `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                             |
+| `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                               |
+| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'` | `'text'`        | Which keyboard mobile raises.                                                 |
+| `options.flashOnError`     | `boolean`                          | `true`          | Flash on a refused keystroke. Colour only; add `rfi-input--shake` for motion. |
 
 ### Shortcuts
 
@@ -90,54 +132,80 @@ Every native `<input>` prop is passed through (`placeholder`, `disabled`, `name`
 | `m` | ×1,000,000     |
 | `b` | ×1,000,000,000 |
 
-Typing a shortcut on its own reads as one of that unit, so `k` gives `1,000`.
-Override them with `options.shortcuts`, mapping characters to multipliers.
+Typing one on its own reads as one of that unit, so `k` gives `1,000`. Override
+with `options.shortcuts`.
 
-### Currency and locale
-
-```tsx
-<FinancialInput options={{ locale: 'de-DE' }} />                    // 1.234,56
-<FinancialInput options={{ locale: 'sv-SE', currency: 'SEK' }} />   // symbol: "kr", suffix
-```
-
-The symbol and which side it belongs on come from Intl, and the hook returns
-them for you to render beside the input rather than putting them in the value.
-See [DESIGN.md](DESIGN.md#currency).
-
-### Styling
-
-Nothing is loaded unless you ask for it:
-
-```tsx
-<FinancialInput />                              // unstyled, no CSS at all
-<FinancialInput className="border rounded" />   // your own classes
-
-import 'react-financial-input/styles.css';      // optional, MUI-flavoured
-```
-
-### Headless
+## Headless
 
 Keep the formatting and validation, bring your own input:
 
 ```tsx
 import { useFinancialInput } from 'react-financial-input';
 
-const { getInputProps, clear, applyShortcut } = useFinancialInput({
-  value,
-  onChange: setValue
-});
+const { getInputProps } = useFinancialInput({ value, onChange: setValue });
 
 <TextField slotProps={{ htmlInput: getInputProps() }} />; // MUI
 <Input {...getInputProps()} />; // Chakra
 ```
 
+The hook returns everything the extras are built from:
+
+| Returned                       | For                                              |
+| ------------------------------ | ------------------------------------------------ |
+| `getInputProps()`              | Spread onto any input                            |
+| `applyShortcut(character)`     | Multiplier tap targets                           |
+| `clear()`                      | A clear button. Undoable, like any other edit    |
+| `symbol`, `symbolPosition`     | The currency symbol and which side it belongs on |
+| `numericValue`, `displayValue` | The committed number, and what is on screen      |
+
+### Currency lists
+
+`listCurrencies()` and `searchCurrencies()` read `Intl`, so there is no bundled
+table to go stale — and both tree-shake away if you do not use them:
+
+```ts
+listCurrencies('en-US'); // g10 by default, 10 currencies
+listCurrencies('en-US', 'g7'); // 5
+listCurrencies('en-US', 'all'); // 162
+listCurrencies('en-US', ['NZD', 'THB']); // your own, in your order
+
+searchCurrencies('kron', { codes: 'all' }); // DKK, NOK, SEK — code beats name
+```
+
+`toFlagEmoji('SEK')` gives 🇸🇪 at no cost — an ISO 4217 code is the country code
+plus a letter, and a flag is that code in regional indicator symbols. Windows
+renders the letters instead.
+
+The **With Currency Search** story has a working combobox you can copy: filter
+as you type, arrow keys, no dependency.
+
+## Just the parsing
+
+No React needed — the same rules the input applies to a paste, as one call:
+
+```ts
+import { parseAmount, formatNumber } from 'react-financial-input';
+
+parseAmount('1k'); // 1000
+parseAmount('2.5m'); // 2500000
+parseAmount('$1,234.56 USD'); // 1234.56
+parseAmount('(1,234.00)'); // -1234   accounting negative
+parseAmount('not a number'); // null
+
+formatNumber(1234567); // '1,234,567'
+formatNumber(1234.5, { group: '.', decimal: ',' }); // '1.234,5'
+```
+
+`parseAmount` takes optional separators and shortcuts as its second and third
+arguments, so `parseAmount('1.234,56', { group: '.', decimal: ',' })` reads the
+German convention. It runs server-side quite happily.
+
 ## Docs
 
-- **[DESIGN.md](DESIGN.md)** — why it behaves the way it does: the mobile
-  keyboard trade-off, the device support matrix and how each row is verified,
-  styling variants and the floating label.
+- **[DESIGN.md](DESIGN.md)** — why it behaves as it does: the mobile keyboard
+  trade-off, the input event cheatsheet, the device support matrix, styling.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — architecture rules and local setup.
-- **[CI.md](CI.md)** — what each workflow does, and how to publish a new version.
+- **[CI.md](CI.md)** — what each workflow does, and how to publish.
 
 ## License
 

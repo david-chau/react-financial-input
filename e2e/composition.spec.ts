@@ -83,6 +83,39 @@ test.describe('IME composition', () => {
     await expect(input).toHaveValue('1,234,567');
   });
 
+  /*
+      Samsung's keyboard defers compositionend until the field loses focus, so
+      a finished shortcut token has to commit while still composing.
+   */
+  test('a composed shortcut commits without compositionend', async ({
+    page,
+    context
+  }) => {
+    await page.goto(STORIES.default);
+
+    const input = page.getByRole('textbox');
+    await input.waitFor();
+    await input.click();
+
+    const cdp = await context.newCDPSession(page);
+
+    await cdp.send('Input.imeSetComposition', {
+      text: '2',
+      selectionStart: 1,
+      selectionEnd: 1
+    });
+    await expect(input).toHaveValue('2');
+
+    // No Input.insertText: the composition is deliberately left open.
+    await cdp.send('Input.imeSetComposition', {
+      text: '2k',
+      selectionStart: 2,
+      selectionEnd: 2
+    });
+
+    await expect(input).toHaveValue('2,000');
+  });
+
   test('a composed value that is not a number is refused', async ({
     page,
     context

@@ -8,6 +8,7 @@ import {
   containsOnlyNumberCharacters,
   hasLeadingZero,
   hasMultipleDecimals,
+  parseNumber,
   shiftDecimal,
   toCanonical
 } from '../../utils';
@@ -164,6 +165,28 @@ export const sanitiseNumericText = (
   return isNegative ? `-${normalised}` : normalised;
 };
 
+/*
+    The whole library in one call, for when you only want the parsing: text in,
+    number out. Same rules the input applies to a paste, so "1k", "1,000",
+    "$1,234.56 USD" and "(1,234.00)" all work, and anything without a number in
+    it returns null.
+
+    Useful server-side too — this has no React in it.
+ */
+export const parseAmount = (
+  text: string,
+  separators: Separators = DEFAULT_SEPARATORS,
+  shortcuts: StringKeyedMap<number> = DEFAULT_SHORTCUTS
+): Nullable<number> => {
+  const canonical = sanitiseNumericText(
+    text,
+    separators,
+    toExponents(shortcuts)
+  );
+
+  return canonical === null ? null : parseNumber(canonical);
+};
+
 export const isAboveScale = (fraction: string, scale: number): boolean =>
   fraction.length > scale;
 
@@ -258,5 +281,35 @@ export const isValidNumberString = (
 
   return (
     !isAboveMaxDigits(integer, maxDigits) && !isAboveScale(fraction, scale)
+  );
+};
+
+/*
+    Whether the value is digits followed by a single shortcut character, e.g.
+    "2k" — a complete, unambiguous multiplier token.
+
+    Samsung's keyboard composes the whole word and does not fire compositionend
+    until the field loses focus, so waiting for it left "2k" on screen while
+    every other platform had already shown "2,000". A finished shortcut token
+    needs no further input to interpret, so it is committed on sight.
+ */
+export const isCompleteShortcutToken = (
+  value: string,
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
+): boolean => {
+  const match = value.trim().match(/^(.*?)([a-z])$/i);
+
+  if (!match) {
+    return false;
+  }
+
+  const [, digits, character] = match;
+
+  return (
+    isShortcut(character, exponents) &&
+    /^-?[0-9]*$/.test(
+      toCanonical(digits, separators).replace(CANONICAL_DECIMAL, '')
+    )
   );
 };

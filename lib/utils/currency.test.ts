@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   listCurrencies,
+  searchCurrencies,
   resolveCurrency,
   resolveSeparators,
   toFlagEmoji
@@ -83,7 +84,8 @@ describe('resolveSeparators', () => {
 
 describe('listCurrencies', () => {
   it('enumerates the runtime currencies with symbols and names', () => {
-    const all = listCurrencies('en-US');
+    // Defaults to the g10 shortlist; 'all' is the full set.
+    const all = listCurrencies('en-US', 'all');
 
     expect(all.length).toBeGreaterThan(50);
 
@@ -150,5 +152,87 @@ describe('toFlagEmoji', () => {
     expect(
       [...(toFlagEmoji('USD') ?? '')].map((c) => c.codePointAt(0))
     ).toEqual([0x1f1fa, 0x1f1f8]);
+  });
+});
+
+describe('presets', () => {
+  it.each([
+    // preset  expected                                            note
+    ['g7', 'USD EUR JPY GBP CAD', 'five, because the euro members collapse'],
+    ['g10', 'USD EUR JPY GBP CHF AUD NZD CAD SEK NOK', "the FX market's ten"]
+  ])('%s is %s (%s)', (preset, expected) => {
+    expect(
+      listCurrencies('en-US', preset as 'g7' | 'g10')
+        .map((option) => option.code)
+        .join(' ')
+    ).toBe(expected);
+  });
+
+  it('all returns everything the runtime knows', () => {
+    expect(listCurrencies('en-US', 'all').length).toBeGreaterThan(100);
+  });
+
+  it('takes your own array, in your order', () => {
+    expect(
+      listCurrencies('en-US', ['NZD', 'THB']).map((option) => option.code)
+    ).toEqual(['NZD', 'THB']);
+  });
+});
+
+describe('searchCurrencies', () => {
+  const codes = (query: string, options = {}) =>
+    searchCurrencies(query, { locale: 'en-US', ...options }).map((o) => o.code);
+
+  it.each([
+    // query    first result  note
+    ['usd', 'USD', 'an exact code'],
+    ['us', 'USD', 'a code prefix beats a name containing "us"'],
+    ['gb', 'GBP', 'another prefix'],
+    ['swed', 'SEK', 'by name'],
+    ['yen', 'JPY', 'by name again']
+  ])('%j finds %s first (%s)', (query, expected) => {
+    expect(codes(query as string)[0]).toBe(expected);
+  });
+
+  it('returns the head of the list for an empty query', () => {
+    // A combobox needs something to show before anything is typed.
+    expect(codes('', { codes: 'g7' })).toEqual([
+      'USD',
+      'EUR',
+      'JPY',
+      'GBP',
+      'CAD'
+    ]);
+  });
+
+  it('respects the limit', () => {
+    expect(codes('a', { limit: 3 })).toHaveLength(3);
+  });
+
+  it('searches within a preset only', () => {
+    expect(codes('kron', { codes: 'g7' })).toEqual([]);
+    expect(codes('kron', { codes: 'g10' })).toEqual(['NOK', 'SEK']);
+  });
+
+  it('finds nothing for nonsense', () => {
+    expect(codes('zzzzz')).toEqual([]);
+  });
+});
+
+describe('the default shortlist', () => {
+  /*
+      A picker wants a list people recognise, not 162 rows to scroll. Asking
+      for 'all' is explicit.
+   */
+  it('is g10, not everything', () => {
+    expect(listCurrencies('en-US')).toHaveLength(10);
+    expect(listCurrencies('en-US', 'all').length).toBeGreaterThan(100);
+  });
+
+  it('applies to search as well', () => {
+    expect(searchCurrencies('kron', { locale: 'en-US' })).toHaveLength(2);
+    expect(
+      searchCurrencies('kron', { locale: 'en-US', codes: 'all' }).length
+    ).toBeGreaterThan(2);
   });
 });

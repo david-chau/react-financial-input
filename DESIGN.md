@@ -129,6 +129,20 @@ with it:
 | `not a number`  | refused, previous value kept      |
 | `1.2.3`         | refused — two fraction separators |
 
+**Two things only real hardware showed.** Both passed every emulated test.
+
+Android reports `selectionStart: 0` for a backspace at the end of the value.
+Honouring it threw the caret to the front on every delete — `1,000|` became
+`|100`. The deletion point now comes from comparing the value before and after,
+which no platform can misreport.
+
+Samsung's keyboard composes the whole word and does not fire `compositionend`
+until the field loses focus, so `2k` sat on screen while every other platform
+had already shown `2,000`. A finished shortcut token — digits then a shortcut
+letter — now commits on sight, because it needs no further input to interpret.
+
+Recorded traces for both live in the reducer's table.
+
 **Composition is held, not formatted.** Android emits
 `insertCompositionText` for every keystroke of a word still being composed, with
 `data` that cannot be trusted until it settles. Reformatting mid-composition
@@ -152,6 +166,18 @@ One step per accepted edit, so a paste or a shortcut expansion undoes in one.
 > The **Debug (Playground)** story logs all of this live. Open it on a device,
 > perform the gesture, and read off what actually fired. That is the fastest way
 > to find out what a particular keyboard app really does.
+
+## Using it without React
+
+`parseAmount(text, separators?, shortcuts?)` runs the same sanitising a paste
+gets and returns a number or `null`, and `formatNumber(value, separators?)` goes
+the other way. Neither imports React, so both work on a server.
+
+Everything else the library is built from is exported too — `shiftDecimal` for
+exact powers-of-ten multiplication, `toCanonical` and `formatCanonical` for the
+two-form conversion, `listCurrencies` and `toFlagEmoji` for currency data, and
+the reducer itself. The reducer is pure, so it can be driven from a test or
+another framework without a DOM.
 
 ## Verification layers
 
@@ -321,6 +347,89 @@ win over it.
 > U+00A0, fr-FR uses U+202F. It is invisible in a diff, so a test comparing a
 > formatted value against a literal `" "` will fail confusingly. The library
 > treats the separator as an opaque string, so it works either way.
+
+## Off-by-default extras
+
+The component renders a bare `<input>` and nothing else. Everything below is
+markup you supply, with the hook providing the behaviour — the same arrangement
+as the floating label. That is what keeps the default surface small.
+
+### Clear button
+
+```tsx
+const { getInputProps, clear, numericValue } = useFinancialInput();
+
+<div className="rfi-field">
+  <input {...getInputProps()} />
+  {numericValue !== null && (
+    <button className="rfi-clear" onClick={clear} aria-label="Clear">
+      ×
+    </button>
+  )}
+</div>;
+```
+
+`clear()` goes through the history, so Ctrl+Z puts back what was cleared — which
+is what makes the button safe to offer at all. The stylesheet moves a suffix
+currency symbol inboard when a clear button is present, and derives every inset
+from the button's own size so the gaps hold if you change it.
+
+### Currency picker
+
+`listCurrencies(locale, codes?)` enumerates what the runtime knows from
+`Intl.supportedValuesOf`, so there is no bundled table to go stale.
+
+`toFlagEmoji(code)` costs nothing either: an ISO 4217 code is the ISO 3166
+country code plus a letter, and a flag emoji is that country code written in
+regional indicator symbols — no image assets. Two caveats. **Windows renders no
+flag emoji at all**, showing the two letters instead. And codes with no country
+return `null` (`XAU` is gold), so you can fall back to the code.
+
+`.rfi-group` joins a `<select>` to the input so the two read as one control; the
+dropdown shows a flag and code, since the symbol already appears in the field.
+
+**Presets.** `'g10'` is the default — the FX market's ten, which is the list a
+picker usually wants. `'g7'` is the seven countries' currencies, five once the
+euro members collapse. `'all'` is everything the runtime knows, currently 162,
+which is why there is a searchable combobox: a native `<select>` stops being
+usable long before that. Or pass your own array, in your own order.
+
+**Cost.** None of this is bundled data. Importing the component alone is about
+4.1 kB gzipped; adding the search, presets and flags takes it to about 4.6 kB,
+and it drops out entirely if unused.
+
+Changing the selection re-resolves the symbol, its side **and** the separators,
+and reformats what is on screen. That last part was a bug — the value kept the
+previous locale's punctuation until the next keystroke. The conversion goes
+through canonical rather than rebuilding from the numeric value, so a value
+still being typed keeps its shape: `1.` becomes `1,` rather than collapsing.
+
+### Multiplier keypad
+
+Every mobile numeric keypad omits letter keys, so if you opt into
+`options.inputMode: 'decimal'` the shortcuts become untypeable. `applyShortcut`
+puts them back as tap targets, and `.rfi-keypad` / `.rfi-key` style them as flat
+calculator keys that stretch to the field's width. The multiplier lives in a
+`title` tooltip rather than printed on every key.
+
+### Refused keystrokes
+
+A refusal is otherwise silent — the value simply does not change, which reads as
+a dead input. The component adds `.rfi-input--rejected` for the duration of the
+animation; `options.flashOnError: false` turns it off.
+
+**Colour only by default. Motion is opt-in**, because some people find a shaking
+field unpleasant and colour already says "refused":
+
+```tsx
+<FinancialInput />                              {/* flash */}
+<FinancialInput className="rfi-input--shake" /> {/* flash and shake */}
+```
+
+`prefers-reduced-motion` drops the shake and keeps the flash. The flash
+keyframes declare `from` and nothing else, so the browser animates back to
+whatever the element's real style is — which fades out correctly on every
+variant, focused or not, without hard-coding the resting colours.
 
 ## Roadmap
 

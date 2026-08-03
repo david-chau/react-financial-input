@@ -64,11 +64,49 @@ const preview: Preview = {
   ],
   parameters: {
     options: {
+      /*
+          Grouped by what someone is trying to find out, rather than the order
+          the stories happened to be written in: start here, then how it looks,
+          then what it does, then how it is configured, then edge cases, then
+          the device tools.
+       */
       storySort: {
         order: [
           'Introduction',
           'FinancialInput',
-          ['Debug (Playground)', 'Default', 'Variants']
+          [
+            // Start here
+            'Debug (Playground)',
+            'Default',
+            'With Value',
+
+            // How it looks
+            'Variants',
+            'With Floating Label',
+
+            // What it does
+            'Shortcuts',
+            'Shortcut Buttons',
+            'With Currency',
+            'With Currency Search',
+            'With Currency Picker',
+            'With Clear Button',
+            'Controlled',
+
+            // How it is configured
+            'Whole Numbers Only',
+            'Four Decimal Places',
+            'Limited To Six Digits',
+
+            // Edge cases and states
+            'Error Feedback',
+            'With Error State',
+            'Disabled',
+
+            // Device tools
+            'Mobile Viewport',
+            'Keyboard tester'
+          ]
         ]
       }
     },

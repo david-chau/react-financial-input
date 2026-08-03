@@ -57,7 +57,7 @@ const styles = {
 
 const TOUR: [string, string][] = [
   [
-    'Playground',
+    'Debug (Playground)',
     'Type, paste, drag and undo, and watch every browser event as it fires. Start here if something looks wrong on your device.'
   ],
   [

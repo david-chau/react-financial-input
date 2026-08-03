@@ -636,3 +636,113 @@ describe('reduceClear', () => {
     expect(cleared.past).toHaveLength(0);
   });
 });
+
+/*
+    Traces recorded from real phones through the Debug (Playground) story, not
+    invented. Both of these passed every emulated test and still failed on
+    hardware, which is exactly what this table exists to stop.
+ */
+describe('recorded device traces', () => {
+  it('android: backspace at the end reports selectionStart 0', () => {
+    /*
+        The caret cannot legitimately be at 0 after deleting the last
+        character. Honouring it sent the caret to the front on every delete:
+        "1,000|" became "|100".
+     */
+    const next = run(
+      stateOf('1,000', 1000),
+      InputType.DELETE_CONTENT_BACKWARD,
+      null,
+      '1,00',
+      0
+    );
+
+    expect(next.displayValue).toBe('100');
+    expect(next.cursor).toBe(3);
+  });
+
+  it.each([
+    // previous     after      lying caret  -> cursor  note
+    ['1,000', '1,00', 0, 3, 'delete at the end'],
+    ['1,234,567', '1,234,56', 0, 7, 'regrouping down a level'],
+    ['1,000', ',000', 0, 0, 'deleting the first character really is 0'],
+    ['1,234', '1,34', 0, 1, 'deleting in the middle']
+  ])(
+    'android: %j -> %j with caret %i lands at %i (%s)',
+    (before, after, caret, expected) => {
+      const next = run(
+        stateOf(before as string),
+        InputType.DELETE_CONTENT_BACKWARD,
+        null,
+        after as string,
+        caret as number
+      );
+
+      expect(next.cursor).toBe(expected);
+    }
+  );
+
+  it('samsung: commits a shortcut without waiting for compositionend', () => {
+    /*
+        Samsung composes the whole word and defers compositionend until the
+        field loses focus, so "2k" sat on screen while every other platform
+        had already shown "2,000".
+     */
+    const composing = run(
+      stateOf('2', 2),
+      InputType.INSERT_COMPOSITION_TEXT,
+      '2k',
+      '2k',
+      2,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      true
+    );
+
+    expect(composing.displayValue).toBe('2,000');
+    expect(composing.numericValue).toBe(2000);
+  });
+
+  it.each([
+    // composed  -> committed  note
+    ['2k', '2,000', 'the reported case'],
+    ['2.5m', '2,500,000', 'a fraction'],
+    ['1b', '1,000,000,000', 'billions'],
+    ['300h', '30,000', 'hundreds']
+  ])('samsung: composing %j commits %j (%s)', (composed, expected) => {
+    const next = run(
+      stateOf(''),
+      InputType.INSERT_COMPOSITION_TEXT,
+      composed,
+      composed,
+      composed.length,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      true
+    );
+
+    expect(next.displayValue).toBe(expected);
+  });
+
+  it.each([
+    ['2', 'still just digits'],
+    ['12', 'more digits'],
+    ['2.', 'a fraction being started'],
+    ['ab', 'not a shortcut at all']
+  ])('samsung: keeps holding %j (%s)', (composed) => {
+    const next = run(
+      stateOf(''),
+      InputType.INSERT_COMPOSITION_TEXT,
+      composed,
+      composed,
+      composed.length,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      true
+    );
+
+    // Held verbatim: not a finished token, so nothing to commit yet.
+    expect(next.displayValue).toBe(composed);
+    expect(next.numericValue).toBe(null);
+  });
+});

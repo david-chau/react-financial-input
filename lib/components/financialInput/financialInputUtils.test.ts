@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_SEPARATORS } from '../../utils';
 import {
   DEFAULT_MAX_DIGITS,
   DEFAULT_SCALE,
+  parseAmount,
   applyShortcut,
   getShortcutExponent,
   isShortcut,
@@ -167,5 +169,45 @@ describe('isValidInsert rejects non-numeric characters', () => {
         2
       )
     ).toBe(true);
+  });
+});
+
+/*
+    The one-call entry point, for using the parsing without the component.
+ */
+describe('parseAmount', () => {
+  it.each([
+    // text                 -> number      note
+    ['1k', 1000, 'the shorthand people actually type'],
+    ['2.5m', 2500000, 'a fraction of a million'],
+    ['1b', 1000000000, 'billions'],
+    ['4.35h', 435, 'exact — 4.35 * 100 is 434.99999999999994 in floats'],
+    ['1,000', 1000, 'already grouped'],
+    ['$1,234.56 USD', 1234.56, 'straight off a spreadsheet'],
+    ['(1,234.00)', -1234, 'an accounting negative'],
+    ['-42', -42, 'a plain negative'],
+    ['1 234 567', 1234567, 'space-grouped'],
+    ['007', 7, 'leading zeros'],
+    ['0', 0, 'zero']
+  ])('parseAmount(%j) -> %j (%s)', (text, expected) => {
+    expect(parseAmount(text as string)).toBe(expected);
+  });
+
+  it.each([
+    ['not a number', 'prose'],
+    ['', 'empty'],
+    ['   ', 'whitespace'],
+    ['.', 'a lone separator'],
+    ['1.2.3', 'two separators']
+  ])('parseAmount(%j) -> null (%s)', (text) => {
+    expect(parseAmount(text)).toBeNull();
+  });
+
+  it('reads other conventions when told to', () => {
+    expect(parseAmount('1.234,56', { group: '.', decimal: ',' })).toBe(1234.56);
+  });
+
+  it('takes custom shortcuts', () => {
+    expect(parseAmount('5t', DEFAULT_SEPARATORS, { t: 1000 })).toBe(5000);
   });
 });
