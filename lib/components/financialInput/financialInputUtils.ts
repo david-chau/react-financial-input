@@ -5,6 +5,7 @@ import {
   DEFAULT_SEPARATORS,
   Separators,
   buildDecimalPattern,
+  buildSymbolPunctuationPattern,
   containsOnlyNumberCharacters,
   hasLeadingZero,
   hasMultipleDecimals,
@@ -135,11 +136,36 @@ export const sanitiseNumericText = (
    */
   const isNegative = trimmed.startsWith('-') || /^\(.*\)$/.test(trimmed);
 
-  // A trailing shortcut letter, so pasting "2.5m" behaves like typing it.
-  const trailing = trimmed.match(/([a-z])\s*\)?\s*$/i);
-  const exponent = trailing
-    ? getShortcutExponent(trailing[1], exponents)
-    : null;
+  /*
+      A trailing run of shortcut letters, so pasting "2.5m" behaves like typing
+      it — and so does "1kk", which multiplies twice for 1,000,000. Typing has
+      always chained, because each keystroke multiplies what is already there;
+      the paste path used to keep only the last letter, so "2.5mk" came out as
+      2,500 instead of 2.5 billion.
+
+      Two guards stop currency text being read as a multiplier, and both are
+      needed because plenty of currencies are spelled with h/k/m/b:
+
+      Every letter in the run must be a shortcut. "1 234,56 kr" ends in a run
+      containing "k", and "$1,234.56 USD" ends in one containing "D" — one
+      unknown letter and the whole run is currency text, to be stripped.
+
+      And the run must sit against the digits, or be the whole of the text. A
+      shortcut is typed onto a number; a currency code follows a space. Without
+      that, "1 000 KM" is Bosnian marks read as a thousand billion, and
+      "1 MMK" is Myanmar kyat read as 1e15.
+
+      Written as (?:^|\d) rather than a lookbehind, which older WebKit does
+      not support.
+   */
+  const trailing = trimmed.match(/(?:^|\d)([a-z]+)\s*\)?\s*$/i);
+  const letters = trailing ? trailing[1].split('') : [];
+  const found = letters.map((letter) => getShortcutExponent(letter, exponents));
+
+  const exponent =
+    found.length > 0 && found.every((value) => value !== null)
+      ? found.reduce((total: number, value) => total + (value as number), 0)
+      : null;
 
   /*
       Everything that is not a digit or the configured fraction separator goes,
@@ -147,12 +173,22 @@ export const sanitiseNumericText = (
       it. The survivor is canonical once the fraction separator is normalised.
    */
   const digits = trimmed
+    /*
+        A fraction separator that belongs to a currency symbol — the "." in
+        "Cg.", "kr." or "Rs." — is punctuation, not a decimal point. It has to
+        go before the digit filter, which would otherwise keep it.
+     */
+    .replace(buildSymbolPunctuationPattern(separators), '$1')
     .replace(buildDecimalPattern(separators), '')
     .split(separators.decimal)
     .join(CANONICAL_DECIMAL);
 
+  /*
+      A bare run of shortcuts reads as one of that unit, the same as typing "k"
+      into an empty field gives 1,000.
+   */
   if (digits === '' || digits === CANONICAL_DECIMAL) {
-    return null;
+    return exponent === null ? null : shiftDecimal('1', exponent);
   }
 
   if (hasMultipleDecimals(digits)) {

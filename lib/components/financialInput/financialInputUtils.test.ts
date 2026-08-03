@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SEPARATORS } from '../../utils';
+import { DEFAULT_SEPARATORS, listCurrencies } from '../../utils';
 import {
   DEFAULT_MAX_DIGITS,
   DEFAULT_SCALE,
@@ -8,7 +8,8 @@ import {
   getShortcutExponent,
   isShortcut,
   isValidInsert,
-  isValidNumberString
+  isValidNumberString,
+  sanitiseNumericText
 } from './financialInputUtils';
 
 describe('shortcuts', () => {
@@ -209,5 +210,94 @@ describe('parseAmount', () => {
 
   it('takes custom shortcuts', () => {
     expect(parseAmount('5t', DEFAULT_SEPARATORS, { t: 1000 })).toBe(5000);
+  });
+});
+
+/*
+    Chained multipliers. Typing "1kk" has always given 1,000,000, because each
+    keystroke multiplies what is already there — but the paste path kept only
+    the last letter and threw the rest away, so the same characters pasted gave
+    1,000, and "2.5mk" gave 2,500 rather than 2.5 billion. A wrong number that
+    looks plausible, in a financial input.
+ */
+describe('sanitiseNumericText: chained shortcuts', () => {
+  const SV = { group: ' ', decimal: ',' };
+
+  it.each([
+    // text        -> canonical    note
+    ['1kk', '1000000', 'two multiplies, as typing it does'],
+    ['1km', '1000000000', 'mixed, left to right'],
+    ['2.5mk', '2500000000', 'on a fraction'],
+    ['1kkk', '1000000000', 'three'],
+    ['1k', '1000', 'one is unchanged'],
+    ['kk', '1000000', 'bare, reads as one of that unit'],
+    ['2.5m', '2500000', 'the ordinary case still works']
+  ])('%j -> %j (%s)', (text, expected) => {
+    expect(sanitiseNumericText(text)).toBe(expected);
+  });
+
+  /*
+      The reason the run must sit against the digits. These are real currency
+      codes spelled entirely with shortcut letters, and a space is what tells
+      them apart from a multiplier someone typed.
+   */
+  it.each([
+    // text            separators  -> canonical  note
+    ['1 000 KM', SV, '1000', 'Bosnian marks, not 1e12'],
+    ['1 MMK', SV, '1', 'Myanmar kyat, not 1e15'],
+    ['1 234,56 kr', SV, '1234.56', 'Swedish krona'],
+    ['$1,234.56 USD', DEFAULT_SEPARATORS, '1234.56', 'dollars'],
+    ['1,234.56 MKD', DEFAULT_SEPARATORS, '1234.56', 'Macedonian denar'],
+    ['2,5 m', SV, '2.5', 'a spaced letter is currency text, not a multiplier'],
+    /*
+        Found by the sweep below, not by hand. XCG's symbol is "Cg." and that
+        period was being read as a decimal point: "Cg.1234" came out as 0.1234,
+        and "1,234.56 Cg." was refused for holding two of them. "kr." and "Rs."
+        have the same shape.
+     */
+    ['1234 Cg.', DEFAULT_SEPARATORS, '1234', 'a symbol ending in a period'],
+    ['Cg.1234', DEFAULT_SEPARATORS, '1234', 'and leading with one'],
+    [
+      '1,234.56 Cg.',
+      DEFAULT_SEPARATORS,
+      '1234.56',
+      'a real decimal point survives alongside it'
+    ]
+  ])(
+    '%j is currency text, not a multiplier (%s)',
+    (text, separators, expected) => {
+      expect(sanitiseNumericText(text, separators)).toBe(expected);
+    }
+  );
+});
+
+/*
+    Every currency the runtime knows, swept rather than sampled.
+
+    The hand-picked cases above were found by guessing which codes are spelled
+    with shortcut letters. That is exactly the kind of list that misses one, so
+    this drives the whole of Intl through the sanitiser: a pasted amount must
+    come back as itself, never multiplied by the currency it is labelled with.
+
+    The table is built at collection time, so a failure names the currency.
+ */
+describe('no currency reads as a multiplier', () => {
+  const currencies = listCurrencies('en-US', 'all');
+
+  it('has a list worth sweeping', () => {
+    expect(currencies.length).toBeGreaterThan(100);
+  });
+
+  it.each(
+    currencies.flatMap(({ code, symbol }) =>
+      [
+        [code, `1234 ${code}`],
+        [code, `${code} 1234`],
+        [`${code} symbol ${symbol}`, `1234 ${symbol}`],
+        [`${code} symbol ${symbol}`, `${symbol}1234`]
+      ].filter(([, text]) => !/\d/.test(String(text).replace('1234', '')))
+    )
+  )('%s: %j stays 1234', (_label, text) => {
+    expect(sanitiseNumericText(String(text))).toBe('1234');
   });
 });
