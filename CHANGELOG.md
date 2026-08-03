@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/david-chau/react-financial-input/compare/v0.11.0...v0.11.1) (2026-08-03)
+
+
+### Bug fixes
+
+* cancel the pending animation frame on teardown ([#47](https://github.com/david-chau/react-financial-input/issues/47)) ([9fc9616](https://github.com/david-chau/react-financial-input/commit/9fc9616478ef28a3ac3d5ff330bcca195c995a2c))
+
 ## [0.11.0](https://github.com/david-chau/react-financial-input/compare/v0.10.0...v0.11.0) (2026-08-03)
 
 
