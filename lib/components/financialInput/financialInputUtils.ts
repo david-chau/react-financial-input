@@ -260,3 +260,33 @@ export const isValidNumberString = (
     !isAboveMaxDigits(integer, maxDigits) && !isAboveScale(fraction, scale)
   );
 };
+
+/*
+    Whether the value is digits followed by a single shortcut character, e.g.
+    "2k" — a complete, unambiguous multiplier token.
+
+    Samsung's keyboard composes the whole word and does not fire compositionend
+    until the field loses focus, so waiting for it left "2k" on screen while
+    every other platform had already shown "2,000". A finished shortcut token
+    needs no further input to interpret, so it is committed on sight.
+ */
+export const isCompleteShortcutToken = (
+  value: string,
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
+): boolean => {
+  const match = value.trim().match(/^(.*?)([a-z])$/i);
+
+  if (!match) {
+    return false;
+  }
+
+  const [, digits, character] = match;
+
+  return (
+    isShortcut(character, exponents) &&
+    /^-?[0-9]*$/.test(
+      toCanonical(digits, separators).replace(CANONICAL_DECIMAL, '')
+    )
+  );
+};

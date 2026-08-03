@@ -84,6 +84,20 @@ WebKit (no CDP equivalent), and a possible string-valued API.
 - **Several locales group with non-ASCII whitespace** — sv-SE and nb-NO use
   U+00A0, fr-FR uses U+202F. Invisible in a diff; a test comparing against a
   literal `" "` fails confusingly.
+- **Never trust `selectionStart` for a delete.** Android reports 0 for a
+  backspace at the end of the value. Derive the deletion point from the
+  before/after strings instead.
+- **Samsung defers `compositionend` until blur.** A finished shortcut token has
+  to commit while still composing, or the shortcut appears broken on Samsung
+  alone.
+- **Storybook shows the library version in the corner of every story.** The
+  deployed site lags whatever is on a branch, and without it a merged fix and
+  an unmerged one look identical. `?rfiBadge=0` hides it for the GIF recorder.
+- **Playwright's `reuseExistingServer` will attach to a Storybook dev server
+  you already have open on 6006** and test that instead of the build. Set
+  `RFI_PORT` when it matters.
+- **Never pipe a Playwright run through `tail -3`.** The failure count sits
+  above the pass count, so a truncated summary reads as green when it is not.
 - **The merged ref is cached on the caller's ref identity.** Rebuilding it per
   render makes React re-attach every render, and a consumer's state-setting
   callback ref then loops forever.

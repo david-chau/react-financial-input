@@ -129,6 +129,20 @@ with it:
 | `not a number`  | refused, previous value kept      |
 | `1.2.3`         | refused — two fraction separators |
 
+**Two things only real hardware showed.** Both passed every emulated test.
+
+Android reports `selectionStart: 0` for a backspace at the end of the value.
+Honouring it threw the caret to the front on every delete — `1,000|` became
+`|100`. The deletion point now comes from comparing the value before and after,
+which no platform can misreport.
+
+Samsung's keyboard composes the whole word and does not fire `compositionend`
+until the field loses focus, so `2k` sat on screen while every other platform
+had already shown `2,000`. A finished shortcut token — digits then a shortcut
+letter — now commits on sight, because it needs no further input to interpret.
+
+Recorded traces for both live in the reducer's table.
+
 **Composition is held, not formatted.** Android emits
 `insertCompositionText` for every keystroke of a word still being composed, with
 `data` that cannot be trusted until it settles. Reformatting mid-composition

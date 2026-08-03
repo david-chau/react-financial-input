@@ -3,6 +3,7 @@ import { InputType } from '../../enums';
 import {
   DEFAULT_SEPARATORS,
   Separators,
+  commonPrefixLength,
   containsLetters,
   formatCanonical,
   formatNumber,
@@ -14,6 +15,7 @@ import {
   Range,
   SHORTCUT_EXPONENTS,
   applyShortcut,
+  isCompleteShortcutToken,
   isShortcut,
   isValidInsert,
   isValidNumberString,
@@ -269,22 +271,30 @@ const remove = (
   state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState => {
-  const { targetValue, selectionStart, separators } = action;
+  const { targetValue, separators } = action;
+
+  /*
+      Where the deletion happened, taken from the values rather than from the
+      caret the platform reported. Android sends selectionStart 0 for a
+      backspace at the end of the value, and trusting it threw the caret to the
+      front of the field on every delete.
+   */
+  const deletedAt = commonPrefixLength(state.displayValue, targetValue);
 
   /*
       Backspacing a grouping separator only moves the caret. The separator is
       formatter output, not something the user typed, so deleting it would just
       be undone by the next reformat.
    */
-  if (state.displayValue.charAt(selectionStart) === separators.group) {
-    return { ...state, cursor: selectionStart, rejected: false };
+  if (state.displayValue.charAt(deletedAt) === separators.group) {
+    return { ...state, cursor: deletedAt, rejected: false };
   }
 
   return accept(
     state,
     formatNumberString(targetValue, separators),
     targetValue,
-    selectionStart,
+    deletedAt,
     separators
   );
 };
@@ -295,14 +305,15 @@ const remove = (
     just reformat what is left.
  */
 const removeRange = (
-  _state: FinancialInputState,
+  state: FinancialInputState,
   action: FinancialInputAction
 ): FinancialInputState =>
   accept(
-    _state,
+    state,
     formatNumberString(action.targetValue, action.separators),
     action.targetValue,
-    action.selectionStart,
+    // Same reasoning as remove(): the values are more reliable than the caret.
+    commonPrefixLength(state.displayValue, action.targetValue),
     action.separators
   );
 
@@ -480,10 +491,26 @@ export const reduceInput = (
         user could meaningfully undo to. reduceCompositionEnd records the
         committed result instead.
      */
+    /*
+        Mid-composition the raw text is normally held until compositionend.
+        Samsung's keyboard does not fire that until the field loses focus,
+        which left "2k" on screen while every other platform already showed
+        "2,000" — so a finished shortcut token commits on sight, since it
+        needs no further input to interpret.
+     */
     case InputType.INSERT_COMPOSITION_TEXT:
-      return action.isComposing
-        ? hold(state, action)
-        : remember(state, replace(state, action));
+      if (
+        action.isComposing &&
+        !isCompleteShortcutToken(
+          action.targetValue,
+          action.separators,
+          action.exponents
+        )
+      ) {
+        return hold(state, action);
+      }
+
+      return remember(state, replace(state, action));
 
     case InputType.HISTORY_UNDO:
       return undo(state);
