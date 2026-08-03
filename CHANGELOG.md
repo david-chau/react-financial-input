@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.6](https://github.com/david-chau/react-financial-input/compare/v0.6.5...v0.6.6) (2026-08-03)
+
+
+### Bug fixes
+
+* chain pasted shortcuts, and stop currency symbols reading as multipliers ([#30](https://github.com/david-chau/react-financial-input/issues/30)) ([73048cf](https://github.com/david-chau/react-financial-input/commit/73048cf55e5cf8ed0c0b51244f8ac6624606566e))
+
 ## [0.6.5](https://github.com/david-chau/react-financial-input/compare/v0.6.4...v0.6.5) (2026-08-03)
 
 
