@@ -532,6 +532,87 @@ test.describe('the flag font', () => {
   });
 });
 
+/*
+    The assertion that actually closes the Windows question.
+
+    Declaring the @font-face and resolving the family prove wiring, not
+    outcome — both pass with a corrupt woff2. This paints the glyph and looks
+    at the pixels: a real flag has several hues, the letter fallback is drawn
+    in one colour.
+
+    On Windows the second half is the interesting one. The system stack must
+    come back monochrome, because that is the whole reason the font ships; if
+    Windows ever gains its own flag glyphs, this fails and the 80 kB can go.
+ */
+test.describe('the font paints a real flag', () => {
+  const paint = (page: Page, family: string) =>
+    page.evaluate(async (fontFamily) => {
+      await document.fonts.ready;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+
+      context.font = `24px ${fontFamily}`;
+      context.fillStyle = '#000';
+      context.fillText('\u{1F1E8}\u{1F1E6}', 0, 24);
+
+      const { data } = context.getImageData(0, 0, 32, 32);
+
+      for (let index = 0; index < data.length; index += 4) {
+        const [red, green, blue, alpha] = [
+          data[index],
+          data[index + 1],
+          data[index + 2],
+          data[index + 3]
+        ];
+
+        if (
+          alpha > 0 &&
+          (Math.abs(red - green) > 24 || Math.abs(green - blue) > 24)
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    }, family);
+
+  test('renders in colour wherever it is loaded', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    await input(page).waitFor();
+
+    expect(await paint(page, '"Twemoji Country Flags"')).toBe(true);
+  });
+
+  /*
+      And the gap it fills, measured on the platform that has it.
+
+      Only Chromium on Windows falls through to Segoe UI Emoji, which carries
+      no flags. Firefox ships Twemoji Mozilla with the browser, so it draws
+      them on Windows regardless — the font is redundant there, which is worth
+      encoding rather than discovering later.
+   */
+  test('the system stack alone is monochrome on Windows Chromium', async ({
+    page,
+    browserName
+  }) => {
+    test.skip(
+      process.platform !== 'win32' || browserName !== 'chromium',
+      'only meaningful on the platform that lacks the glyphs'
+    );
+
+    await page.goto(STORIES.withCurrencySearch);
+    await input(page).waitFor();
+
+    // If this ever passes, Windows grew flag glyphs and the 80 kB can go.
+    expect(await paint(page, 'system-ui, sans-serif')).toBe(false);
+  });
+});
+
 test.describe('currency search presets', () => {
   for (const [codes, expected] of [
     ['g7', 5],
