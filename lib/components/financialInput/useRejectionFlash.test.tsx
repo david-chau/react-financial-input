@@ -100,3 +100,53 @@ describe('useRejectionFlash', () => {
     expect(clear).toHaveBeenCalled();
   });
 });
+
+/*
+    Both scheduled callbacks are cancelled on unmount, not just the timer.
+
+    Found by auditing for leaks rather than by a failure: the frame fired after
+    the component was gone and set state on it. React makes that a silent
+    no-op, so nothing had ever complained.
+ */
+describe('teardown cancels everything it scheduled', () => {
+  it('cancels the pending frame on unmount', () => {
+    const pending: FrameRequestCallback[] = [];
+    let cancelled = 0;
+
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      pending.push(callback);
+
+      return pending.length;
+    });
+    vi.stubGlobal('cancelAnimationFrame', () => {
+      cancelled += 1;
+    });
+
+    const { unmount } = render(<Harness enabled />);
+
+    act(() => screen.getByRole('button').click());
+    expect(pending).toHaveLength(1);
+
+    unmount();
+
+    expect(cancelled).toBeGreaterThan(0);
+  });
+
+  it('cancels the previous frame when a second refusal arrives', () => {
+    let cancelled = 0;
+
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    vi.stubGlobal('cancelAnimationFrame', () => {
+      cancelled += 1;
+    });
+
+    render(<Harness enabled />);
+    const button = screen.getByRole('button');
+
+    act(() => button.click());
+    act(() => button.click());
+
+    // The first frame is dropped rather than left to fire alongside the second.
+    expect(cancelled).toBeGreaterThan(0);
+  });
+});

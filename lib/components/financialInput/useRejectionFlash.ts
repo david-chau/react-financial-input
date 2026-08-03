@@ -16,11 +16,26 @@ export const REJECTED_FLASH_MS = 450;
 export const useRejectionFlash = (enabled: boolean) => {
   const [isFlashing, setIsFlashing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /*
+      The frame is cancelled as carefully as the timer.
+
+      Not a leak — the callback holds its closure for a single frame, and React
+      18 makes a setState on an unmounted component a silent no-op, so nothing
+      warns and nothing breaks. But an audit for leaks found it firing after
+      unmount, and leaving one of two scheduled callbacks uncancelled is the
+      kind of asymmetry that becomes a real leak the moment someone moves it to
+      a longer queue.
+   */
+  const frame = useRef<number | undefined>(undefined);
 
   useEffect(
     () => () => {
       if (timer.current) {
         clearTimeout(timer.current);
+      }
+
+      if (frame.current !== undefined) {
+        cancelAnimationFrame(frame.current);
       }
     },
     []
@@ -35,10 +50,14 @@ export const useRejectionFlash = (enabled: boolean) => {
       clearTimeout(timer.current);
     }
 
+    if (frame.current !== undefined) {
+      cancelAnimationFrame(frame.current);
+    }
+
     // Off then on, so a second refusal restarts the animation rather than
     // riding out the first one.
     setIsFlashing(false);
-    requestAnimationFrame(() => setIsFlashing(true));
+    frame.current = requestAnimationFrame(() => setIsFlashing(true));
 
     timer.current = setTimeout(() => setIsFlashing(false), REJECTED_FLASH_MS);
   };
