@@ -532,6 +532,36 @@ keyframes declare `from` and nothing else, so the browser animates back to
 whatever the element's real style is — which fades out correctly on every
 variant, focused or not, without hard-coding the resting colours.
 
+## What 1.0.0 promises
+
+A version number is a promise about change, so it is worth saying which one.
+
+**The exported names are the contract.** Every entry point lists its exports by
+hand, and a test asserts each list exactly — `index.test.ts` and
+`entryPoints.test.ts`. Removing or renaming any of them is a major version.
+That list is deliberately short: the package exported 66 names by accident
+before 1.0.0, through four `export *` lines, and shipping that would have
+frozen reducer internals and a cache-clearing test seam as public API forever.
+
+**What is not exported may change in a patch.** The reducer, the validation
+helpers, the caret arithmetic — all internal. If you need one of them, ask for
+it rather than reaching into `dist/`; a name that is asked for can be exported
+on purpose.
+
+**The CSS class names are part of the contract too**, because the stylesheet is
+opt-in and people build on the markup. `rfi-input`, `rfi-field`, `rfi-label`,
+`rfi-adornment`, `rfi-flag` and the rest behave like exports.
+
+**Behaviour that is documented here is behaviour you can rely on.** The
+canonical-versus-display split, `null` never being `NaN`, the caret rules, the
+grouping following the locale. Where a platform forced an unusual decision it is
+written down with the reason, so it does not look like something safe to
+"clean up" later.
+
+**What is not promised** is in [Limits](#limits) below: numbers above 2^53,
+digit glyphs outside ASCII, and the support-matrix rows nobody has hardware to
+verify. Those are stated rather than implied.
+
 ## Limits
 
 What this library does not do, stated plainly, because finding out later is
