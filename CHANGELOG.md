@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/david-chau/react-financial-input/compare/v0.7.0...v0.8.0) (2026-08-03)
+
+
+### Features
+
+* ship the flag font, so flags work on Windows too ([#36](https://github.com/david-chau/react-financial-input/issues/36)) ([7cf8260](https://github.com/david-chau/react-financial-input/commit/7cf82606bc426644fe46c59c12a3a564a6e3c5d5))
+
 ## [0.7.0](https://github.com/david-chau/react-financial-input/compare/v0.6.7...v0.7.0) (2026-08-03)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "react-financial-input",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Zero-dependency React financial input that formats as you type and handles desktop, iOS and Android input events.",
   "keywords": [
     "react",
