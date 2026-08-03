@@ -239,3 +239,23 @@ export const areSeparatorsValid = (separators: Separators): boolean =>
 
 export const buildDecimalPattern = (separators: Separators): RegExp =>
   new RegExp(`[^0-9${escapeForRegExp(separators.decimal)}]`, 'g');
+
+/*
+    A fraction separator that is part of a currency symbol rather than part of
+    the number: the "." in "Cg.", "kr." or "Rs.".
+
+    Without this, "Cg.1234" sanitises to ".1234" and reads as 0.1234 — a wrong
+    amount, off by four orders of magnitude — and "1,234.56 Cg." is refused
+    outright for holding two decimal points.
+
+    A separator touching a letter belongs to that letter. Written with a
+    lookahead and a capture rather than a lookbehind, which older WebKit does
+    not support.
+ */
+export const buildSymbolPunctuationPattern = (
+  separators: Separators
+): RegExp => {
+  const decimal = escapeForRegExp(separators.decimal);
+
+  return new RegExp(`([a-z])${decimal}|${decimal}(?=[a-z])`, 'gi');
+};
