@@ -625,13 +625,25 @@
   right: var(--rfi-padding-x);
 }
 
-/* Reserve room so the value never runs underneath the symbol. */
+/*
+ * Reserve room so the value never runs underneath the symbol.
+ *
+ * 3.5rem, not 2rem. The value is right-aligned, so a suffix symbol and the
+ * digits compete for the same edge and a reserve that is too small is an
+ * overlap rather than a tight fit. Measured at the default font size: "kr"
+ * needs 28px, but "US$" needs 45px and "CHF" 46px — so the old 32px was fine
+ * for sv-SE and broken for most of the majors.
+ *
+ * ponytail: a flat reserve sized for the common worst case. CSS cannot measure
+ * the symbol, so anything past about four characters still needs
+ * --rfi-adornment-space set by hand.
+ */
 .rfi-field:has(.rfi-adornment--prefix) .rfi-input {
-  padding-left: var(--rfi-adornment-space, 2rem);
+  padding-left: var(--rfi-adornment-space, 3.5rem);
 }
 
 .rfi-field:has(.rfi-adornment--suffix) .rfi-input {
-  padding-right: var(--rfi-adornment-space, 2rem);
+  padding-right: var(--rfi-adornment-space, 3.5rem);
 }
 
 .rfi-field:focus-within .rfi-adornment {
@@ -643,7 +655,7 @@
  * they overlap and read as "$United States".
  */
 .rfi-field:has(.rfi-adornment--prefix) .rfi-label {
-  left: var(--rfi-adornment-space, 2rem);
+  left: var(--rfi-adornment-space, 3.5rem);
 }
 
 /* Floated, the label clears the symbol, so it returns to the border inset. */

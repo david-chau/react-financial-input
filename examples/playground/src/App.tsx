@@ -4,6 +4,7 @@ import {
   parseAmount,
   useFinancialInput
 } from 'react-financial-input';
+import { CurrencyCombobox } from './CurrencyCombobox';
 
 /*
     A scratchpad, not a demo reel. Every panel is a few lines you can delete or
@@ -79,30 +80,17 @@ export const App = () => {
 
       <Panel
         title="Currency"
-        hint="The symbol and the separators come from the locale, not the code."
+        hint="Type to search 162 of them. Symbol and separators follow the locale, not the code."
       >
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <select
+        <div className="rfi-group">
+          <CurrencyCombobox
             value={currency}
-            onChange={(event) => setCurrency(event.target.value)}
-            aria-label="Currency"
-          >
-            {['USD', 'EUR', 'JPY', 'SEK', 'GBP'].map((code) => (
-              <option key={code}>{code}</option>
-            ))}
-          </select>
-          <div style={{ position: 'relative', flex: 1 }}>
+            onChange={setCurrency}
+            codes="g10"
+          />
+          <div className="rfi-field">
             <input {...getInputProps()} />
-            <span
-              style={{
-                position: 'absolute',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                [symbolPosition === 'prefix' ? 'left' : 'right']: 14,
-                opacity: 0.6,
-                pointerEvents: 'none'
-              }}
-            >
+            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
               {symbol}
             </span>
           </div>

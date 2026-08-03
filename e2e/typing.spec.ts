@@ -378,6 +378,47 @@ test.describe('alignment', () => {
   });
 });
 
+/*
+    The value is right-aligned, so a suffix symbol and the digits compete for
+    the same edge. The reserve used to be a flat 2rem, which fits "kr" (28px)
+    and not "US$" (45px) or "CHF" (46px) — so it looked correct in sv-SE and
+    overlapped in most of the majors. Geometry, not appearance, so that it
+    cannot pass by looking about right.
+ */
+test.describe('the value never runs under the currency symbol', () => {
+  for (const currency of ['USD', 'CHF', 'SEK']) {
+    test(`${currency} keeps its distance`, async ({ page }) => {
+      await page.goto(
+        withArgs(STORIES.withCurrencySearch, { locale: 'sv-SE' })
+      );
+      const field = input(page).last();
+      await field.waitFor();
+
+      const combobox = page.getByRole('combobox', { name: 'Currency' });
+      await combobox.click();
+      await combobox.fill(currency);
+      await combobox.press('ArrowDown');
+      await combobox.press('Enter');
+
+      await field.click();
+      await field.pressSequentially('1234');
+
+      const overlap = await page.evaluate(() => {
+        const el = document.querySelector('.rfi-input') as HTMLElement;
+        const symbol = document.querySelector('.rfi-adornment') as HTMLElement;
+        const box = el.getBoundingClientRect();
+        const symbolBox = symbol.getBoundingClientRect();
+        const reserved = parseFloat(getComputedStyle(el).paddingRight);
+
+        // Where the text may reach, versus where the symbol starts.
+        return box.right - reserved - symbolBox.left;
+      });
+
+      expect(overlap).toBeLessThanOrEqual(0);
+    });
+  }
+});
+
 test.describe('currency search presets', () => {
   for (const [codes, expected] of [
     ['g7', 5],

@@ -69,9 +69,6 @@ React 18 or newer (`>=18.0.0`). Nothing else.
 | Paste is sanitised, not refused | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-paste-is-sanitised.gif)             |
 | Undo, one step per edit         | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-undo-restores-in-one-step.gif)      |
 
-Undo is the component's own, so a paste or an expansion comes back in a single
-step rather than unwinding character by character.
-
 ### Currency
 
 |                                   |                                                                                                                    |
@@ -79,9 +76,8 @@ step rather than unwinding character by character.
 | Symbol and separators from `Intl` | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-currency-and-separators.gif) |
 | Search, for when 162 is the list  | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-search-162-currencies.gif)   |
 
-`locale: 'de-DE'` gives `1.234,56`. `currency: 'SEK'` resolves the symbol **and**
-which side it belongs on. Symbols follow the **locale**, not the currency: SEK
-reads `SEK` in `en-US` and `kr` only in `sv-SE`.
+`locale` and `currency` come from `Intl`, and the symbol follows the **locale**,
+not the currency — SEK reads `SEK` in `en-US` and `kr` only in `sv-SE`.
 
 ### Feedback and extras
 
@@ -91,35 +87,26 @@ reads `SEK` in `en-US` and `kr` only in `sv-SE`.
 | Clear button, undoable               | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-clear-button-and-undo-brings-it-back.gif) |
 | Multiplier keys for a numeric keypad | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-multiplier-keys-for-a-numeric-keypad.gif) |
 
-The clear button, the keys, the currency picker and the floating label are all
-**off by default** — the component renders a bare `<input>`. The hook gives you
-the behaviour; you render the markup.
-See [the extras](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#off-by-default-extras).
+All of these are **off by default** — the component renders a bare `<input>`,
+and the hook gives you the behaviour to render yourself. See
+[the extras](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#off-by-default-extras).
 
 ## Why this one
 
-- **Shortcuts work on mobile.** Most currency inputs ask for a numeric keypad,
-  which has no letter keys — so `2.5m` is impossible to type on a phone.
-  ([why](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#why-the-keyboard-defaults-to-text-on-mobile))
-- **Built on `InputEvent`, not key codes.** Soft keyboards often send no key
-  code at all. ([how](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#how-input-is-handled))
-- **The awkward paths are handled.** Paste, drag-drop, cut, word delete and
-  Android IME composition each have a case, not a shrug.
-  ([cheatsheet](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#input-event-cheatsheet))
-- **Tested on real hardware.** Two bugs — an Android caret jump and Samsung
-  deferring `compositionend` — only appeared on physical phones, and are now
-  recorded traces in the test table.
+Most currency inputs ask for a numeric keypad, which has no letter keys — so
+`2.5m` cannot be typed on a phone at all. This one reads `InputEvent.inputType`
+rather than guessing from key codes, so paste, drag-drop, cut, word delete and
+Android IME composition each have a case rather than a shrug.
+
+The [design notes](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md)
+have the reasoning, the input event cheatsheet and the device support matrix.
 
 ## Props
 
-Every native `<input>` prop is passed through (`placeholder`, `disabled`,
-`name`, `onBlur`, `aria-*`), and `ref` is forwarded.
-
-Four names are taken over rather than forwarded: `value`, `defaultValue` and
-`onChange` carry the number or the canonical string instead of DOM strings, and
-**`onError` is the refused-keystroke callback**, not the DOM's `error` handler.
-`type` is always `text` — `type="number"` cannot hold a value containing
-grouping separators.
+Every native `<input>` prop is passed through and `ref` is forwarded, except
+four: `value`, `defaultValue` and `onChange` carry the number or the canonical
+string rather than DOM strings, and **`onError` is the refused-keystroke
+callback**, not the DOM's. `type` is always `text`.
 
 | Prop                       | Type                                        | Default         | Description                                                                   |
 | -------------------------- | ------------------------------------------- | --------------- | ----------------------------------------------------------------------------- |
