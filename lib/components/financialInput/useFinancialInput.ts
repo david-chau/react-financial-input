@@ -2,7 +2,6 @@ import {
   InputHTMLAttributes,
   KeyboardEvent,
   Ref,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -14,7 +13,6 @@ import {
   SymbolPosition,
   areSeparatorsValid,
   formatCanonical,
-  mergeRefs,
   resolveCurrency,
   resolveSeparators,
   toCanonical
@@ -28,6 +26,8 @@ import {
   toExponents
 } from './financialInputUtils';
 import { InputType } from '../../enums';
+import { useMergedRef } from './useMergedRef';
+import { useRejectionFlash } from './useRejectionFlash';
 import {
   FinancialInputState,
   createInitialState,
@@ -43,9 +43,6 @@ export const INPUT_CLASS_NAME = 'rfi-input';
 
 /** Added for a moment when a keystroke is refused, so the refusal is visible. */
 export const REJECTED_CLASS_NAME = 'rfi-input--rejected';
-
-/** Must outlast the longest animation in styles.css. */
-const REJECTED_FLASH_MS = 450;
 
 export interface FinancialInputOptions {
   /** Maximum number of decimal places. Defaults to 2. Use 0 for whole numbers. */
@@ -242,29 +239,11 @@ export const useFinancialInput = ({
       : toCanonical(snapshot.displayValue, separators);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const getMergedRef = useMergedRef(inputRef);
+  const { isFlashing, flash: flashRejection } = useRejectionFlash(flashOnError);
   const [state, setState] = useState<FinancialInputState>(() =>
     createInitialState(toNumber(value), separators)
   );
-
-  /*
-      Merging the caller's ref has to be cached on the caller's ref identity.
-      Building it inline would hand React a new callback ref on every render,
-      and React detaches and re-attaches a ref whose identity changed — so a
-      consumer's callback ref would fire on every render. If that callback sets
-      state, the result is an infinite render loop.
-   */
-  const mergedRef = useRef<{
-    external: Ref<HTMLInputElement> | undefined;
-    merged: (node: HTMLInputElement | null) => void;
-  } | null>(null);
-
-  const getMergedRef = (external?: Ref<HTMLInputElement>) => {
-    if (!mergedRef.current || mergedRef.current.external !== external) {
-      mergedRef.current = { external, merged: mergeRefs(inputRef, external) };
-    }
-
-    return mergedRef.current.merged;
-  };
 
   /*
       Android soft keyboards emit insertCompositionText for every keystroke of a
@@ -273,47 +252,6 @@ export const useFinancialInput = ({
       ends. This ref is the only thing the reducer cannot work out for itself.
    */
   const isComposing = useRef(false);
-
-  /*
-      A refused keystroke is otherwise silent — the value simply does not
-      change, which reads as a dead input. A brief flash says "that was
-      refused" without the consumer having to wire up an error state.
-   */
-  const [isFlashing, setIsFlashing] = useState(false);
-  /*
-      The undefined is in the type parameter, not just the argument: @types/react
-      18.0 has no useRef<T>(undefined) overload — React 19's types added it — and
-      the package claims support from 18.0.0.
-   */
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined
-  );
-
-  useEffect(
-    () => () => {
-      if (flashTimer.current) clearTimeout(flashTimer.current);
-    },
-    []
-  );
-
-  const flashRejection = () => {
-    if (!flashOnError) {
-      return;
-    }
-
-    if (flashTimer.current) {
-      clearTimeout(flashTimer.current);
-    }
-
-    // Off then on, so a second refusal restarts the animation.
-    setIsFlashing(false);
-    requestAnimationFrame(() => setIsFlashing(true));
-
-    flashTimer.current = setTimeout(
-      () => setIsFlashing(false),
-      REJECTED_FLASH_MS
-    );
-  };
 
   /*
       String mode fires on a change of canonical rather than of the number,

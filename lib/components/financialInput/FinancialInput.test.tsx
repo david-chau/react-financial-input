@@ -1,6 +1,6 @@
 import { createRef, useCallback, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialInput } from './FinancialInput';
 import { useFinancialInput } from './useFinancialInput';
@@ -657,5 +657,118 @@ describe('native form submission', () => {
     expect(
       submittedBy(screen.getByTestId('form') as HTMLFormElement).amount
     ).toBe('1234.56');
+  });
+});
+
+/*
+    getInputProps merges what you pass it rather than replacing it. That is the
+    documented contract for the headless path — "one spread, and it merges
+    caller overrides instead of fighting them" — and it was the least covered
+    part of the hook, because every other test lets it supply all the handlers.
+ */
+describe('getInputProps merges the caller handlers', () => {
+  const Field = (overrides: Record<string, unknown>) => {
+    const Harness = () => {
+      const { getInputProps } = useFinancialInput();
+
+      return <input {...getInputProps(overrides)} />;
+    };
+
+    return Harness;
+  };
+
+  it.each([
+    ['onInput', 'onInput'],
+    ['onKeyDown', 'onKeyDown']
+  ])('still calls a caller %s', async (_name, prop) => {
+    const spy = vi.fn();
+    const Harness = Field({ [prop]: spy });
+    const user = userEvent.setup();
+
+    render(<Harness />);
+    await user.type(screen.getByRole('textbox'), '1');
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('runs the library handler as well, not instead', async () => {
+    const spy = vi.fn();
+    const Harness = Field({ onInput: spy });
+    const user = userEvent.setup();
+
+    render(<Harness />);
+    const input = screen.getByRole('textbox');
+    await user.type(input, '1234');
+
+    // Both happened: the caller saw the event, and the value still formatted.
+    expect(spy).toHaveBeenCalled();
+    expect(input).toHaveValue('1,234');
+  });
+
+  it.each([
+    ['onCompositionStart', 'compositionStart'],
+    ['onCompositionEnd', 'compositionEnd']
+  ])('still calls a caller %s', (prop, event) => {
+    const spy = vi.fn();
+    const Harness = Field({ [prop]: spy });
+
+    render(<Harness />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent[event as 'compositionStart' | 'compositionEnd'](input, {
+      data: '1'
+    });
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('merges className rather than dropping the library one', () => {
+    const Harness = Field({ className: 'mine' });
+
+    render(<Harness />);
+
+    expect(screen.getByRole('textbox').className).toContain('mine');
+    expect(screen.getByRole('textbox').className).toContain('rfi-input');
+  });
+
+  // type and inputMode come before ...rest, so a caller can still override.
+  it('lets the caller override inputMode', () => {
+    const Harness = Field({ inputMode: 'decimal' });
+
+    render(<Harness />);
+
+    expect(screen.getByRole('textbox')).toHaveAttribute('inputmode', 'decimal');
+  });
+});
+
+/*
+    The caret is put back after React re-renders with a reformatted value, but
+    only when the input is focused — otherwise it would steal focus from
+    wherever the user actually is.
+ */
+describe('caret restoration', () => {
+  it('leaves an unfocused input alone', () => {
+    const Harness = () => {
+      const { getInputProps } = useFinancialInput({ value: 1234 });
+
+      return <input {...getInputProps()} />;
+    };
+
+    render(<Harness />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+
+    expect(document.activeElement).not.toBe(input);
+    expect(input).toHaveValue('1,234');
+  });
+
+  it('puts the caret after a separator it just inserted', async () => {
+    const user = userEvent.setup();
+    render(<FinancialInput />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+
+    await user.type(input, '1000');
+
+    expect(input).toHaveValue('1,000');
+    expect(input.selectionStart).toBe(5);
   });
 });

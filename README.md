@@ -185,7 +185,9 @@ All of it is in **[UTILS.md](https://github.com/david-chau/react-financial-input
   currency lists, search, flags.
 - **[DESIGN.md](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md)** — why it behaves as it does: the state model and
   controlled mode, the mobile keyboard trade-off, exact multipliers, the input
-  event cheatsheet, the device support matrix, styling.
+  event cheatsheet, the device support matrix, styling — and
+  [what it does not do](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#limits):
+  numbers above 2^53, and the rows nobody has tested on real hardware.
 - **[CONTRIBUTING.md](https://github.com/david-chau/react-financial-input/blob/main/CONTRIBUTING.md)** — architecture rules and local setup.
 - **[CI.md](https://github.com/david-chau/react-financial-input/blob/main/CI.md)** — what each workflow does, and how to publish.
 - **[HISTORY.md](https://github.com/david-chau/react-financial-input/blob/main/HISTORY.md)** — where it came from, why it stalled for two

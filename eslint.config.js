@@ -39,5 +39,45 @@ export default tseslint.config(
       ]
     }
   },
+  /*
+      Complexity, measured rather than assumed.
+
+      Before 1.0.0 nothing watched this, and two functions had quietly reached
+      a cyclomatic complexity of 21. The tangled parts were split out; what is
+      left is structural, and listed as exceptions below rather than pretended
+      away.
+
+      The threshold exists to stop anything *new* getting there. Raising it is
+      a decision someone has to make on purpose.
+   */
+  {
+    files: ['lib/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.stories.*'],
+    rules: { complexity: ['error', 12] }
+  },
+  {
+    /*
+        reduceInput is a flat switch over sixteen input types. The metric counts
+        every case, but a dispatch table is the clearest shape this can take —
+        collapsing it to satisfy a number would make it worse to read.
+
+        isValidInsert is a chain of independent guard clauses, each rejecting
+        one rule. Same argument: the count is high, the reading is linear.
+     */
+    files: [
+      'lib/components/financialInput/financialInputReducer.ts',
+      'lib/components/financialInput/financialInputUtils.ts'
+    ],
+    rules: { complexity: ['error', 18] }
+  },
+  {
+    /*
+        A hook body, whose branches are spread across many small closures
+        rather than nested in one. Extracting them further would mean passing
+        the same eight values through every signature.
+     */
+    files: ['lib/components/financialInput/useFinancialInput.ts'],
+    rules: { complexity: ['error', 22] }
+  },
   prettier
 );

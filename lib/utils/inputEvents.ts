@@ -94,6 +94,56 @@ export interface Edit {
 }
 
 /*
+    Which kind an edit is, given what the event said and what the strings show.
+
+    Pulled out of describeEdit, which was doing the diffing and this decision
+    in one function at a cyclomatic complexity of 15. The rules are worth
+    reading on their own:
+
+    insertText is decided by length, not by name. It is the one type the table
+    cannot classify, because a keystroke and an Android clipboard chip both
+    send it — one with a character, one with an entire string.
+
+    Any other known type is taken at its word. An unknown type is reported as
+    unknown rather than guessed at. And with no event at all, the diff decides.
+ */
+const toKind = ({
+  inputType,
+  text,
+  removed,
+  isBulk
+}: {
+  inputType: string | null;
+  text: string;
+  removed: string;
+  isBulk: boolean;
+}): EditKind => {
+  if (inputType === InputType.INSERT_TEXT) {
+    return isBulk ? 'insertBulk' : 'insert';
+  }
+
+  const declared = classifyInputType(inputType);
+
+  if (declared) {
+    return declared;
+  }
+
+  if (inputType) {
+    return 'unknown';
+  }
+
+  if (text && removed) {
+    return 'replace';
+  }
+
+  if (text) {
+    return isBulk ? 'insertBulk' : 'insert';
+  }
+
+  return removed ? 'delete' : 'none';
+};
+
+/*
     What changed between two values, and what kind of edit it was.
 
     Pass the InputEvent when you have one — inside an `input` or `beforeinput`
@@ -134,31 +184,7 @@ export const describeEdit = (
   const inserted = inputType && event?.data ? event.data : text;
   const isBulk = inserted.length > 1;
 
-  const declared = classifyInputType(inputType);
-
-  const derived: EditKind =
-    text && removed
-      ? 'replace'
-      : text
-        ? isBulk
-          ? 'insertBulk'
-          : 'insert'
-        : removed
-          ? 'delete'
-          : 'none';
-
-  /*
-      insertText is the exception the table cannot cover, so its kind comes
-      from the length instead: one character is a keystroke, more arrived in
-      bulk. That is what makes an Android clipboard chip readable — it reports
-      insertText and hands over an entire string.
-   */
-  const kind: EditKind =
-    inputType === InputType.INSERT_TEXT
-      ? isBulk
-        ? 'insertBulk'
-        : 'insert'
-      : (declared ?? (inputType ? 'unknown' : derived));
+  const kind = toKind({ inputType, text, removed, isBulk });
 
   return { kind, inputType, at, text, removed, isBulk };
 };
