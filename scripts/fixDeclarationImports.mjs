@@ -95,9 +95,17 @@ for (const file of declarationsIn(DIST)) {
     The require condition points here. The contents are identical — the
     extension is what tells TypeScript to read it as CommonJS.
  */
-const entry = join(DIST, 'index.d.ts');
-copyFileSync(entry, join(DIST, 'index.d.cts'));
+const entries = ['index', 'currency', 'events'];
+
+for (const name of entries) {
+  const source = join(DIST, `${name}.d.ts`);
+
+  if (existsSync(source)) {
+    copyFileSync(source, join(DIST, `${name}.d.cts`));
+  }
+}
 
 console.log(
-  `declarations: ${rewritten} specifiers given extensions, index.d.cts written`
+  `declarations: ${rewritten} specifiers given extensions, ` +
+    `${entries.join('.d.cts, ')}.d.cts written`
 );

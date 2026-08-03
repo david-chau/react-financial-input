@@ -44,7 +44,27 @@
     "./styles.css": "./styles.css",
     "./package.json": "./package.json",
     "./flags.css": "./flags.css",
-    "./flags.woff2": "./flags.woff2"
+    "./flags.woff2": "./flags.woff2",
+    "./currency": {
+      "import": {
+        "types": "./dist/currency.d.ts",
+        "default": "./dist/currency.js"
+      },
+      "require": {
+        "types": "./dist/currency.d.cts",
+        "default": "./dist/currency.cjs"
+      }
+    },
+    "./events": {
+      "import": {
+        "types": "./dist/events.d.ts",
+        "default": "./dist/events.js"
+      },
+      "require": {
+        "types": "./dist/events.d.cts",
+        "default": "./dist/events.cjs"
+      }
+    }
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

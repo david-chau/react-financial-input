@@ -11,9 +11,18 @@ export default defineConfig({
     copyPublicDir: false,
     sourcemap: true,
     lib: {
-      entry: resolve(rootDir, 'lib/index.ts'),
+      /*
+          Three entries, so that currency data and event reading are not
+          measured as part of importing the input. Shared code between them
+          becomes a chunk rather than being duplicated.
+       */
+      entry: {
+        index: resolve(rootDir, 'lib/index.ts'),
+        currency: resolve(rootDir, 'lib/currency.ts'),
+        events: resolve(rootDir, 'lib/events.ts')
+      },
       formats: ['es', 'cjs'],
-      fileName: (format) => (format === 'es' ? 'index.js' : 'index.cjs')
+      fileName: (format, name) => `${name}.${format === 'es' ? 'js' : 'cjs'}`
     },
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime'],

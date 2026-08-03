@@ -25,21 +25,13 @@ const PUBLIC_API = [
   'shiftDecimal',
   'toCanonical',
   'formatCanonical',
-  'DEFAULT_SHORTCUTS',
+  'DEFAULT_SHORTCUTS'
 
-  // Currency data, from Intl
-  'listCurrencies',
-  'searchCurrencies',
-  'toFlagEmoji',
-  'supportsFlagEmoji',
-  'CURRENCY_PRESETS',
-  'DEFAULT_CURRENCY_PRESET',
-
-  // Reading input events
-  'classifyInputType',
-  'describeEdit',
-  'isDeleteInputType',
-  'InputType'
+  /*
+      Currency data and event reading are no longer here. They moved to their
+      own entry points so that importing the input does not measure as
+      importing them — see currency.test.ts and events.test.ts.
+   */
 ].sort();
 
 describe('the public API', () => {
