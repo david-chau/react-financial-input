@@ -1,9 +1,9 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
-import { FinancialInput, FinancialInputProps } from './FinancialInput';
-import { listCurrencies, toFlagEmoji } from '../../utils';
+import { FinancialInput, FinancialInputOwnProps } from './FinancialInput';
+import type { CurrencyPreset } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
 import { EventTesterPanel } from './EventTesterPanel';
 import { KeyboardTesterPanel } from './KeyboardTesterPanel';
@@ -14,10 +14,23 @@ import { CurrencyCombobox } from './CurrencyCombobox';
     component's own props. Typing the meta on this rather than on
     `typeof FinancialInput` is what lets `label` and `helper` be args.
  */
-type FieldArgs = FinancialInputProps & {
+type FieldArgs = FinancialInputOwnProps & {
+  /*
+      The number branch of the props union. Storybook's Meta needs one object
+      type, and a union of two would leave every `args` implicitly `any`.
+   */
+  value?: Nullable<number>;
+  onChange?: (value: Nullable<number>) => void;
   label?: string;
   helper?: string;
   error?: boolean;
+  /*
+      Currency search only. 'custom' is not a preset — it is the control that
+      hands over to `customCodes`.
+   */
+  codes?: CurrencyPreset | 'custom';
+  customCodes?: string[];
+  locale?: string;
 };
 
 const meta: Meta<FieldArgs> = {
@@ -83,13 +96,13 @@ const Field = ({ label, helper, error, ...props }: FieldArgs) => {
     nesting separator, so "Debug / Playground" would have made a folder.
  */
 export const DebugPlayground: Story = {
-  name: 'Debug (Playground)',
+  name: 'Debug - Playground',
   parameters: { layout: 'fullscreen' },
   render: () => <EventTesterPanel />
 };
 
 export const KeyboardTester: Story = {
-  name: 'Keyboard tester',
+  name: 'Debug - Keyboard tester',
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' }
@@ -159,6 +172,58 @@ export const Controlled: Story = {
         <small style={{ fontFamily: 'monospace', opacity: 0.7 }}>
           onChange: {value === null ? 'null' : value}
         </small>
+      </div>
+    );
+  }
+};
+
+/*
+    valueType: 'string', for state that is already text — a form storing raw
+    input, a backend expecting a string, or a form library whose fields are
+    strings.
+
+    What comes back is canonical: no grouping, always a "." fraction, whatever
+    the locale on screen. Type into the de-DE field and watch the two diverge.
+ */
+export const StringValues: Story = {
+  render: function StringValues(args) {
+    const [raw, setRaw] = useState<Nullable<string>>('1234.56');
+    const [german, setGerman] = useState<Nullable<string>>('1234.56');
+
+    return (
+      <div style={{ display: 'grid', gap: '1.5rem', width: 260 }}>
+        <div style={{ display: 'grid', gap: '0.4rem' }}>
+          <FinancialInput
+            valueType="string"
+            value={raw}
+            onChange={(next) => {
+              args.onChange?.(next === null ? null : Number(next));
+              setRaw(next);
+            }}
+          />
+          <p className="rfi-helper">
+            onChange: <code>{raw === null ? 'null' : JSON.stringify(raw)}</code>
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gap: '0.4rem' }}>
+          <FinancialInput
+            valueType="string"
+            value={german}
+            onChange={setGerman}
+            options={{ locale: 'de-DE' }}
+          />
+          <p className="rfi-helper">
+            de-DE on screen, canonical out:{' '}
+            <code>{german === null ? 'null' : JSON.stringify(german)}</code>
+          </p>
+        </div>
+
+        <p className="rfi-helper">
+          Trailing zeros survive here and cannot in number mode: typing the last
+          zero of <code>1.50</code> leaves the number at <code>1.5</code>, so
+          only the string reports it.
+        </p>
       </div>
     );
   }
@@ -335,81 +400,50 @@ export const WithErrorState: Story = {
 };
 
 /*
-    Each currency is paired with the locale that actually uses it. Both the
-    symbol and which side it belongs on are properties of the locale, not the
-    currency: SEK is "kr" trailing in sv-SE but "SEK" leading in en-US.
- */
-const PICKER_LOCALES: Record<string, string> = {
-  USD: 'en-US',
-  GBP: 'en-GB',
-  EUR: 'de-DE',
-  JPY: 'ja-JP',
-  SEK: 'sv-SE',
-  INR: 'en-IN'
-};
-
-/*
     A currency picker is off by default — the component never renders one.
-    `listCurrencies()` enumerates what the runtime knows from Intl, so there is
-    no bundled table to go stale, and changing the selection re-resolves both
-    the symbol and its side.
- */
-/*
-    Search rather than a dropdown, which is what 'all' (162 currencies) needs.
-    Defaults to the g10 shortlist; pass 'g7', 'all', or your own array.
+    `searchCurrencies` reads Intl rather than a bundled table, so there is no
+    list to go stale, and changing the selection re-resolves the symbol, which
+    side it belongs on, and the separators.
+
+    Search rather than a dropdown, because 'all' is 162 and a native <select>
+    stops being usable long before that.
  */
 export const WithCurrencySearch: Story = {
+  args: { codes: 'g10', customCodes: ['NZD', 'THB', 'ZAR'], locale: '' },
+  argTypes: {
+    codes: {
+      name: 'currency list',
+      description:
+        "Preset shortlist, or 'custom' to supply your own array instead.",
+      control: 'inline-radio',
+      options: ['g7', 'g10', 'all', 'custom'],
+      table: { category: 'Currency search' }
+    },
+    customCodes: {
+      name: 'custom codes',
+      description: 'ISO 4217 codes, kept in the order you write them.',
+      control: 'object',
+      // Only meaningful once the list above is set to 'custom'.
+      if: { arg: 'codes', eq: 'custom' },
+      table: { category: 'Currency search' }
+    },
+    locale: {
+      name: 'locale',
+      description:
+        "Empty means the app's own locale. Both the symbol and the " +
+        'separators come from this, not from the currency.',
+      control: 'select',
+      options: ['', 'en-US', 'en-GB', 'de-DE', 'sv-SE', 'ja-JP'],
+      table: { category: 'Currency search' }
+    }
+  },
   render: function WithCurrencySearch(args) {
     const id = useId();
     const [currency, setCurrency] = useState('USD');
-    const { getInputProps, symbol, symbolPosition, numericValue } =
-      useFinancialInput({
-        onChange: args.onChange,
-        options: { currency, scale: currency === 'JPY' ? 0 : 2 }
-      });
 
-    return (
-      <div style={{ width: 340 }}>
-        <div className="rfi-group">
-          <CurrencyCombobox value={currency} onChange={setCurrency} />
-          <div className="rfi-field">
-            <input {...getInputProps({ id, placeholder: ' ' })} />
-            <label className="rfi-label" htmlFor={id}>
-              Amount
-            </label>
-            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
-              {symbol}
-            </span>
-          </div>
-        </div>
-        <p className="rfi-helper">
-          g10 by default · type to search · {symbol} ·{' '}
-          {numericValue === null ? 'null' : numericValue}
-        </p>
-        <p className="rfi-helper">
-          No locale is set here, so symbols resolve in the app&rsquo;s own
-          locale — SEK reads &ldquo;SEK&rdquo; in en-US and &ldquo;kr&rdquo; in
-          sv-SE. Pass <code>locale</code> to change that.
-        </p>
-      </div>
-    );
-  }
-};
-
-export const WithCurrencyPicker: Story = {
-  render: function WithCurrencyPicker(args) {
-    const id = useId();
-    const [currency, setCurrency] = useState('USD');
-
-    const locale = PICKER_LOCALES[currency];
-
-    const options = useMemo(
-      () =>
-        Object.keys(PICKER_LOCALES).map(
-          (code) => listCurrencies(PICKER_LOCALES[code], [code])[0]
-        ),
-      []
-    );
+    // 'custom' is a story control, not a preset — swap in the array it stands for.
+    const codes = args.codes === 'custom' ? args.customCodes : args.codes;
+    const locale = args.locale || undefined;
 
     const { getInputProps, symbol, symbolPosition, numericValue } =
       useFinancialInput({
@@ -418,20 +452,14 @@ export const WithCurrencyPicker: Story = {
       });
 
     return (
-      <div style={{ maxWidth: 320 }}>
+      <div style={{ width: 340 }}>
         <div className="rfi-group">
-          <select
-            className="rfi-select"
+          <CurrencyCombobox
             value={currency}
-            onChange={(event) => setCurrency(event.target.value)}
-            aria-label="Currency"
-          >
-            {options.map((option) => (
-              <option key={option.code} value={option.code}>
-                {toFlagEmoji(option.code)} {option.code}
-              </option>
-            ))}
-          </select>
+            onChange={setCurrency}
+            locale={locale}
+            codes={codes}
+          />
           <div className="rfi-field">
             <input {...getInputProps({ id, placeholder: ' ' })} />
             <label className="rfi-label" htmlFor={id}>
@@ -443,8 +471,14 @@ export const WithCurrencyPicker: Story = {
           </div>
         </div>
         <p className="rfi-helper">
-          {locale} · {symbolPosition} · scale {currency === 'JPY' ? 0 : 2} ·{' '}
-          {numericValue === null ? 'null' : numericValue}
+          {args.codes} · {locale ?? 'app locale'} · {symbolPosition} · {symbol}{' '}
+          · {numericValue === null ? 'null' : numericValue}
+        </p>
+        <p className="rfi-helper">
+          Symbols follow the <strong>locale</strong>, not the currency: SEK
+          reads &ldquo;SEK&rdquo; leading in en-US and &ldquo;kr&rdquo; trailing
+          in sv-SE, which also groups with a non-breaking space. Switch the
+          locale control to watch the separators change with it.
         </p>
       </div>
     );

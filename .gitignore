@@ -20,3 +20,8 @@ blob-report
 .playwright
 
 # The demo GIFs in docs/ ARE committed — they are what the README renders.
+
+# The examples app installs the published package.
+examples/*/node_modules
+examples/*/dist
+examples/*/package-lock.json

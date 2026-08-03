@@ -89,9 +89,9 @@ const preview: Preview = {
             'Shortcut Buttons',
             'With Currency',
             'With Currency Search',
-            'With Currency Picker',
             'With Clear Button',
             'Controlled',
+            'String Values',
 
             // How it is configured
             'Whole Numbers Only',

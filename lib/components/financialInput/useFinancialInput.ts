@@ -24,6 +24,7 @@ import {
   DEFAULT_SCALE,
   DEFAULT_SHORTCUTS,
   Range,
+  parseAmount,
   toExponents
 } from './financialInputUtils';
 import { InputType } from '../../enums';
@@ -106,12 +107,35 @@ export interface FinancialInputOptions {
   inputMode?: 'decimal' | 'numeric' | 'text';
 }
 
-export interface UseFinancialInputOptions {
-  value?: Nullable<number>;
-  onChange?: (value: Nullable<number>) => void;
+interface CommonInputOptions {
   onError?: () => void;
   options?: FinancialInputOptions;
 }
+
+/** The default. `onChange` hands back a number, or null while incomplete. */
+export interface NumberValueOptions extends CommonInputOptions {
+  valueType?: 'number';
+  value?: Nullable<number>;
+  onChange?: (value: Nullable<number>) => void;
+}
+
+/*
+    For state that is already text: a form storing raw input, a backend that
+    wants a string, or a form library whose fields are strings.
+
+    `value` accepts either form — canonical "1234.56", display "1,234.56", or a
+    shortcut token like "2.5m", since that is what a paste already goes through.
+    `onChange` hands back **canonical**: no grouping, always a "." fraction,
+    never locale punctuation, so it is safe to send onward. The formatted string
+    on screen is `displayValue` from the hook.
+ */
+export interface StringValueOptions extends CommonInputOptions {
+  valueType: 'string';
+  value?: Nullable<string>;
+  onChange?: (value: Nullable<string>) => void;
+}
+
+export type UseFinancialInputOptions = NumberValueOptions | StringValueOptions;
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   ref?: Ref<HTMLInputElement>;
@@ -131,8 +155,17 @@ export const useFinancialInput = ({
   value,
   onChange,
   onError,
+  valueType = 'number',
   options = {}
 }: UseFinancialInputOptions = {}) => {
+  /*
+      The union is for callers; inside, both modes take the same path and only
+      differ in what `emit` hands back. One cast here beats branching types
+      through every call site.
+   */
+  const emitChange = onChange as
+    ((next: Nullable<number | string>) => void) | undefined;
+
   const {
     scale = DEFAULT_SCALE,
     maxDigits = DEFAULT_MAX_DIGITS,
@@ -185,13 +218,32 @@ export const useFinancialInput = ({
     );
   }
 
+  /*
+      A string `value` goes through the same sanitising a paste gets, so
+      "1,234.56", "1234.56" and "2.5m" are all accepted. Everything downstream
+      of here works on the number.
+   */
+  const toNumber = (
+    raw: Nullable<number | string> | undefined
+  ): Nullable<number> =>
+    typeof raw === 'string'
+      ? parseAmount(raw, separators, shortcuts)
+      : (raw ?? null);
+
+  /*
+      Canonical, not display: no grouping and always a "." fraction. Taken from
+      the display string rather than rebuilt from the number, so a value still
+      being typed keeps its shape — "1.50" stays "1.50" instead of collapsing
+      to "1.5", and "1." survives mid-edit.
+   */
+  const toCanonicalValue = (snapshot: FinancialInputState): Nullable<string> =>
+    snapshot.displayValue === ''
+      ? null
+      : toCanonical(snapshot.displayValue, separators);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, setState] = useState<FinancialInputState>(() =>
-    createInitialState(value, {
-      group: options.groupSeparator ?? resolveSeparators(options.locale).group,
-      decimal:
-        options.decimalSeparator ?? resolveSeparators(options.locale).decimal
-    })
+    createInitialState(toNumber(value), separators)
   );
 
   /*
@@ -228,7 +280,14 @@ export const useFinancialInput = ({
       refused" without the consumer having to wire up an error state.
    */
   const [isFlashing, setIsFlashing] = useState(false);
-  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /*
+      The undefined is in the type parameter, not just the argument: @types/react
+      18.0 has no useRef<T>(undefined) overload — React 19's types added it — and
+      the package claims support from 18.0.0.
+   */
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
 
   useEffect(
     () => () => {
@@ -256,14 +315,35 @@ export const useFinancialInput = ({
     );
   };
 
+  /*
+      String mode fires on a change of canonical rather than of the number,
+      because the two differ: typing the trailing zero of "1.50" leaves the
+      number at 1.5, and a string consumer still needs to be told.
+   */
+  const emit = (next: FinancialInputState) => {
+    if (valueType === 'string') {
+      const nextValue = toCanonicalValue(next);
+
+      if (nextValue !== toCanonicalValue(state)) {
+        emitChange?.(nextValue);
+      }
+
+      return;
+    }
+
+    if (next.numericValue !== state.numericValue) {
+      emitChange?.(next.numericValue);
+    }
+  };
+
   const commit = (next: FinancialInputState) => {
     setState(next);
 
     if (next.rejected) {
       flashRejection();
       onError?.();
-    } else if (next.numericValue !== state.numericValue) {
-      onChange?.(next.numericValue);
+    } else {
+      emit(next);
     }
   };
 
@@ -367,8 +447,8 @@ export const useFinancialInput = ({
 
     if (next.rejected) {
       onError?.();
-    } else if (next.numericValue !== state.numericValue) {
-      onChange?.(next.numericValue);
+    } else {
+      emit(next);
     }
   };
 
@@ -392,8 +472,10 @@ export const useFinancialInput = ({
   if (value !== lastValue) {
     setLastValue(value);
 
-    if ((value ?? null) !== state.numericValue) {
-      setState(createInitialState(value, separators));
+    const incoming = toNumber(value);
+
+    if (incoming !== state.numericValue) {
+      setState(createInitialState(incoming, separators));
     }
   }
 
@@ -497,6 +579,8 @@ export const useFinancialInput = ({
     inputRef,
     displayValue: state.displayValue,
     numericValue: state.numericValue,
+    /** No grouping, always a "." fraction — the form to send onward. */
+    canonicalValue: toCanonicalValue(state),
     getInputProps,
     applyShortcut,
     clear,

@@ -1,5 +1,5 @@
 import { expect, test, Page } from '@playwright/test';
-import { STORIES, withoutBadge } from './storyUrl';
+import { STORIES, withArgs, withoutBadge } from './storyUrl';
 
 const input = (page: Page) => page.getByRole('textbox');
 
@@ -305,27 +305,10 @@ test.describe('recovered fixes', () => {
   });
 
   /*
-      The select draws its own chevron, because a native one sits inside the
-      right padding by a different amount per browser. The first attempt put
-      `background:` shorthand after `background-image`, which resets it — so
-      the image silently never rendered and the native arrow was still showing.
+      The other recovered fix was the <select> chevron, which went with the
+      currency picker when search replaced it. Nothing renders a select any
+      more, so there is no longer anything to pin.
    */
-  test('the select draws its own chevron', async ({ page }) => {
-    await page.goto(STORIES.withCurrencyPicker);
-    await page.locator('.rfi-select').waitFor();
-
-    const style = await page.locator('.rfi-select').evaluate((element) => {
-      const computed = getComputedStyle(element);
-
-      return {
-        appearance: computed.appearance,
-        image: computed.backgroundImage
-      };
-    });
-
-    expect(style.appearance).toBe('none');
-    expect(style.image).toContain('url(');
-  });
 });
 
 test.describe('currency search', () => {
@@ -368,45 +351,110 @@ test.describe('currency search', () => {
   });
 });
 
-test.describe('currency picker', () => {
+/*
+    The story's list and locale are controls, so they are driven from the URL
+    rather than duplicated as test-only stories.
+ */
+/*
+    Amounts line up on the decimal point when they are right-aligned, which is
+    how every ledger sets them. Documented as the stylesheet's default, so it
+    is pinned rather than left to drift.
+ */
+test.describe('alignment', () => {
+  test('the value is right-aligned, and opts out via the custom property', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withValue);
+    const field = input(page);
+    await field.waitFor();
+
+    await expect(field).toHaveCSS('text-align', 'right');
+
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty('--rfi-text-align', 'left')
+    );
+
+    await expect(field).toHaveCSS('text-align', 'left');
+  });
+});
+
+test.describe('currency search presets', () => {
+  for (const [codes, expected] of [
+    ['g7', 5],
+    ['g10', 10]
+  ] as const) {
+    test(`the ${codes} preset lists ${expected}`, async ({ page }) => {
+      await page.goto(withArgs(STORIES.withCurrencySearch, { codes }));
+      const combobox = page.getByRole('combobox', { name: 'Currency' });
+      await combobox.waitFor();
+
+      await combobox.click();
+
+      expect(await page.getByRole('option').count()).toBe(expected);
+    });
+  }
+
+  test('a custom array lists exactly what was passed, in order', async ({
+    page
+  }) => {
+    await page.goto(withArgs(STORIES.withCurrencySearch, { codes: 'custom' }));
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    await combobox.waitFor();
+
+    await combobox.click();
+
+    // The story's own custom array: NZD, THB, ZAR.
+    await expect(page.getByRole('option')).toHaveText([/NZD/, /THB/, /ZAR/]);
+  });
+
+  /*
+      Ported from the currency picker story that search replaced. The symbol,
+      the side it sits on and the separators are all properties of the locale
+      rather than of the currency, and every one of them has to re-resolve
+      when the selection changes.
+   */
   test('re-resolves the symbol, its side and the separators', async ({
     page
   }) => {
-    await page.goto(STORIES.withCurrencyPicker);
+    await page.goto(
+      withArgs(STORIES.withCurrencySearch, { locale: 'sv-SE', codes: 'g10' })
+    );
     const field = input(page);
-    const select = page.getByRole('combobox', { name: 'Currency' });
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
     const adornment = page.locator('.rfi-adornment');
     await field.waitFor();
 
     await field.click();
     await field.pressSequentially('1234.5');
-    await expect(field).toHaveValue('1,234.5');
-    await expect(adornment).toHaveText('$');
 
-    // sv-SE trails with "kr" and groups with U+00A0.
-    await select.selectOption('SEK');
-    await expect(adornment).toHaveText('kr');
-    await expect(adornment).toHaveClass(/suffix/);
+    // sv-SE groups with U+00A0, not a plain space, and trails the symbol.
     await expect(field).toHaveValue('1\u00a0234,5');
+    await expect(adornment).toHaveClass(/suffix/);
 
-    await select.selectOption('EUR');
-    await expect(adornment).toHaveText('€');
-    await expect(field).toHaveValue('1.234,5');
+    await combobox.click();
+    await combobox.fill('SEK');
+    await combobox.press('ArrowDown');
+    await combobox.press('Enter');
+
+    await expect(adornment).toHaveText('kr');
+    await expect(field).toHaveValue('1\u00a0234,5');
   });
 
   /*
-      The symbol belongs in the field, once. Repeating it in the dropdown is
-      noise, and the flag already identifies the row.
+      The symbol belongs in the field, once. Repeating it in the list is noise,
+      and the flag already identifies the row.
    */
   test('labels options with a flag and code, not the symbol again', async ({
     page
   }) => {
-    await page.goto(STORIES.withCurrencyPicker);
-    await input(page).waitFor();
+    await page.goto(STORIES.withCurrencySearch);
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    await combobox.waitFor();
 
-    const first = page.locator('option').first();
+    await combobox.click();
+    const first = page.getByRole('option').first();
 
-    await expect(first).toHaveText(/🇺🇸\s*USD/);
+    await expect(first).toHaveText(/\u{1F1FA}\u{1F1F8}\s*USD/u);
     await expect(first).not.toHaveText(/\$/);
   });
 });

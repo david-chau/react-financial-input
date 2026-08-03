@@ -6,7 +6,19 @@ import storybook from 'eslint-plugin-storybook';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'storybook-static', 'coverage', 'playwright-report'] },
+  {
+    /*
+        examples/ is a standalone app on the published package, not part
+        of the library build — it has its own tsconfig and dependencies.
+     */
+    ignores: [
+      'dist',
+      'storybook-static',
+      'coverage',
+      'playwright-report',
+      'examples'
+    ]
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   // configs['recommended-latest'] is still the legacy shape in v7; flat.* is not.

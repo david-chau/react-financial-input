@@ -10,6 +10,15 @@ export const storyUrl = (id: string): string =>
 /** Same story, without the version badge — for the demo recordings. */
 export const withoutBadge = (url: string) => `${url}&rfiBadge=0`;
 
+/*
+    Storybook reads `args` off the URL, so a story's controls can be driven
+    from a test without adding a test-only story to do the same job.
+ */
+export const withArgs = (url: string, args: Record<string, string>) =>
+  `${url}&args=${Object.entries(args)
+    .map(([name, value]) => `${name}:${value}`)
+    .join(';')}`;
+
 export const STORIES = {
   debugPlayground: storyUrl('financialinput--debug-playground'),
   keyboardTester: storyUrl('financialinput--keyboard-tester'),
@@ -21,7 +30,6 @@ export const STORIES = {
   variants: storyUrl('financialinput--variants'),
   errorFeedback: storyUrl('financialinput--error-feedback'),
   withClearButton: storyUrl('financialinput--with-clear-button'),
-  withCurrencyPicker: storyUrl('financialinput--with-currency-picker'),
   withCurrencySearch: storyUrl('financialinput--with-currency-search'),
   shortcutButtons: storyUrl('financialinput--shortcut-buttons')
 };
