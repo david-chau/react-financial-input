@@ -10,7 +10,7 @@ shortcuts that work on **every device, including phones**.
 
 Zero runtime dependencies. Unstyled by default.
 
-**[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground)**
+**[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground?file=src%2FApp.tsx)**
 · **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
 · **[Framework examples →](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md)**
 
