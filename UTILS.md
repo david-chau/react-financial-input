@@ -83,11 +83,48 @@ symbols. Codes with no country return `null`, so fall back to the code.
 ### Windows draws letters, not flags
 
 Windows ships no glyphs for regional indicator pairs, so a browser renders the
-two letters — `SE` instead of 🇸🇪. This is a missing font on the machine, not
-something CSS or JavaScript can work around. Every other major platform is fine.
+two letters — `SE` instead of 🇸🇪. Every other platform has them. It is a missing
+font on the machine, not something CSS or JavaScript can work around.
 
-`supportsFlagEmoji()` tells you which you are on. It draws one and looks for
-colour: a real flag has several hues, the letter fallback has one.
+So the font ships too, as its own import:
+
+```ts
+import 'react-financial-input/flags.css';
+```
+
+That is the whole fix. The currency search already carries `.rfi-flag` on the
+glyph, so nothing else changes.
+
+**It cannot affect anything but flags.** The `@font-face` declares
+`unicode-range: U+1F1E6-1F1FF`, so the font is only ever consulted for flag
+codepoints — never your digits, labels or currency symbols.
+
+**It does download on every platform, not only Windows.** The font has to sit
+first in the stack, because Windows _does_ have glyphs for regional indicators
+— it draws them as boxed letters — so a fallback position would let those win
+and the file would never be used. First position means every platform that
+imports it fetches the 80 kB.
+
+That buys something beyond Windows: flags then look identical everywhere,
+rather than Apple's artwork on macOS, Google's on Android and Twemoji on
+Windows. If you would rather each platform keep its native look and accept
+letters on Windows, do not import the file — `supportsFlagEmoji()` below lets
+you load it on Windows alone if you want the middle ground.
+
+Rendering flags in your own markup as well? Put the family first wherever that
+markup gets its font:
+
+```css
+body {
+  font-family: 'Twemoji Country Flags', system-ui, sans-serif;
+}
+```
+
+**Cost** — 80 kB, once, on the platforms that use it. It is a separate subpath
+export, never referenced by the built JavaScript, so leaving the import out
+ships nothing.
+
+If you would rather decide yourself, or load something else entirely:
 
 ```ts
 import { supportsFlagEmoji } from 'react-financial-input';
@@ -95,41 +132,13 @@ import { supportsFlagEmoji } from 'react-financial-input';
 supportsFlagEmoji(); // false on Windows, true on macOS, iOS, Android, most Linux
 ```
 
-It returns `false` during server rendering and anywhere without a canvas,
-because the honest answer is then "cannot tell" and the fallback is the safe
-branch. The result is cached — it cannot change mid-session.
+It draws a flag and looks for colour — a real one has several hues, the letter
+fallback has one. Cached, and `false` wherever there is no canvas to draw on,
+because the honest answer during server rendering is "cannot tell" and the
+fallback is the safe branch.
 
-### Making them appear anyway
-
-The only real fix is a font carrying the glyphs, and that is a few hundred
-kilobytes. **This library ships the hook, not the font** — a package that
-advertises 4.6 kB has no business quietly adding a webfont. You choose whether
-the download is worth it, and pay for it only where it is needed:
-
-```ts
-if (supportsFlagEmoji()) return; // nothing to do on most platforms
-
-await import('./flag-font.css'); // your font, loaded on Windows alone
-```
-
-```css
-@font-face {
-  font-family: 'Your Flags';
-  src: url('/fonts/flags.woff2') format('woff2');
-  font-display: swap;
-}
-:root {
-  --rfi-flag-font: 'Your Flags';
-}
-```
-
-`styles.css` puts `--rfi-flag-font` in front of the normal stack on `.rfi-flag`,
-which the currency search already carries, so setting the variable is the whole
-integration. Leave it unset and the letters stay, which reads perfectly well.
-
-Fonts that work, none of them ours to recommend over the others: Noto Color
-Emoji subset to the regional indicator range, Twemoji Country Flags, or any
-flag-only webfont you already license.
+The font is Twemoji, used under CC-BY 4.0; attribution travels in the package
+as [NOTICE.md](NOTICE.md).
 
 ## Reading input events
 

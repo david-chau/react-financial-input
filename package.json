@@ -37,14 +37,19 @@
       "require": "./dist/index.cjs"
     },
     "./styles.css": "./styles.css",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./flags.css": "./flags.css",
+    "./flags.woff2": "./flags.woff2"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "styles.css"
+    "styles.css",
+    "flags.css",
+    "flags.woff2",
+    "NOTICE.md"
   ],
   "scripts": {
     "build": "vite build && tsc -p ./tsconfig-build.json",

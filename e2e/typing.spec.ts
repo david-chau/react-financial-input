@@ -476,6 +476,54 @@ test.describe('a clipboard chip pastes through insertText', () => {
   });
 });
 
+/*
+    Windows ships no glyphs for regional indicator pairs and draws the two
+    letters instead. The fix is a font, shipped as a separate opt-in import so
+    that nobody downloads 80 kB they do not need.
+
+    What runs here is the wiring: the font is declared, it reaches the flag,
+    and — because its unicode-range covers only flag codepoints — it cannot
+    reach anything else. Whether Windows then paints a flag is Windows'
+    business, and CI's windows-latest runner is where that would be proven.
+ */
+test.describe('the flag font', () => {
+  test('is declared, and scoped to flag codepoints alone', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    await input(page).waitFor();
+
+    const face = await page.evaluate(async () => {
+      await document.fonts.ready;
+
+      const flags = [...document.fonts].find(
+        (font) => font.family.replace(/["']/g, '') === 'Twemoji Country Flags'
+      );
+
+      return flags ? { status: flags.status, range: flags.unicodeRange } : null;
+    });
+
+    expect(face).not.toBeNull();
+    // Regional indicators only: it can never paint a digit or a letter.
+    expect(face?.range).toContain('U+1F1E6');
+    expect(face?.range).not.toContain('U+0030');
+  });
+
+  test('reaches the flag and not the text beside it', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    await combobox.waitFor();
+    await combobox.click();
+
+    await expect(page.locator('.rfi-flag').first()).toHaveCSS(
+      'font-family',
+      /Twemoji Country Flags/
+    );
+
+    await expect(
+      page.locator('.rfi-combobox__option strong').first()
+    ).not.toHaveCSS('font-family', /Twemoji Country Flags/);
+  });
+});
+
 test.describe('currency search presets', () => {
   for (const [codes, expected] of [
     ['g7', 5],

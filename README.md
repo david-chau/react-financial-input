@@ -46,6 +46,13 @@ Want it styled? One import, opt-in:
 import 'react-financial-input/styles.css';
 ```
 
+Showing currency flags? Windows has no flag glyphs of its own, so the font
+ships too. Importing it is what makes flags work on every OS, at 80 kB:
+
+```tsx
+import 'react-financial-input/flags.css';
+```
+
 React 18 or newer (`>=18.0.0`). Nothing else.
 
 > **Submitting a native `<form>`?** Do not put `name` on the input — it submits
