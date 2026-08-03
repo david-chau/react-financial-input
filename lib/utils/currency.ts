@@ -69,6 +69,41 @@ export const resolveSeparators = (locale?: string): Separators => {
   }
 };
 
+/*
+    Shortlists people actually ask for. G7 is the seven countries' currencies,
+    which is five once the euro members are collapsed; G10 is the FX market's
+    ten, which is a different list and includes NOK and NZD.
+
+    Just arrays — pass your own instead if these are not the ones you want.
+ */
+export const CURRENCY_PRESETS = {
+  g7: ['USD', 'EUR', 'JPY', 'GBP', 'CAD'],
+  g10: ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'AUD', 'NZD', 'CAD', 'SEK', 'NOK']
+} as const;
+
+/** A preset name, or 'all' for everything the runtime knows. */
+export type CurrencyPreset = keyof typeof CURRENCY_PRESETS | 'all';
+
+/*
+    g10 by default rather than everything. A picker wants a shortlist people
+    recognise, not 162 rows to scroll; ask for 'all' when you mean all.
+ */
+export const DEFAULT_CURRENCY_PRESET: CurrencyPreset = 'g10';
+
+const resolveCodes = (
+  codes: readonly string[] | CurrencyPreset = DEFAULT_CURRENCY_PRESET
+): readonly string[] | undefined => {
+  if (codes === 'all') {
+    return undefined;
+  }
+
+  if (typeof codes === 'string') {
+    return CURRENCY_PRESETS[codes];
+  }
+
+  return codes;
+};
+
 export interface CurrencyOption extends ResolvedCurrency {
   /** ISO 4217 code, e.g. "SEK". */
   code: string;
@@ -86,10 +121,10 @@ export interface CurrencyOption extends ResolvedCurrency {
  */
 export const listCurrencies = (
   locale?: string,
-  codes?: string[]
+  codes?: readonly string[] | CurrencyPreset
 ): CurrencyOption[] => {
   const available =
-    codes ??
+    resolveCodes(codes) ??
     (typeof Intl.supportedValuesOf === 'function'
       ? Intl.supportedValuesOf('currency')
       : []);
@@ -154,4 +189,54 @@ export const toFlagEmoji = (currency: string): Nullable<string> => {
       (letter) => REGIONAL_INDICATOR_A + letter.charCodeAt(0) - LETTER_A
     )
   );
+};
+
+export interface CurrencySearchOptions {
+  locale?: string;
+  /** A preset name, your own array, or everything by default. */
+  codes?: readonly string[] | CurrencyPreset;
+  /** Cap the result, since a combobox rarely wants 160 rows. */
+  limit?: number;
+}
+
+/*
+    Filters currencies for a search box, matching the code or the name.
+
+    Ranked so the code wins: typing "us" should put USD first rather than
+    burying it under every currency whose name happens to contain "us". An
+    empty query returns the head of the list, which is what a combobox wants to
+    show before anything is typed.
+ */
+export const searchCurrencies = (
+  query: string,
+  { locale, codes, limit = 20 }: CurrencySearchOptions = {}
+): CurrencyOption[] => {
+  const all = listCurrencies(locale, codes);
+  const needle = query.trim().toLowerCase();
+
+  if (needle === '') {
+    return all.slice(0, limit);
+  }
+
+  const rank = (option: CurrencyOption): number => {
+    const code = option.code.toLowerCase();
+    const name = option.name.toLowerCase();
+
+    if (code === needle) return 0;
+    if (code.startsWith(needle)) return 1;
+    if (name.toLowerCase().startsWith(needle)) return 2;
+    if (name.includes(needle)) return 3;
+    if (code.includes(needle)) return 4;
+
+    return Number.POSITIVE_INFINITY;
+  };
+
+  return all
+    .map((option) => ({ option, score: rank(option) }))
+    .filter(({ score }) => Number.isFinite(score))
+    .sort(
+      (a, b) => a.score - b.score || a.option.code.localeCompare(b.option.code)
+    )
+    .slice(0, limit)
+    .map(({ option }) => option);
 };

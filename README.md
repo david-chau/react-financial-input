@@ -154,8 +154,26 @@ The hook returns everything the extras are built from:
 | `symbol`, `symbolPosition`     | The currency symbol and which side it belongs on |
 | `numericValue`, `displayValue` | The committed number, and what is on screen      |
 
-`listCurrencies()` and `toFlagEmoji()` build a currency picker with no bundled
-table — both read `Intl`.
+### Currency lists
+
+`listCurrencies()` and `searchCurrencies()` read `Intl`, so there is no bundled
+table to go stale — and both tree-shake away if you do not use them:
+
+```ts
+listCurrencies('en-US'); // g10 by default, 10 currencies
+listCurrencies('en-US', 'g7'); // 5
+listCurrencies('en-US', 'all'); // 162
+listCurrencies('en-US', ['NZD', 'THB']); // your own, in your order
+
+searchCurrencies('kron', { codes: 'all' }); // DKK, NOK, SEK — code beats name
+```
+
+`toFlagEmoji('SEK')` gives 🇸🇪 at no cost — an ISO 4217 code is the country code
+plus a letter, and a flag is that code in regional indicator symbols. Windows
+renders the letters instead.
+
+The **With Currency Search** story has a working combobox you can copy: filter
+as you type, arrow keys, no dependency.
 
 ## Just the parsing
 

@@ -372,6 +372,102 @@
 }
 
 /*
+ * Searchable currency picker. A native select stops being usable past a couple
+ * of dozen options, and the full currency list is 162.
+ */
+.rfi-combobox {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.rfi-combobox__input {
+  box-sizing: border-box;
+  width: var(--rfi-combobox-width, 7.5rem);
+  height: var(--rfi-height);
+  padding: 0 var(--rfi-padding-x);
+  border: 1px solid var(--rfi-border-color);
+  border-radius: var(--rfi-radius) 0 0 var(--rfi-radius);
+  background: var(--rfi-background);
+  color: var(--rfi-color);
+  font-family: var(--rfi-font-family);
+  font-size: var(--rfi-font-size);
+}
+
+.rfi-combobox__input:hover {
+  border-color: var(--rfi-border-color-hover);
+}
+
+.rfi-combobox__input:focus {
+  outline: none;
+  border-color: var(--rfi-primary);
+  box-shadow: inset 0 0 0 1px var(--rfi-primary);
+}
+
+.rfi-combobox__list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 15rem;
+  max-height: 15rem;
+  margin: 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--rfi-border-color);
+  border-radius: var(--rfi-radius);
+  background: var(--rfi-surface);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.14);
+}
+
+.rfi-combobox__option {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--rfi-color);
+  font-family: var(--rfi-font-family);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rfi-combobox__option--active,
+.rfi-combobox__option[aria-selected='true'] {
+  background: var(--rfi-combobox-active, rgba(25, 118, 210, 0.1));
+}
+
+.rfi-combobox__option small {
+  opacity: 0.6;
+  font-size: 0.75rem;
+  /* The name is the least important part; let it go rather than wrap. */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rfi-combobox__empty {
+  padding: 0.5rem;
+  opacity: 0.6;
+  font-family: var(--rfi-font-family);
+  font-size: 0.85rem;
+}
+
+/* Joined to the input, the combobox owns the left half of the group. */
+.rfi-group > .rfi-combobox .rfi-combobox__input {
+  margin-right: -1px;
+}
+
+.rfi-group > .rfi-combobox:focus-within {
+  position: relative;
+  z-index: 2;
+}
+
+/*
  * Keypad. For multiplier tap targets, and anything else that sits under the
  * input — flat pill keys, in the manner of a phone or desktop calculator.
  *

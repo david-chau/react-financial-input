@@ -7,6 +7,7 @@ import { listCurrencies, toFlagEmoji } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
 import { EventTesterPanel } from './EventTesterPanel';
 import { KeyboardTesterPanel } from './KeyboardTesterPanel';
+import { CurrencyCombobox } from './CurrencyCombobox';
 
 /*
     The floating-label stories wrap the input, so their args are wider than the
@@ -345,6 +346,48 @@ const PICKER_LOCALES: Record<string, string> = {
     no bundled table to go stale, and changing the selection re-resolves both
     the symbol and its side.
  */
+/*
+    Search rather than a dropdown, which is what 'all' (162 currencies) needs.
+    Defaults to the g10 shortlist; pass 'g7', 'all', or your own array.
+ */
+export const WithCurrencySearch: Story = {
+  render: function WithCurrencySearch(args) {
+    const id = useId();
+    const [currency, setCurrency] = useState('USD');
+    const { getInputProps, symbol, symbolPosition, numericValue } =
+      useFinancialInput({
+        onChange: args.onChange,
+        options: { currency, scale: currency === 'JPY' ? 0 : 2 }
+      });
+
+    return (
+      <div style={{ width: 340 }}>
+        <div className="rfi-group">
+          <CurrencyCombobox value={currency} onChange={setCurrency} />
+          <div className="rfi-field">
+            <input {...getInputProps({ id, placeholder: ' ' })} />
+            <label className="rfi-label" htmlFor={id}>
+              Amount
+            </label>
+            <span className={`rfi-adornment rfi-adornment--${symbolPosition}`}>
+              {symbol}
+            </span>
+          </div>
+        </div>
+        <p className="rfi-helper">
+          g10 by default · type to search · {symbol} ·{' '}
+          {numericValue === null ? 'null' : numericValue}
+        </p>
+        <p className="rfi-helper">
+          No locale is set here, so symbols resolve in the app&rsquo;s own
+          locale — SEK reads &ldquo;SEK&rdquo; in en-US and &ldquo;kr&rdquo; in
+          sv-SE. Pass <code>locale</code> to change that.
+        </p>
+      </div>
+    );
+  }
+};
+
 export const WithCurrencyPicker: Story = {
   render: function WithCurrencyPicker(args) {
     const id = useId();

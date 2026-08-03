@@ -273,6 +273,46 @@ test.describe('shortcut keypad', () => {
   });
 });
 
+test.describe('currency search', () => {
+  test('filters, selects by keyboard, and applies', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    const amount = page.locator('.rfi-input');
+    await combobox.waitFor();
+
+    // g10 by default — a shortlist, not 162 rows to scroll.
+    await combobox.click();
+    expect(await page.getByRole('option').count()).toBe(10);
+
+    await combobox.fill('kron');
+    expect(await page.getByRole('option').count()).toBe(2);
+
+    await combobox.press('ArrowDown');
+    await combobox.press('Enter');
+
+    await amount.click();
+    await amount.pressSequentially('1234');
+
+    /*
+        No locale is set, so the symbol resolves in the app's locale: SEK is
+        "SEK" in en-US and "kr" only in sv-SE.
+     */
+    await expect(page.locator('.rfi-adornment')).toHaveText('SEK');
+    await expect(amount).toHaveValue('1,234');
+  });
+
+  test('says so when nothing matches', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    await combobox.waitFor();
+
+    await combobox.click();
+    await combobox.fill('zzzz');
+
+    await expect(page.getByText('No match')).toBeVisible();
+  });
+});
+
 test.describe('currency picker', () => {
   test('re-resolves the symbol, its side and the separators', async ({
     page
