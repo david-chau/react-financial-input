@@ -502,9 +502,17 @@ test.describe('the flag font', () => {
     });
 
     expect(face).not.toBeNull();
+
+    /*
+        Upper-cased before comparing: WebKit normalises unicodeRange to
+        lowercase and Chromium reports it as written, so a case-sensitive
+        assertion passes on one engine and fails on the other.
+     */
+    const range = (face?.range ?? '').toUpperCase();
+
     // Regional indicators only: it can never paint a digit or a letter.
-    expect(face?.range).toContain('U+1F1E6');
-    expect(face?.range).not.toContain('U+0030');
+    expect(range).toContain('U+1F1E6');
+    expect(range).not.toContain('U+0030');
   });
 
   test('reaches the flag and not the text beside it', async ({ page }) => {
