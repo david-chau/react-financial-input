@@ -746,3 +746,87 @@ describe('recorded device traces', () => {
     expect(next.numericValue).toBe(null);
   });
 });
+
+/*
+    Android keyboards offer the clipboard as a chip above the keys. Tapping it
+    emits insertText carrying the whole string, not insertFromPaste — so it
+    used to hit the keystroke path, where "$" and "(" are not valid characters,
+    and was refused. Ctrl+V on the same device sends insertFromPaste and always
+    worked, which is what disguised it as a platform problem.
+
+    Recorded from a real SwiftKey session; the log read:
+      insertText · data="(1,234.00)" · "" -> ""
+ */
+describe('insertText carrying more than one character', () => {
+  it.each([
+    // before   data                 targetValue          -> display     numeric   note
+    [
+      '',
+      '(1,234.00)',
+      '(1,234.00)',
+      '-1,234.00',
+      -1234,
+      'the recorded SwiftKey trace'
+    ],
+    [
+      '',
+      '$1,234.56 USD',
+      '$1,234.56 USD',
+      '1,234.56',
+      1234.56,
+      'currency chip'
+    ],
+    ['', '1234.56', '1234.56', '1,234.56', 1234.56, 'plain'],
+    ['', '1,234.56', '1,234.56', '1,234.56', 1234.56, 'already grouped'],
+    ['', '2.5m', '2.5m', '2,500,000', 2500000, 'a shortcut token expands'],
+    ['12', '345', '12345', '12,345', 12345, 'appended to an existing value'],
+    [
+      '',
+      '12 34',
+      '12 34',
+      '1,234',
+      1234,
+      'a space is stripped — spreadsheets copy that way, and fr-FR groups with it'
+    ]
+  ])(
+    'from %j inserting %j -> %j',
+    (before, data, targetValue, displayValue, numericValue, _note) => {
+      const next = run(
+        stateOf(before as string),
+        InputType.INSERT_TEXT,
+        data as string,
+        targetValue as string,
+        (targetValue as string).length
+      );
+
+      expect(next.rejected).toBe(false);
+      expect(next.displayValue).toBe(displayValue);
+      expect(next.numericValue).toBe(numericValue);
+    }
+  );
+
+  it.each([
+    // data              targetValue         note
+    ['rubbish', 'rubbish', 'a suggestion-strip word has no number in it'],
+    ['1.234', '1.234', 'still bound by scale'],
+    ['999999999999', '999999999999', 'still bound by maxDigits']
+  ])('refuses %j (%s)', (data, targetValue, _note) => {
+    const next = run(
+      stateOf('99'),
+      InputType.INSERT_TEXT,
+      data as string,
+      targetValue as string,
+      (targetValue as string).length
+    );
+
+    expect(next.rejected).toBe(true);
+    expect(next.displayValue).toBe('99');
+  });
+
+  // One character is a keystroke, and must stay on the strict path.
+  it('leaves single-character insertText on the typing path', () => {
+    const next = run(stateOf('1'), InputType.INSERT_TEXT, '$', '1$', 2);
+
+    expect(next.rejected).toBe(true);
+  });
+});

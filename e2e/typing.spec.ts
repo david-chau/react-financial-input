@@ -419,6 +419,63 @@ test.describe('the value never runs under the currency symbol', () => {
   }
 });
 
+/*
+    Android keyboards show the clipboard as a chip above the keys, and tapping
+    it emits insertText carrying the whole string rather than insertFromPaste.
+    That routed a paste onto the keystroke path, where "$" and "(" are not
+    valid characters, so the chip silently did nothing while Ctrl+V on the same
+    device worked.
+
+    Playwright cannot tap a real keyboard chip, but it can dispatch the same
+    event the chip does. The event is the contract, and the reducer table has
+    the recorded trace.
+ */
+test.describe('a clipboard chip pastes through insertText', () => {
+  for (const [text, expected] of [
+    ['$1,234.56 USD', '1,234.56'],
+    ['(1,234.00)', '-1,234.00'],
+    ['2.5m', '2,500,000']
+  ] as const) {
+    test(`${text} becomes ${expected}`, async ({ page }) => {
+      await open(page, STORIES.default);
+
+      await input(page).evaluate((element: HTMLInputElement, value: string) => {
+        // What the keyboard does: set the value, then report insertText.
+        element.value = value;
+        element.dispatchEvent(
+          new InputEvent('input', {
+            inputType: 'insertText',
+            data: value,
+            bubbles: true
+          })
+        );
+      }, text);
+
+      await expect(input(page)).toHaveValue(expected);
+    });
+  }
+
+  test('a word from the suggestion strip is still refused', async ({
+    page
+  }) => {
+    await open(page, STORIES.withValue);
+    await expect(input(page)).toHaveValue('1,234,567.89');
+
+    await input(page).evaluate((element: HTMLInputElement) => {
+      element.value = 'rubbish';
+      element.dispatchEvent(
+        new InputEvent('input', {
+          inputType: 'insertText',
+          data: 'rubbish',
+          bubbles: true
+        })
+      );
+    });
+
+    await expect(input(page)).toHaveValue('1,234,567.89');
+  });
+});
+
 test.describe('currency search presets', () => {
   for (const [codes, expected] of [
     ['g7', 5],

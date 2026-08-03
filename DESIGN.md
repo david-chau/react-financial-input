@@ -162,6 +162,7 @@ full set the reducer handles, and what it does with each.
 | ---------------------- | -------------------------------------------------------- | ------------------------------------------------------- |
 | Type a digit           | `insertText`                                             | validated, then formatted                               |
 | Type `h`/`k`/`m`/`b`   | `insertText`                                             | multiplier applied by decimal shift                     |
+| Tap the clipboard chip | `insertText` with the whole string in `data`             | sanitised as a paste — see below                        |
 | Backspace              | `deleteContentBackward`                                  | reformatted; a separator only moves the caret           |
 | Delete forward         | `deleteContentForward`                                   | reformatted                                             |
 | Cut                    | `deleteByCut`                                            | reformatted                                             |
@@ -239,6 +240,27 @@ Beyond that, everything the library is built from is exported: `shiftDecimal`
 for exact powers-of-ten multiplication, `toCanonical` and `formatCanonical` for
 the two-form conversion, and the reducer itself. The reducer is pure, so it can
 be driven from a test or another framework without a DOM.
+
+### `insertText` does not mean "one character"
+
+It mostly does, and treating it that way is why the clipboard chip above an
+Android keyboard did nothing for a while.
+
+SwiftKey and Samsung both offer the clipboard as a tappable chip in the
+suggestion strip. Tapping it emits `insertText` with the entire string in
+`data` — not `insertFromPaste`, which is what `Ctrl`+`V` and the long-press
+Paste menu send. So the string went down the keystroke path, where it was
+validated as though someone had typed a single character, and `$` and `(` are
+not valid characters. The paste was refused and nothing appeared.
+
+Two things made it hard to see. Every other paste gesture on the same device
+worked, so it read as a device problem rather than a routing one; and iOS does
+not offer the chip at all, so it could not be reproduced there.
+
+The rule now: **one character is a keystroke, more than one arrived in bulk.**
+Anything longer is sanitised rather than validated, exactly as a paste is. The
+suggestion strip inserts whole words the same way, and those sanitise to
+nothing and are refused, which is also what should happen.
 
 ## Verification layers
 

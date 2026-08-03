@@ -461,8 +461,28 @@ export const reduceInput = (
   action: FinancialInputAction
 ): FinancialInputState => {
   switch (action.inputType) {
+    /*
+        A keystroke carries one character. Anything longer arrived in bulk and
+        has to be sanitised rather than validated as if it had been typed.
+
+        Android keyboards are the reason. SwiftKey and Samsung both offer the
+        clipboard as a chip above the keys, and tapping it emits
+        `insertText` with the whole string in `data` — not `insertFromPaste`.
+        So "$1,234.56 USD" hit the keystroke path, where the "$" is not a valid
+        character, and the paste was refused. Ctrl+V on the same device sends
+        insertFromPaste and always worked, which is what made it look like a
+        platform bug rather than a routing one.
+
+        The suggestion strip inserts whole words the same way, and they are
+        sanitised to null and refused, which is also right.
+     */
     case InputType.INSERT_TEXT:
-      return remember(state, insert(state, action));
+      return remember(
+        state,
+        (action.data ?? '').length > 1
+          ? replace(state, action)
+          : insert(state, action)
+      );
 
     case InputType.DELETE_CONTENT_BACKWARD:
       return remember(state, remove(state, action));
