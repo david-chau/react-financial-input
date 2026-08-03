@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/david-chau/react-financial-input/compare/v0.8.0...v0.9.0) (2026-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* the package exported 66 names; it now exports 18. Removed were reducer internals, regex builders, string helpers and a resetFlagSupportCache that exists only so a test can clear a cache. None of them was ever chosen — index.ts was four `export *` lines and everything came along with them. Nothing documented was removed. If something you relied on is gone, it can be exported deliberately.
+
+### Features
+
+* curate the public API, and close the gaps found auditing for 1.0.0 ([#38](https://github.com/david-chau/react-financial-input/issues/38)) ([c264b92](https://github.com/david-chau/react-financial-input/commit/c264b929492a4bc7c3dd62341eecea3d601ae98e))
+
 ## [0.8.0](https://github.com/david-chau/react-financial-input/compare/v0.7.0...v0.8.0) (2026-08-03)
 
 
