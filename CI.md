@@ -96,6 +96,30 @@ release will swallow without describing.
 This happened once, to 0.6.2. Since npm versions are immutable, the fix was to
 write the missing entries into `CHANGELOG.md` by hand rather than republish.
 
+### Release-As has to be a trailer, not a line in the body
+
+Promoting past 0.x needs `Release-As: 1.0.0`, because release-please will not
+do it on its own. The footer is only read in **trailer position** — the last
+block of the message, after the body, exactly as Conventional Commits defines
+a footer.
+
+Put it on the second line and release-please treats it as prose. A `chore:`
+commit carrying it releases nothing at all, and the log says so plainly if you
+go looking:
+
+```
+✔ No user facing commits found since 85936e1 - skipping
+```
+
+Two things follow from that. The trailer goes **last**. And because merges here
+are squashed, the commit message is built from the **pull request title and
+body** — so the trailer has to be the final line of the pull request
+description, not of some commit on the branch.
+
+It is also worth landing a releasable commit alongside it — a `fix:` or
+`feat:` — rather than relying on the footer to conjure a release out of a
+`chore:` nobody would otherwise ship.
+
 ### The version comes from your commit messages
 
 The bump is derived from [Conventional Commits](https://www.conventionalcommits.org):

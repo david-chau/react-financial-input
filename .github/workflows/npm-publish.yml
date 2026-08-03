@@ -67,6 +67,23 @@ jobs:
       id-token: write
       contents: read
     steps:
+      # A dispatched tag that does not exist otherwise fails inside
+      # actions/checkout as "git failed with exit code 1", three retries deep,
+      # with no mention of the tag. That is what a premature manual run of this
+      # workflow looks like, and it took reading the raw log to see why.
+      - name: The tag must exist
+        if: ${{ github.event.inputs.tag != '' }}
+        run: |
+          if ! git ls-remote --exit-code --tags \
+            "https://github.com/${{ github.repository }}" \
+            "refs/tags/${{ github.event.inputs.tag }}" >/dev/null 2>&1; then
+            echo "::error::Tag ${{ github.event.inputs.tag }} does not exist." \
+              "Publishing follows a release: merge the release pull request," \
+              "which tags and publishes on its own. Dispatch a tag here only" \
+              "to re-publish one that already exists."
+            exit 1
+          fi
+
       # The version bump is a commit release-please just pushed, so check out
       # the tag rather than the commit that triggered this run.
       - uses: actions/checkout@v5
