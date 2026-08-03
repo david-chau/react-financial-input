@@ -71,6 +71,29 @@ Also shipped: controlled-mode sync, `groupSeparator`/`decimalSeparator`,
 Remaining, in the DESIGN.md roadmap: real-device CI (L4), IME on Firefox and
 WebKit (no CDP equivalent), and a possible string-valued API.
 
+## Working with this repo
+
+**Check origin before starting anything.** `git fetch origin`, then look at
+whether `main` has moved and whether the pull request you were last pushing to
+is still open:
+
+```bash
+git fetch -q origin
+git log --oneline -1 origin/main
+gh pr list --state open
+```
+
+The maintainer merges with admin bypass, since a solo committer cannot approve
+their own pull request — so a merge can land at any moment, including in the
+middle of a run of pushes. Continuing to push to a branch whose pull request has
+already merged strands the commits: they sit on a closed branch, never reach
+`main`, and the deployed Storybook keeps showing the old build. That has
+happened twice.
+
+If the pull request has merged, branch fresh from `origin/main` and cherry-pick
+anything outstanding. A plain rebase will conflict, because git cannot match a
+squashed commit against the commits it came from.
+
 ## Things that will bite
 
 - **Canonical vs display form.** Display uses the configured separators;
