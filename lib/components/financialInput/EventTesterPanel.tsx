@@ -68,7 +68,7 @@ const CHEATSHEET: {
     action: 'Backspace',
     inputType: 'deleteContentBackward',
     handling: 'reformatted; a separator only moves the caret',
-    notes: 'data is null on every platform'
+    notes: 'data is null on every platform tested so far'
   },
   {
     action: 'Delete (forward)',

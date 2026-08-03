@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/npm/l/react-financial-input)](https://github.com/david-chau/react-financial-input/blob/main/LICENSE)
 
 A React currency input that formats as you type, with `h`/`k`/`m`/`b` multiplier
-shortcuts that work on **every device, including phones**.
+shortcuts designed for modern desktop and mobile browsers.
 
 Zero runtime dependencies. Unstyled by default.
 

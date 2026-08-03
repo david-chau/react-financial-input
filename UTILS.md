@@ -143,9 +143,10 @@ as [NOTICE.md](NOTICE.md).
 ## Reading input events
 
 The part of this library that is about _browsers_ rather than about money. No
-React, no currency, no formatting — just working out what a user did to a text
-field, across desktop, iOS and Android, where the same gesture arrives under
-different names or under no name at all.
+React, no currency, no formatting — just describing edits in a text field from
+modern browser input events and the resulting value. Desktop and mobile
+browsers can report the same gesture differently, or provide no useful event
+detail at all.
 
 `FinancialInput` is built on these, which is the only reason to trust them:
 every quirk encoded here was found by a real device failing.
@@ -208,7 +209,7 @@ Nothing here validates. It reports what happened; whether to allow it is yours
 to decide.
 
 A worked migration — a desktop `onKeyDown` guard rewritten to survive phones —
-is in [EXAMPLES.md](EXAMPLES.md#making-a-desktop-input-work-on-every-device),
+is in [EXAMPLES.md](EXAMPLES.md#handling-input-beyond-desktop-keyboards),
 and the **Input events** story shows both readings of the same keystroke side
 by side.
 
