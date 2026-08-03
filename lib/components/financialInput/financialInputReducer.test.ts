@@ -431,8 +431,12 @@ describe('IME composition', () => {
       composing, displayValue holds unvalidated text, so rejecting has to
       rebuild from the last committed numeric value.
    */
+  /*
+      Letters no longer reach this point — they are refused while composing, by
+      "composition that can never become a number" below. These are the values
+      that are composable but still fail to commit.
+   */
   it.each([
-    ['abc', 'letters'],
     ['1.234', 'more decimals than scale allows'],
     ['', 'nothing at all']
   ])('restores the committed value when %j is refused (%s)', (composed) => {
@@ -724,11 +728,15 @@ describe('recorded device traces', () => {
     expect(next.displayValue).toBe(expected);
   });
 
+  /*
+      "ab" used to be held here too. It is now refused on sight, since no
+      further keystroke could turn it into a number — see "composition that can
+      never become a number".
+   */
   it.each([
     ['2', 'still just digits'],
     ['12', 'more digits'],
-    ['2.', 'a fraction being started'],
-    ['ab', 'not a shortcut at all']
+    ['2.', 'a fraction being started']
   ])('samsung: keeps holding %j (%s)', (composed) => {
     const next = run(
       stateOf(''),
@@ -828,5 +836,69 @@ describe('insertText carrying more than one character', () => {
     const next = run(stateOf('1'), InputType.INSERT_TEXT, '$', '1$', 2);
 
     expect(next.rejected).toBe(true);
+  });
+});
+
+/*
+    An IME is left alone while composing, because reformatting under it makes
+    the keyboard fight the input. But "left alone" was taken to mean "shows
+    anything": an iOS pinyin keyboard puts "ni hao" and then 你好 straight into
+    the field, which replaced the committed amount on screen — and iOS fires no
+    compositionend for it, so it never cleaned itself up.
+
+    Recorded from a real iPhone:
+      insertCompositionText · data="你好" · composing · "" → "你好"
+ */
+describe('composition that can never become a number', () => {
+  const composing = (
+    state: FinancialInputState,
+    targetValue: string,
+    isComposing = true
+  ) =>
+    run(
+      state,
+      InputType.INSERT_COMPOSITION_TEXT,
+      targetValue,
+      targetValue,
+      targetValue.length,
+      DEFAULT_SCALE,
+      DEFAULT_MAX_DIGITS,
+      isComposing
+    );
+
+  it.each([
+    // composing text   note
+    ['ni', 'pinyin, before any character is chosen'],
+    ['ni hao', 'and once it has a space in it'],
+    ['你好', 'the Chinese characters themselves'],
+    ['你好ni hao', 'the mix the real device produced'],
+    ['abc', 'plain letters that are not shortcuts']
+  ])('refuses %j while composing (%s)', (text) => {
+    const state = createInitialState(1234);
+    const next = composing(state, text as string);
+
+    expect(next.rejected).toBe(true);
+    // The committed amount stays on screen rather than being replaced.
+    expect(next.displayValue).toBe('1,234');
+    expect(next.numericValue).toBe(1234);
+  });
+
+  /*
+      What must keep working: Android composes digits a character at a time,
+      and Samsung defers compositionend until blur, so a finished shortcut
+      token still has to commit on sight.
+   */
+  it.each([
+    // composing text  ->  displayValue  note
+    ['2', '2', 'a digit mid-composition is held raw'],
+    ['20', '20', 'and the next one'],
+    ['1.5', '1.5', 'a decimal separator is composable'],
+    ['2k', '2,000', 'a finished shortcut commits without compositionend'],
+    ['-5', '-5', 'a minus sign is composable']
+  ])('holds %j -> %j (%s)', (text, expected) => {
+    const next = composing(createInitialState(null), text as string);
+
+    expect(next.rejected).toBe(false);
+    expect(next.displayValue).toBe(expected);
   });
 });

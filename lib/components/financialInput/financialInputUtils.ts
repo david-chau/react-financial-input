@@ -329,6 +329,37 @@ export const isValidNumberString = (
     every other platform had already shown "2,000". A finished shortcut token
     needs no further input to interpret, so it is committed on sight.
  */
+/*
+    Whether composing text could still turn into a number.
+
+    An IME is left alone while it composes — reformatting under it makes the
+    keyboard fight the input — but "left alone" cannot mean "shows anything".
+    A pinyin keyboard puts "ni hao" and then "\u4f60\u597d" straight into the field, and
+    holding that leaves Chinese text sitting in a numeric input, replacing the
+    committed value on screen. iOS never fires compositionend for it either, so
+    it does not clean itself up.
+
+    So: hold only while every character could still belong to a number. Digits,
+    the configured separators, a minus sign, and the shortcut letters — Samsung
+    composes "2k" and that has to survive. Anything else can never become a
+    number no matter what is typed next, so it is refused now rather than at a
+    compositionend that may not arrive.
+ */
+export const isComposableNumericText = (
+  text: string,
+  separators: Separators = DEFAULT_SEPARATORS,
+  exponents: StringKeyedMap<number> = SHORTCUT_EXPONENTS
+): boolean =>
+  text
+    .split('')
+    .every(
+      (character) =>
+        /[0-9-]/.test(character) ||
+        character === separators.group ||
+        character === separators.decimal ||
+        isShortcut(character, exponents)
+    );
+
 export const isCompleteShortcutToken = (
   value: string,
   separators: Separators = DEFAULT_SEPARATORS,
