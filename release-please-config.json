@@ -1,25 +1,55 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "$comment": "separate-pull-requests must stay true. With false, the Merge plugin builds one PR on a branch carrying no component, but getBranchComponent() falls back to the package.json name — so buildRelease compares 'undefined' against 'react-financial-input', returns undefined, and no release is ever tagged. There is only one package here, so this still produces a single release PR.",
+  "$comment": "separate-pull-requests must stay true. With false, the Merge plugin builds one PR on a branch carrying no component, but getBranchComponent() falls back to the package.json name \u2014 so buildRelease compares 'undefined' against 'react-financial-input', returns undefined, and no release is ever tagged. There is only one package here, so this still produces a single release PR.",
   "separate-pull-requests": true,
   "packages": {
     ".": {
       "release-type": "node",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false,
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
       "changelog-sections": [
-        { "type": "feat", "section": "Features" },
-        { "type": "fix", "section": "Bug fixes" },
-        { "type": "perf", "section": "Performance" },
-        { "type": "docs", "section": "Documentation" },
-        { "type": "refactor", "section": "Refactoring" },
-        { "type": "test", "section": "Tests", "hidden": true },
-        { "type": "build", "section": "Build", "hidden": true },
-        { "type": "ci", "section": "CI", "hidden": true },
-        { "type": "chore", "section": "Chores", "hidden": true }
+        {
+          "type": "feat",
+          "section": "Features"
+        },
+        {
+          "type": "fix",
+          "section": "Bug fixes"
+        },
+        {
+          "type": "perf",
+          "section": "Performance"
+        },
+        {
+          "type": "docs",
+          "section": "Documentation"
+        },
+        {
+          "type": "refactor",
+          "section": "Refactoring"
+        },
+        {
+          "type": "test",
+          "section": "Tests",
+          "hidden": true
+        },
+        {
+          "type": "build",
+          "section": "Build",
+          "hidden": true
+        },
+        {
+          "type": "ci",
+          "section": "CI",
+          "hidden": true
+        },
+        {
+          "type": "chore",
+          "section": "Chores",
+          "hidden": true
+        }
       ]
     }
-  }
+  },
+  "$comment2": "bump-minor-pre-major and bump-patch-for-minor-pre-major were removed at 1.0.0. They only apply below 1.0, where they kept breaking changes at a minor bump. Past 1.0.0 a BREAKING CHANGE footer means a major, which is the whole point of the version."
 }

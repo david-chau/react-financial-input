@@ -139,3 +139,20 @@ because nobody owns every phone.
 
 The headline used to say "works on every device". It says something narrower
 now, and truer.
+
+## 1.0.0
+
+Cut after seven rounds of looking for reasons not to.
+
+Each round found something, and the list is a fair description of what a
+"finished" side project actually hides: an API of 66 names nobody had chosen,
+TypeScript declarations that were wrong for CommonJS consumers, two critical
+ARIA violations in the widget the docs told people to copy, a `'use client'`
+banner that made the parsing unusable in the server action the examples
+demonstrated, a load-bearing rule with no test holding it, and grouping that
+was wrong for every Indian locale.
+
+The seventh round found nothing, and a deliberate hunt for memory leaks found
+one uncancelled animation frame that was not a leak.
+
+None of that was visible from the outside. The library worked the whole time.
