@@ -578,3 +578,84 @@ describe('string values', () => {
     expect(onChange).toHaveBeenLastCalledWith('1234.5');
   });
 });
+
+/*
+    Pins what the docs promise about native form submission. A native form
+    submits what is on screen, and what is on screen is the display value — so
+    `name` belongs on a hidden input carrying the canonical one, not on this
+    input. EXAMPLES.md says so; this is what stops that going stale.
+ */
+describe('native form submission', () => {
+  const submittedBy = (form: HTMLFormElement) =>
+    Object.fromEntries(new FormData(form));
+
+  it('submits the display value when name is on the input itself', async () => {
+    const user = userEvent.setup();
+    render(
+      <form data-testid="form">
+        <FinancialInput name="amount" />
+      </form>
+    );
+
+    await user.type(screen.getByRole('textbox'), '1234.56');
+
+    const submitted = submittedBy(
+      screen.getByTestId('form') as HTMLFormElement
+    );
+
+    expect(submitted.amount).toBe('1,234.56');
+    // Which is the whole problem: this is not a number.
+    expect(Number(submitted.amount)).toBeNaN();
+  });
+
+  it('submits a parseable value through a hidden canonical field', async () => {
+    const Form = () => {
+      const { getInputProps, canonicalValue } = useFinancialInput();
+
+      return (
+        <form data-testid="form">
+          <input {...getInputProps()} />
+          <input type="hidden" name="amount" value={canonicalValue ?? ''} />
+        </form>
+      );
+    };
+
+    const user = userEvent.setup();
+    render(<Form />);
+
+    await user.type(screen.getByRole('textbox'), '1234.56');
+
+    const submitted = submittedBy(
+      screen.getByTestId('form') as HTMLFormElement
+    );
+
+    expect(submitted.amount).toBe('1234.56');
+    expect(Number(submitted.amount)).toBe(1234.56);
+  });
+
+  // Canonical stays "." even where the display uses a comma.
+  it('keeps the hidden field locale-free', async () => {
+    const Form = () => {
+      const { getInputProps, canonicalValue } = useFinancialInput({
+        options: { locale: 'de-DE' }
+      });
+
+      return (
+        <form data-testid="form">
+          <input {...getInputProps()} />
+          <input type="hidden" name="amount" value={canonicalValue ?? ''} />
+        </form>
+      );
+    };
+
+    const user = userEvent.setup();
+    render(<Form />);
+
+    await user.type(screen.getByRole('textbox'), '1234,56');
+
+    expect(screen.getByRole('textbox')).toHaveValue('1.234,56');
+    expect(
+      submittedBy(screen.getByTestId('form') as HTMLFormElement).amount
+    ).toBe('1234.56');
+  });
+});

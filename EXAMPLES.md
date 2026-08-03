@@ -26,9 +26,16 @@ import { FinancialInput } from 'react-financial-input';
 export const AmountField = () => {
   const [amount, setAmount] = useState<number | null>(null);
 
-  return <FinancialInput value={amount} onChange={setAmount} name="amount" />;
+  return (
+    <>
+      <label htmlFor="amount">Amount</label>
+      <FinancialInput id="amount" value={amount} onChange={setAmount} />
+    </>
+  );
 };
 ```
+
+No `name` here on purpose — see the server actions section below for why.
 
 The built package carries a `'use client'` banner already, so importing it from
 a server component gives you the usual "needs a client boundary" error rather
@@ -36,23 +43,55 @@ than a broken hydration.
 
 ### Server actions
 
-Server actions read `FormData`, which is strings — so let the input give you one
-and skip the parse on the server:
+> **Do not put `name` on the input itself.** A native form submits whatever is
+> on screen, and what is on screen is the _display_ value — `"1,234.56"`, with
+> grouping separators. `Number("1,234.56")` is `NaN`. This catches people out,
+> so it is worth stating plainly: the formatted string is for the user, and the
+> canonical one is for you.
+
+Carry the canonical value in a hidden input, and give _that_ the name:
 
 ```tsx
 'use client';
 
-<FinancialInput
-  valueType="string"
-  value={raw}
-  onChange={setRaw}
-  name="amount"
-/>;
+import { useState } from 'react';
+import { FinancialInput } from 'react-financial-input';
+
+export const AmountForm = ({
+  action
+}: {
+  action: (data: FormData) => void;
+}) => {
+  const [amount, setAmount] = useState<string | null>(null);
+
+  return (
+    <form action={action}>
+      <label htmlFor="amount">Amount</label>
+      <FinancialInput
+        id="amount"
+        valueType="string"
+        value={amount}
+        onChange={setAmount}
+      />
+      {/* Canonical: no grouping, always a "." fraction, whatever the locale. */}
+      <input type="hidden" name="amount" value={amount ?? ''} />
+      <button type="submit">Save</button>
+    </form>
+  );
+};
 ```
 
-`onChange` hands back canonical text — `"1234.56"`, no grouping, always a `.`
-fraction, whatever the user's locale — so `Number(formData.get('amount'))` is
-safe on the other side.
+Now `Number(formData.get('amount'))` is safe on the server, in any locale.
+
+If you would rather submit the display value and deal with it server-side,
+`parseAmount` is the same function the input uses and runs perfectly well in a
+server action:
+
+```ts
+import { parseAmount } from 'react-financial-input';
+
+const amount = parseAmount(String(formData.get('amount'))); // number | null
+```
 
 ## React Hook Form
 
@@ -155,28 +194,33 @@ const { getInputProps } = useFinancialInput({ value, onChange });
 
 ## A plain form, no library
 
-`getInputProps()` merges what you pass it, so `name` reaches the DOM and the
-field shows up in `FormData`:
+Same rule as server actions: the visible input holds the display value, so the
+hidden one carries the name.
 
 ```tsx
-const { getInputProps, canonicalValue } = useFinancialInput({
-  valueType: 'string'
-});
+const { getInputProps, canonicalValue } = useFinancialInput();
 
 <form
   onSubmit={(event) => {
     event.preventDefault();
-    // Or read canonicalValue directly — same string, no parsing.
-    console.log(new FormData(event.currentTarget).get('amount'));
+    const data = new FormData(event.currentTarget);
+
+    data.get('amount'); // "1234.56" — canonical, from the hidden input
   }}
 >
-  <input {...getInputProps({ name: 'amount' })} />
+  <label htmlFor="amount">Amount</label>
+  <input {...getInputProps({ id: 'amount' })} />
+  <input type="hidden" name="amount" value={canonicalValue ?? ''} />
+  <button type="submit">Save</button>
 </form>;
 ```
 
-One caveat: the submitted string is the **display** value, grouping separators
-and all, because that is what is on screen. `canonicalValue` from the hook is
-the one to send.
+Putting `name` on the visible input instead submits `"1,234.56"`, separators
+and all — `Number()` of that is `NaN`. There is a test pinning exactly this, so
+the behaviour cannot drift out from under the docs.
+
+Not using a `<form>` at all? `canonicalValue` is right there; no `FormData`
+needed.
 
 ## Tanstack Form
 

@@ -75,6 +75,26 @@ That is ten lines, and it replaced `bignumber.js` — which the old code used fo
 single multiply before immediately calling `.toNumber()` and discarding the
 precision it had paid for.
 
+### The React floor is 18.0.0
+
+`peerDependencies` is `>=18.0.0` rather than `^18 || ^19`, so a new major does
+not produce a peer warning on a library that will almost certainly still work
+with it. Nothing here reaches for a version-specific API: `useState`, `useRef`,
+`useMemo`, `useEffect`, `useLayoutEffect`, `forwardRef` and the `react-jsx`
+runtime all predate 18.
+
+18.0 is the floor because of **`useId`**, which the combobox uses for its
+listbox and which did not exist in 17.
+
+CI runs the unit suite on `18.0.0` exactly as well as on the newest 18 and 19,
+and typechecks on each. That third leg is not redundant: `@types/react@18.0`
+has no `useRef<T>(undefined)` overload — React 19's types added it — so the
+declared floor was broken while a matrix pinned to `react@18` stayed green,
+because `18` resolves to the newest 18.x.
+
+Anything above 19 is untested by definition. The range is a statement that no
+API in use is expected to break, not that a future major has been verified.
+
 ## How input is handled
 
 Browsers describe an edit through `InputEvent.inputType`: `insertText`,

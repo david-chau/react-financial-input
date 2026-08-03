@@ -39,7 +39,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        react: [18, 19]
+        # 18.0.0 exactly, not just "18": the range in package.json starts there,
+        # and "18" resolves to the newest 18.x, which is a different thing.
+        # @types/react 18.0 has no useRef<T>(undefined) overload, so the floor
+        # broke while the 18.3 leg stayed green.
+        react: ['18.0.0', 18, 19]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -55,6 +59,8 @@ jobs:
             react-dom@${{ matrix.react }} \
             @types/react@${{ matrix.react }} \
             @types/react-dom@${{ matrix.react }}
+      # Types are where the floor actually broke, so check them on each leg.
+      - run: npx tsc --noEmit -p tsconfig-build.json
       - run: npm test
 
   e2e:

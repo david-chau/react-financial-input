@@ -3,7 +3,7 @@
 [![CI](https://github.com/david-chau/react-financial-input/actions/workflows/ci.yml/badge.svg)](https://github.com/david-chau/react-financial-input/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/react-financial-input)](https://www.npmjs.com/package/react-financial-input)
 [![bundle size](https://img.shields.io/bundlejs/size/react-financial-input)](https://bundlejs.com/?q=react-financial-input)
-[![license](https://img.shields.io/npm/l/react-financial-input)](./LICENSE)
+[![license](https://img.shields.io/npm/l/react-financial-input)](https://github.com/david-chau/react-financial-input/blob/main/LICENSE)
 
 A React currency input that formats as you type, with `h`/`k`/`m`/`b` multiplier
 shortcuts that work on **every device, including phones**.
@@ -17,14 +17,25 @@ npm install react-financial-input
 ```
 
 ```tsx
+import { useState } from 'react';
 import { FinancialInput } from 'react-financial-input';
 
-<FinancialInput value={amount} onChange={setAmount} />;
+export const AmountField = () => {
+  const [amount, setAmount] = useState<number | null>(null);
+
+  return (
+    <>
+      <label htmlFor="amount">Amount</label>
+      <FinancialInput id="amount" value={amount} onChange={setAmount} />
+    </>
+  );
+};
 ```
 
-That is the whole API for the common case. `onChange` receives a `number`, or
-`null` while the value is incomplete — an empty input, or a lone `.` part-way
-through typing. Never `NaN`.
+Type `1234567` and you get `1,234,567`; type `2.5m` and you get `2,500,000`.
+
+`onChange` receives a `number`, or `null` while the value is incomplete — an
+empty input, or a lone `.` part-way through typing. Never `NaN`.
 
 Already storing text? Ask for it back:
 
@@ -33,9 +44,29 @@ Already storing text? Ask for it back:
 ```
 
 `onChange` then hands back canonical text — `"1234.56"`, no grouping, always a
-`.` fraction, whatever the locale — so it is safe to POST as-is.
+`.` fraction, whatever the locale.
 
-React 18 or 19 as a peer dependency. Nothing else.
+> Submitting a native `<form>`? Do not put `name` on the input. It submits what
+> is on screen, which is the formatted `"1,234.56"`. Put the canonical value in
+> a hidden input instead — [EXAMPLES.md](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md#a-plain-form-no-library)
+> has the four lines.
+
+### State model
+
+`value` is optional. Leave it off and the input manages its own state, telling
+you about changes through `onChange`; pass it and the input follows the prop.
+
+Two things worth knowing about the controlled path, because they are what makes
+it usable inside a form:
+
+- **An echo is not an external change.** A parent that stores what `onChange`
+  gave it and passes it straight back will not disturb what is being typed.
+  Only a value that differs from the committed one reformats the field, so
+  `1.` and the trailing zero of `1.50` survive mid-edit.
+- **`null` means no value**, both ways: as the initial state, and as what you
+  receive for an empty input. It is never `NaN` and never `undefined`.
+
+React 18 or newer as a peer dependency (`>=18.0.0`). Nothing else.
 
 Want it styled? One import, opt-in:
 
@@ -45,34 +76,34 @@ import 'react-financial-input/styles.css';
 
 **[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground)**
 · **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
-· **[Framework examples →](EXAMPLES.md)**
+· **[Framework examples →](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md)**
 
 ## What it does
 
 ### Typing
 
-|                            |                                             |
-| -------------------------- | ------------------------------------------- |
-| Digits group as you type   | ![](docs/demo-digits-group-as-you-type.gif) |
-| `2.5m` expands to millions | ![](docs/demo-shortcuts-expand.gif)         |
+|                            |                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Digits group as you type   | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-digits-group-as-you-type.gif) |
+| `2.5m` expands to millions | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-shortcuts-expand.gif)         |
 
 ### Editing
 
-|                                 |                                                   |
-| ------------------------------- | ------------------------------------------------- |
-| Backspace across a separator    | ![](docs/demo-backspacing-across-a-separator.gif) |
-| Paste is sanitised, not refused | ![](docs/demo-paste-is-sanitised.gif)             |
-| Undo, one step per edit         | ![](docs/demo-undo-restores-in-one-step.gif)      |
+|                                 |                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Backspace across a separator    | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-backspacing-across-a-separator.gif) |
+| Paste is sanitised, not refused | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-paste-is-sanitised.gif)             |
+| Undo, one step per edit         | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-undo-restores-in-one-step.gif)      |
 
 Undo is the component's own, so a paste or an expansion comes back in a single
 step rather than unwinding character by character.
 
 ### Currency
 
-|                                   |                                            |
-| --------------------------------- | ------------------------------------------ |
-| Symbol and separators from `Intl` | ![](docs/demo-currency-and-separators.gif) |
-| Search, for when 162 is the list  | ![](docs/demo-search-162-currencies.gif)   |
+|                                   |                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Symbol and separators from `Intl` | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-currency-and-separators.gif) |
+| Search, for when 162 is the list  | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-search-162-currencies.gif)   |
 
 `locale: 'de-DE'` gives `1.234,56`. `currency: 'SEK'` resolves the symbol **and**
 which side it belongs on. Symbols follow the **locale**, not the currency: SEK
@@ -80,27 +111,27 @@ reads `SEK` in `en-US` and `kr` only in `sv-SE`.
 
 ### Feedback and extras
 
-|                                      |                                                         |
-| ------------------------------------ | ------------------------------------------------------- |
-| Refused keystrokes flash             | ![](docs/demo-a-refused-keystroke-flashes.gif)          |
-| Clear button, undoable               | ![](docs/demo-clear-button-and-undo-brings-it-back.gif) |
-| Multiplier keys for a numeric keypad | ![](docs/demo-multiplier-keys-for-a-numeric-keypad.gif) |
+|                                      |                                                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Refused keystrokes flash             | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-a-refused-keystroke-flashes.gif)          |
+| Clear button, undoable               | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-clear-button-and-undo-brings-it-back.gif) |
+| Multiplier keys for a numeric keypad | ![](https://raw.githubusercontent.com/david-chau/react-financial-input/main/docs/demo-multiplier-keys-for-a-numeric-keypad.gif) |
 
 The clear button, the keys, the currency picker and the floating label are all
 **off by default** — the component renders a bare `<input>`. The hook gives you
 the behaviour; you render the markup.
-See [the extras](DESIGN.md#off-by-default-extras).
+See [the extras](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#off-by-default-extras).
 
 ## Why this one
 
 - **Shortcuts work on mobile.** Most currency inputs ask for a numeric keypad,
   which has no letter keys — so `2.5m` is impossible to type on a phone.
-  ([why](DESIGN.md#why-the-keyboard-defaults-to-text-on-mobile))
+  ([why](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#why-the-keyboard-defaults-to-text-on-mobile))
 - **Built on `InputEvent`, not key codes.** Soft keyboards often send no key
-  code at all. ([how](DESIGN.md#how-input-is-handled))
+  code at all. ([how](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#how-input-is-handled))
 - **The awkward paths are handled.** Paste, drag-drop, cut, word delete and
   Android IME composition each have a case, not a shrug.
-  ([cheatsheet](DESIGN.md#input-event-cheatsheet))
+  ([cheatsheet](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md#input-event-cheatsheet))
 - **Tested on real hardware.** Two bugs — an Android caret jump and Samsung
   deferring `compositionend` — only appeared on physical phones, and are now
   recorded traces in the test table.
@@ -109,6 +140,12 @@ See [the extras](DESIGN.md#off-by-default-extras).
 
 Every native `<input>` prop is passed through (`placeholder`, `disabled`,
 `name`, `onBlur`, `aria-*`), and `ref` is forwarded.
+
+Four names are taken over rather than forwarded: `value`, `defaultValue` and
+`onChange` carry the number or the canonical string instead of DOM strings, and
+**`onError` is the refused-keystroke callback**, not the DOM's `error` handler.
+`type` is always `text` — `type="number"` cannot hold a value containing
+grouping separators.
 
 | Prop                       | Type                                        | Default         | Description                                                                   |
 | -------------------------- | ------------------------------------------- | --------------- | ----------------------------------------------------------------------------- |
@@ -170,19 +207,19 @@ The hook returns everything the extras are built from:
 DOM. Currency lists, search and flag emoji come from `Intl` rather than a
 bundled table.
 
-All of it is in **[UTILS.md](UTILS.md)**.
+All of it is in **[UTILS.md](https://github.com/david-chau/react-financial-input/blob/main/UTILS.md)**.
 
 ## Docs
 
-- **[EXAMPLES.md](EXAMPLES.md)** — Next.js, React Hook Form, Formik, MUI,
+- **[EXAMPLES.md](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md)** — Next.js, React Hook Form, Formik, MUI,
   Chakra, TanStack Form, plain forms, and how to test it.
-- **[UTILS.md](UTILS.md)** — the non-React exports: parsing, formatting,
+- **[UTILS.md](https://github.com/david-chau/react-financial-input/blob/main/UTILS.md)** — the non-React exports: parsing, formatting,
   currency lists, search, flags.
-- **[DESIGN.md](DESIGN.md)** — why it behaves as it does: the mobile keyboard
+- **[DESIGN.md](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md)** — why it behaves as it does: the mobile keyboard
   trade-off, exact multipliers, the input event cheatsheet, the device support
   matrix, styling.
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — architecture rules and local setup.
-- **[CI.md](CI.md)** — what each workflow does, and how to publish.
+- **[CONTRIBUTING.md](https://github.com/david-chau/react-financial-input/blob/main/CONTRIBUTING.md)** — architecture rules and local setup.
+- **[CI.md](https://github.com/david-chau/react-financial-input/blob/main/CI.md)** — what each workflow does, and how to publish.
 
 ## License
 

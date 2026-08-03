@@ -280,7 +280,14 @@ export const useFinancialInput = ({
       refused" without the consumer having to wire up an error state.
    */
   const [isFlashing, setIsFlashing] = useState(false);
-  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /*
+      The undefined is in the type parameter, not just the argument: @types/react
+      18.0 has no useRef<T>(undefined) overload — React 19's types added it — and
+      the package claims support from 18.0.0.
+   */
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
 
   useEffect(
     () => () => {
