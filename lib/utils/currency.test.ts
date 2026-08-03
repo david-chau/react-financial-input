@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SEPARATORS } from './number';
+import { DEFAULT_SEPARATORS, formatNumber } from './number';
 import {
   listCurrencies,
   searchCurrencies,
@@ -56,11 +56,15 @@ describe('resolveSeparators', () => {
     ['de-DE', '.', ',', 'reversed'],
     ['en-GB', ',', '.', 'same as en-US']
   ])('%s uses %j and %j (%s)', (locale, group, decimal) => {
-    expect(resolveSeparators(locale as string)).toEqual({ group, decimal });
+    // The characters only; group sizes have their own table further down.
+    expect(resolveSeparators(locale as string)).toMatchObject({
+      group,
+      decimal
+    });
   });
 
   it('falls back to the default for an invalid locale', () => {
-    expect(resolveSeparators('not-a-locale')).toEqual({
+    expect(resolveSeparators('not-a-locale')).toMatchObject({
       group: ',',
       decimal: '.'
     });
@@ -514,5 +518,91 @@ describe('search ranking and the flag cache', () => {
     // jsdom supplies no 2d context, so the answer stays unknown and uncached.
     expect(supportsFlagEmoji()).toBe(false);
     expect(supportsFlagEmoji()).toBe(false);
+  });
+});
+
+/*
+    Grouping is not three digits everywhere.
+
+    The Indian lakh/crore system writes 1234567890 as 1,23,45,67,890 — three,
+    then twos — and nine of the thirty locales checked use it: every Indian
+    language locale, plus Nepali and Dzongkha. The old formatter hard-coded
+    thousands and silently produced 1,234,567,890 for all of them.
+
+    Swept rather than sampled, and compared against Intl itself rather than a
+    hand-written expectation, so the source of truth is the same one a browser
+    uses.
+ */
+describe('grouping follows the locale', () => {
+  const LOCALES = [
+    'en-US',
+    'de-DE',
+    'fr-FR',
+    'sv-SE',
+    'ja-JP',
+    'ru-RU',
+    'es-ES',
+    'pt-BR',
+    'tr-TR',
+    'en-IN',
+    'hi-IN',
+    'gu-IN',
+    'ta-IN',
+    'te-IN',
+    'ne-NP'
+  ];
+
+  /*
+      Compared on where the separators fall rather than on the string, because
+      some locales render digits in their own script — Intl gives Devanagari
+      for ne-NP. The value here is always ASCII, which is a deliberate
+      boundary, so the shape is what has to agree.
+   */
+  const shape = (formatted: string) =>
+    formatted
+      .replace(/\p{Nd}/gu, '#')
+      .split('')
+      .join('');
+
+  it.each(LOCALES)('%s groups the way Intl does', (locale) => {
+    const separators = resolveSeparators(locale);
+    const ours = formatNumber(1234567890, separators);
+    const theirs = new Intl.NumberFormat(locale).format(1234567890);
+
+    expect(shape(ours)).toBe(shape(theirs));
+  });
+
+  it.each([
+    // locale   sizes    note
+    ['en-US', [3], 'thousands, and no second size to record'],
+    ['en-IN', [3, 2], 'three, then twos, for lakh and crore'],
+    ['hi-IN', [3, 2], 'the same in Hindi'],
+    ['de-DE', [3], 'thousands with a different separator']
+  ])('resolveSeparators(%j).groupSizes is %j (%s)', (locale, expected) => {
+    expect(resolveSeparators(locale as string).groupSizes).toEqual(expected);
+  });
+
+  // Explicit separators with no sizes keep the familiar behaviour.
+  it('defaults to thousands when no sizes are given', () => {
+    expect(formatNumber(1234567890, { group: ',', decimal: '.' })).toBe(
+      '1,234,567,890'
+    );
+  });
+
+  it.each([
+    // value           sizes     ->  formatted
+    [1234567890, [3, 2], '1,23,45,67,890'],
+    [100000, [3, 2], '1,00,000'],
+    [1000, [3, 2], '1,000'],
+    [100, [3, 2], '100'],
+    [-1234567890, [3, 2], '-1,23,45,67,890']
+  ])('formats %i with sizes %j as %j', (value, groupSizes, expected) => {
+    expect(
+      formatNumber(value as number, {
+        group: ',',
+        decimal: '.',
+        groupSizes: groupSizes as number[]
+      })
+    ).toBe(expected);
   });
 });

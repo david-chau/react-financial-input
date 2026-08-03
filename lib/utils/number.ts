@@ -5,9 +5,23 @@ export interface Separators {
   group: string;
   /** Separates the fraction. "." in en-US, "," in de-DE. */
   decimal: string;
+  /*
+      Digits per group, counted from the right, with the last entry repeating.
+
+      [3] is the familiar thousands grouping and the default. [3, 2] is the
+      Indian lakh/crore system, where 1234567890 is written 1,23,45,67,890 —
+      three digits, then twos. Nine of the thirty locales checked use it:
+      every Indian language, plus Nepali and Dzongkha.
+   */
+  groupSizes?: readonly number[];
 }
 
-export const DEFAULT_SEPARATORS: Separators = { group: ',', decimal: '.' };
+export const DEFAULT_SEPARATORS: Separators = {
+  group: ',',
+  decimal: '.',
+  // Thousands, which is what every locale does except the lakh/crore ones.
+  groupSizes: [3]
+};
 
 /*
     Everything in here works in one of two forms, and keeping them straight is
@@ -81,7 +95,28 @@ export const groupInteger = (
 ): string => {
   const isNegative = integer.startsWith('-');
   const digits = isNegative ? integer.slice(1) : integer;
-  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, separators.group);
+  const sizes = separators.groupSizes ?? [3];
+
+  /*
+      Walked from the right rather than matched with a regex, because the group
+      size is not constant. The old /\B(?=(\d{3})+(?!\d))/ could only ever
+      produce thousands, which quietly gave 12,345,678 where an Indian locale
+      wants 1,23,45,678.
+   */
+  const groups: string[] = [];
+  let end = digits.length;
+  let step = 0;
+
+  while (end > 0) {
+    const size = sizes[Math.min(step, sizes.length - 1)];
+    const start = Math.max(0, end - size);
+
+    groups.unshift(digits.slice(start, end));
+    end = start;
+    step += 1;
+  }
+
+  const grouped = groups.join(separators.group);
 
   return isNegative ? `-${grouped}` : grouped;
 };

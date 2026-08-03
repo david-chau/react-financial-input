@@ -53,16 +53,48 @@ export const resolveCurrency = (
     `locale: 'de-DE'` can configure the input without the caller having to know
     that Germany writes 1.234,56.
  */
+/*
+    How many digits go in each group, read out of Intl rather than assumed.
+
+    Grouping is not three digits everywhere. The Indian lakh/crore system
+    writes 1234567890 as 1,23,45,67,890 — three, then twos — and it is used by
+    every Indian language locale plus Nepali and Dzongkha. Hard-coding thousands
+    silently produced 12,34,56,7890 worth of wrongness for a very large number
+    of people.
+
+    Measured from a probe long enough to show at least three groups: the
+    rightmost group's length is the primary size, the one beside it the
+    secondary. The leftmost is whatever remainder is left over, so it is
+    ignored.
+ */
+const resolveGroupSizes = (format: Intl.NumberFormat): number[] => {
+  const lengths = format
+    .formatToParts(1234567890)
+    .filter((part) => part.type === 'integer')
+    .map((part) => part.value.length)
+    .reverse();
+
+  const [primary, secondary] = lengths;
+
+  if (!primary || !secondary) {
+    return [3];
+  }
+
+  return primary === secondary ? [primary] : [primary, secondary];
+};
+
 export const resolveSeparators = (locale?: string): Separators => {
   try {
-    const parts = new Intl.NumberFormat(locale).formatToParts(11111.1);
+    const format = new Intl.NumberFormat(locale);
+    const parts = format.formatToParts(11111.1);
 
     const group = parts.find((part) => part.type === 'group')?.value;
     const decimal = parts.find((part) => part.type === 'decimal')?.value;
 
     return {
       group: group ?? DEFAULT_SEPARATORS.group,
-      decimal: decimal ?? DEFAULT_SEPARATORS.decimal
+      decimal: decimal ?? DEFAULT_SEPARATORS.decimal,
+      groupSizes: resolveGroupSizes(format)
     };
   } catch {
     return DEFAULT_SEPARATORS;

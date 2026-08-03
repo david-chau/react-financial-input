@@ -86,6 +86,9 @@ React 18 or newer (`>=18.0.0`). Nothing else.
 `locale` and `currency` come from `Intl`, and the symbol follows the **locale**,
 not the currency — SEK reads `SEK` in `en-US` and `kr` only in `sv-SE`.
 
+Grouping follows the locale too, including the Indian lakh/crore system:
+`en-IN` gives `1,23,45,67,890`, not `1,234,567,890`.
+
 ### Feedback and extras
 
 |                                      |                                                                                                                                 |
