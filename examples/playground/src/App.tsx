@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import {
-  FinancialInput,
-  parseAmount,
-  useFinancialInput
-} from 'react-financial-input';
+import { FinancialInput, useFinancialInput } from 'react-financial-input';
+// Its own entry: the only one that also runs on a server.
+import { parseAmount } from 'react-financial-input/parse';
 import { CurrencyCombobox } from './CurrencyCombobox';
 
 /*

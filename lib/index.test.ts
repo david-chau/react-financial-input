@@ -15,22 +15,23 @@ import * as api from './index';
     — or a barrel crept back in.
  */
 const PUBLIC_API = [
-  // Component and hook
+  // The component and the hook behind it. That is the whole root.
   'FinancialInput',
-  'useFinancialInput',
-
-  // Parsing and formatting, no React involved
-  'parseAmount',
-  'formatNumber',
-  'shiftDecimal',
-  'toCanonical',
-  'formatCanonical',
-  'DEFAULT_SHORTCUTS'
+  'useFinancialInput'
 
   /*
-      Currency data and event reading are no longer here. They moved to their
-      own entry points so that importing the input does not measure as
-      importing them — see currency.test.ts and events.test.ts.
+      Everything else moved to its own entry point, asserted in
+      entryPoints.test.ts:
+
+        /parse      parsing and formatting, and the only entry with no
+                    'use client' on it, so it runs in a server action
+        /currency   currency lists, search and flags
+        /events     reading input events, useful on any text field
+
+      Two reasons. A size report measures the whole entry rather than what you
+      imported, and the root is what people judge. And the root has to carry
+      'use client' because the component is here — which would otherwise make
+      pure parsing unusable on a server.
    */
 ].sort();
 

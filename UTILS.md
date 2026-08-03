@@ -7,8 +7,8 @@ Three entry points, so that importing one does not measure as importing all
 three:
 
 ```ts
-// Parsing and formatting — no React, no currency data
-import { parseAmount, formatNumber } from 'react-financial-input';
+// Parsing and formatting — no React, and safe on a server
+import { parseAmount, formatNumber } from 'react-financial-input/parse';
 
 // Currency lists, search and flags, all read from Intl
 import {
@@ -27,7 +27,11 @@ what you used, and that is the number people judge a package by.
 ## Parsing and formatting
 
 The same rules the input applies to a paste, as one call. No React, no DOM —
-these run server-side quite happily.
+these run server-side quite happily — which is why `/parse` is a separate
+entry point. It is the only one without a `'use client'` banner, and a module
+carrying that directive has every export turned into a client reference by the
+Next.js App Router. Imported from the root, `parseAmount` could not run in a
+server action.
 
 ```ts
 parseAmount('1k'); // 1000
@@ -241,14 +245,17 @@ before copying anything.
 
 ## Cost
 
-Measured, not estimated — these are gzipped, from an actual build:
+Measured from an actual build, gzipped, per entry point:
 
-|                                                                        | gzip       |
-| ---------------------------------------------------------------------- | ---------- |
-| `FinancialInput` alone, tree-shaken                                    | **4.7 kB** |
-| Everything: hook, parsing, currency lists, search, flags, input events | **6.2 kB** |
-| `flags.woff2`, only if you import `flags.css`                          | 78 kB      |
+| entry                                         | gzip       | `'use client'`              |
+| --------------------------------------------- | ---------- | --------------------------- |
+| `react-financial-input`                       | **3.2 kB** | yes — the component is here |
+| `react-financial-input/parse`                 | 0.2 kB     | no — runs on a server       |
+| `react-financial-input/currency`              | 0.2 kB     | no                          |
+| `react-financial-input/events`                | 0.2 kB     | no                          |
+| `flags.woff2`, only if you import `flags.css` | 78 kB      | —                           |
 
-None of it is bundled data — the currency lists come from `Intl`, and the flags
-are computed from the code rather than looked up in a table. Anything you do not
-import is not in your bundle.
+The subpath entries are small because they share the code they need rather than
+duplicating it; importing one pulls in its share. None of it is bundled data —
+the currency lists come from `Intl`, and flags are computed from the code
+rather than looked up in a table.

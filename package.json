@@ -41,10 +41,16 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./styles.css": "./styles.css",
-    "./package.json": "./package.json",
-    "./flags.css": "./flags.css",
-    "./flags.woff2": "./flags.woff2",
+    "./parse": {
+      "import": {
+        "types": "./dist/parse.d.ts",
+        "default": "./dist/parse.js"
+      },
+      "require": {
+        "types": "./dist/parse.d.cts",
+        "default": "./dist/parse.cjs"
+      }
+    },
     "./currency": {
       "import": {
         "types": "./dist/currency.d.ts",
@@ -64,7 +70,11 @@
         "types": "./dist/events.d.cts",
         "default": "./dist/events.cjs"
       }
-    }
+    },
+    "./styles.css": "./styles.css",
+    "./flags.css": "./flags.css",
+    "./flags.woff2": "./flags.woff2",
+    "./package.json": "./package.json"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
