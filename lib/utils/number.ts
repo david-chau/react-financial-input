@@ -214,9 +214,6 @@ export const shiftDecimal = (canonical: string, places: number): string => {
 export const hasMultipleDecimals = (canonical: string): boolean =>
   canonical.split(CANONICAL_DECIMAL).length > 2;
 
-export const containsDecimal = (canonical: string): boolean =>
-  canonical.includes(CANONICAL_DECIMAL);
-
 /*
     A leading zero is only invalid in front of another digit — "0" and "0.5" are
     both legitimate things to be part-way through typing.

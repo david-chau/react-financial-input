@@ -4,6 +4,7 @@ import {
   DEFAULT_MAX_DIGITS,
   DEFAULT_SCALE,
   parseAmount,
+  toExponent,
   applyShortcut,
   getShortcutExponent,
   isShortcut,
@@ -299,5 +300,43 @@ describe('no currency reads as a multiplier', () => {
     )
   )('%s: %j stays 1234', (_label, text) => {
     expect(sanitiseNumericText(String(text))).toBe('1234');
+  });
+});
+
+/*
+    Guards that nothing had reached. Both are refusals — the paths that say no
+    — which is exactly where a gap matters most.
+ */
+describe('refusals with no coverage', () => {
+  it.each([
+    // multiplier            note
+    [0, 'zero is not a power of ten'],
+    [-100, 'nor is a negative one'],
+    [Number.POSITIVE_INFINITY, 'nor is infinity'],
+    [Number.NaN, 'nor is NaN'],
+    [7, 'and 7 has no exact decimal-shift representation']
+  ])('toExponent(%j) is null (%s)', (multiplier) => {
+    expect(toExponent(multiplier as number)).toBe(null);
+  });
+
+  /*
+      range: 'POSITIVE' exists so a field can refuse negatives outright. The
+      option was configurable, documented, and the branch that enforces it had
+      never been executed.
+   */
+  it.each([
+    ['-1', false, 'a negative is refused'],
+    ['-0.5', false, 'including a negative fraction'],
+    ['1', true, 'a positive is fine'],
+    ['0', true, 'and so is zero']
+  ])('isValidNumberString(%j, POSITIVE) -> %s (%s)', (canonical, expected) => {
+    expect(
+      isValidNumberString(
+        canonical as string,
+        DEFAULT_MAX_DIGITS,
+        DEFAULT_SCALE,
+        'POSITIVE'
+      )
+    ).toBe(expected);
   });
 });

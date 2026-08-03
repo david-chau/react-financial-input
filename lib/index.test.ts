@@ -58,7 +58,7 @@ describe('the public API', () => {
     ['createInitialState', 'internal state construction'],
     ['buildDecimalPattern', 'regex plumbing'],
     ['buildSymbolPunctuationPattern', 'more regex plumbing'],
-    ['hasSeparatorOrSpace', 'a string helper'],
+    ['stripGroupSeparators', 'a string helper'],
     ['mapCursorToFormatted', 'caret arithmetic'],
     ['isValidInsert', 'validation internals'],
     ['commonPrefixLength', 'superseded publicly by describeEdit'],

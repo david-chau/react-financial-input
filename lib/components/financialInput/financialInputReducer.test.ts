@@ -7,6 +7,7 @@ import {
   createInitialState,
   reduceClear,
   reduceCompositionEnd,
+  reduceHistory,
   reduceInput,
   reduceShortcut
 } from './financialInputReducer';
@@ -900,5 +901,59 @@ describe('composition that can never become a number', () => {
 
     expect(next.rejected).toBe(false);
     expect(next.displayValue).toBe(expected);
+  });
+});
+
+/*
+    reduceHistory is the entry point the hook calls for Ctrl+Z and Ctrl+Y. The
+    undo and redo tables above reach undo() and redo() directly, so the
+    dispatch between them — the exported function — was never executed.
+ */
+describe('reduceHistory', () => {
+  const typed = (...values: string[]) =>
+    values.reduce(
+      (state, value) =>
+        run(state, InputType.INSERT_TEXT, value.slice(-1), value, value.length),
+      createInitialState(null)
+    );
+
+  it.each([
+    ['undo', '1'],
+    ['redo', '12']
+  ])('dispatches %s', (direction, expected) => {
+    const state = typed('1', '12');
+    const undone = reduceHistory(state, 'undo');
+
+    expect(
+      direction === 'undo'
+        ? undone.displayValue
+        : reduceHistory(undone, 'redo').displayValue
+    ).toBe(expected);
+  });
+
+  // Neither end of the history is an error; there is simply nothing to do.
+  it.each([
+    ['undo' as const, 'the start'],
+    ['redo' as const, 'the end']
+  ])('is a quiet no-op at %s of the history (%s)', (direction, _note) => {
+    const state = createInitialState(1234);
+    const next = reduceHistory(state, direction);
+
+    expect(next.rejected).toBe(false);
+    expect(next.displayValue).toBe('1,234');
+  });
+});
+
+/*
+    Some browsers report insertText with a null `data` rather than the
+    character. The reducer falls back to an empty string, and nothing had ever
+    handed it a null to prove that.
+ */
+describe('insertText with no data', () => {
+  it('falls back rather than throwing', () => {
+    const next = run(stateOf('1'), InputType.INSERT_TEXT, null, '12', 2);
+
+    expect(next.displayValue).toBe('12');
+    expect(next.rejected).toBe(false);
   });
 });

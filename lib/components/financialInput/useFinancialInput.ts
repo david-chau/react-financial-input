@@ -461,6 +461,21 @@ export const useFinancialInput = ({
       return;
     }
 
+    /*
+        Unreachable under jsdom, and deliberately not faked.
+
+        React resets a controlled input's caret to the end of the new value on
+        re-render, so by the time this effect runs the guard above always finds
+        the caret already correct. The divergence this line exists for only
+        happens in a real browser — a separator being inserted mid-value, or
+        Android reporting selectionStart 0 for a backspace at the end.
+
+        Covered by Playwright instead: "leaves the caret at the end after a
+        separator is inserted" asserts the resulting position across every
+        engine. Mocking selectionStart to force this branch would test the mock
+        rather than the behaviour.
+     */
+    /* v8 ignore next */
     input.setSelectionRange(state.cursor, state.cursor);
   }, [state]);
 
