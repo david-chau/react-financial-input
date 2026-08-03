@@ -232,6 +232,26 @@ the bundle, which would defeat the whole arrangement.
 `import '.../styles.css'` has no used exports and bundlers would tree-shake it
 away, making the styles vanish in consumer production builds.
 
+### The value is right-aligned
+
+Amounts line up on the decimal point when they are right-aligned, which is how
+every ledger, statement and spreadsheet sets them, and it puts the caret where
+the next digit is going to land. So the stylesheet does that by default:
+
+```css
+.rfi-input {
+  text-align: var(--rfi-text-align);
+}
+:root {
+  --rfi-text-align: right;
+}
+```
+
+Set `--rfi-text-align: left` to opt out. This lives in the stylesheet rather
+than in the component, because tier 1 is a genuinely bare `<input>` — a
+component that emitted its own inline `text-align` would not be unstyled, and
+would quietly override a consumer's own design system.
+
 ### Variants
 
 The stylesheet is modelled on Material UI's TextField, hand-written, with no MUI
@@ -431,4 +451,7 @@ variant, focused or not, without hard-coding the resting colours.
 
 1. Real-device CI (L4) — the only remaining gap in the support matrix
 2. IME composition verified on Firefox and WebKit, which have no CDP equivalent
-3. A string-valued API, for trailing zeros (`1.50`) and values above 2^53
+3. Values above 2^53. `valueType: 'string'` carries the canonical text, so the
+   trailing zero in `1.50` now survives, but the arithmetic behind the shortcut
+   multipliers still goes through a `number`. Fixing that means the reducer
+   holding a decimal string end to end.

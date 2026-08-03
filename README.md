@@ -26,6 +26,15 @@ That is the whole API for the common case. `onChange` receives a `number`, or
 `null` while the value is incomplete — an empty input, or a lone `.` part-way
 through typing. Never `NaN`.
 
+Already storing text? Ask for it back:
+
+```tsx
+<FinancialInput valueType="string" value={raw} onChange={setRaw} />
+```
+
+`onChange` then hands back canonical text — `"1234.56"`, no grouping, always a
+`.` fraction, whatever the locale — so it is safe to POST as-is.
+
 React 18 or 19 as a peer dependency. Nothing else.
 
 Want it styled? One import, opt-in:
@@ -34,7 +43,9 @@ Want it styled? One import, opt-in:
 import 'react-financial-input/styles.css';
 ```
 
-**[Try it in Storybook →](https://david-chau.github.io/react-financial-input/)**
+**[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground)**
+· **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
+· **[Framework examples →](EXAMPLES.md)**
 
 ## What it does
 
@@ -101,8 +112,9 @@ Every native `<input>` prop is passed through (`placeholder`, `disabled`,
 
 | Prop                       | Type                               | Default         | Description                                                                   |
 | -------------------------- | ---------------------------------- | --------------- | ----------------------------------------------------------------------------- |
-| `value`                    | `number \| null`                   | `undefined`     | The numeric value.                                                            |
-| `onChange`                 | `(value: number \| null) => void`  | —               | Called with the number, not the formatted string.                             |
+| `value`                    | `number \| string \| null`         | `undefined`     | Typed by `valueType`. A string may be canonical, display, or `2.5m`.          |
+| `onChange`                 | `(value: number \| string \| null) => void` | —      | The number, or canonical text — never the formatted string.                   |
+| `valueType`                | `'number' \| 'string'`             | `'number'`      | Which of the two `value` and `onChange` speak.                                |
 | `onError`                  | `() => void`                       | —               | Called when a keystroke is refused.                                           |
 | `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point.                        |
 | `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                                       |
@@ -149,6 +161,7 @@ The hook returns everything the extras are built from:
 | `clear()`                      | A clear button. Undoable, like any other edit    |
 | `symbol`, `symbolPosition`     | The currency symbol and which side it belongs on |
 | `numericValue`, `displayValue` | The committed number, and what is on screen      |
+| `canonicalValue`               | The string to send onward — no grouping, `.` fraction |
 
 ## Without React
 
@@ -161,6 +174,8 @@ All of it is in **[UTILS.md](UTILS.md)**.
 
 ## Docs
 
+- **[EXAMPLES.md](EXAMPLES.md)** — Next.js, React Hook Form, Formik, MUI,
+  Chakra, TanStack Form, plain forms, and how to test it.
 - **[UTILS.md](UTILS.md)** — the non-React exports: parsing, formatting,
   currency lists, search, flags.
 - **[DESIGN.md](DESIGN.md)** — why it behaves as it does: the mobile keyboard

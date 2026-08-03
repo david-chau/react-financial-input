@@ -91,6 +91,7 @@ const preview: Preview = {
             'With Currency Search',
             'With Clear Button',
             'Controlled',
+            'String Values',
 
             // How it is configured
             'Whole Numbers Only',

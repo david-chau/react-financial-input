@@ -495,3 +495,86 @@ describe('reformatting when the separators change', () => {
     expect(input).toHaveValue('12,');
   });
 });
+
+/*
+    valueType: 'string', for state that is already text. Canonical goes out —
+    no grouping, always a "." fraction — while the screen keeps the formatted
+    display string.
+ */
+describe('string values', () => {
+  it.each([
+    // typed        onChange receives   note
+    ['1000', '1000', 'canonical has no grouping'],
+    ['1234.5', '1234.5', 'a fraction keeps its "."'],
+    ['2.5m', '2500000', 'a shortcut expands before it is handed back'],
+    ['-42', '-42', 'a negative keeps its sign']
+  ])('typing %j hands back %j — %s', async (typed, expected) => {
+    const onChange = vi.fn();
+    const { user, input } = setup({ valueType: 'string', onChange });
+
+    await user.type(input, typed);
+
+    expect(onChange).toHaveBeenLastCalledWith(expected);
+  });
+
+  it.each([
+    // incoming value   display        note
+    ['1234.56', '1,234.56', 'canonical in'],
+    ['1,234.56', '1,234.56', 'display in, the same way a paste is accepted'],
+    ['2.5m', '2,500,000', 'a shortcut token in'],
+    ['nonsense', '', 'unparseable is empty, not NaN']
+  ])('accepts %j and shows %j — %s', (value, expected) => {
+    render(<FinancialInput valueType="string" value={value} />);
+
+    expect(screen.getByRole('textbox')).toHaveValue(expected);
+  });
+
+  it('empties to null rather than an empty string', async () => {
+    const onChange = vi.fn();
+    const { user, input } = setup({ valueType: 'string', onChange });
+
+    await user.type(input, '5');
+    await user.clear(input);
+
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  /*
+      The number and the canonical string diverge here: 1.5 and 1.50 are the
+      same number, so number mode stays quiet while string mode must not.
+   */
+  it('reports a trailing zero that leaves the number unchanged', async () => {
+    const onChange = vi.fn();
+    const { user, input } = setup({ valueType: 'string', onChange });
+
+    await user.type(input, '1.5');
+    expect(onChange).toHaveBeenLastCalledWith('1.5');
+
+    await user.type(input, '0');
+    expect(onChange).toHaveBeenLastCalledWith('1.50');
+  });
+
+  it('stays numeric by default', async () => {
+    const onChange = vi.fn();
+    const { user, input } = setup({ onChange });
+
+    await user.type(input, '1000');
+
+    expect(onChange).toHaveBeenLastCalledWith(1000);
+  });
+
+  // Canonical is locale-free even when the display is not.
+  it('hands back "." fractions under a comma-decimal locale', async () => {
+    const onChange = vi.fn();
+    const { user, input } = setup({
+      valueType: 'string',
+      onChange,
+      options: { locale: 'de-DE' }
+    });
+
+    await user.type(input, '1234,5');
+
+    expect(input).toHaveValue('1.234,5');
+    expect(onChange).toHaveBeenLastCalledWith('1234.5');
+  });
+});

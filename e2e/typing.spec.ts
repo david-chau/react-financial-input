@@ -355,6 +355,29 @@ test.describe('currency search', () => {
     The story's list and locale are controls, so they are driven from the URL
     rather than duplicated as test-only stories.
  */
+/*
+    Amounts line up on the decimal point when they are right-aligned, which is
+    how every ledger sets them. Documented as the stylesheet's default, so it
+    is pinned rather than left to drift.
+ */
+test.describe('alignment', () => {
+  test('the value is right-aligned, and opts out via the custom property', async ({
+    page
+  }) => {
+    await page.goto(STORIES.withValue);
+    const field = input(page);
+    await field.waitFor();
+
+    await expect(field).toHaveCSS('text-align', 'right');
+
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty('--rfi-text-align', 'left')
+    );
+
+    await expect(field).toHaveCSS('text-align', 'left');
+  });
+});
+
 test.describe('currency search presets', () => {
   for (const [codes, expected] of [
     ['g7', 5],

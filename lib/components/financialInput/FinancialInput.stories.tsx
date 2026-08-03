@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { Nullable } from '../../types';
-import { FinancialInput, FinancialInputProps } from './FinancialInput';
+import { FinancialInput, FinancialInputOwnProps } from './FinancialInput';
 import type { CurrencyPreset } from '../../utils';
 import { useFinancialInput } from './useFinancialInput';
 import { EventTesterPanel } from './EventTesterPanel';
@@ -14,7 +14,13 @@ import { CurrencyCombobox } from './CurrencyCombobox';
     component's own props. Typing the meta on this rather than on
     `typeof FinancialInput` is what lets `label` and `helper` be args.
  */
-type FieldArgs = FinancialInputProps & {
+type FieldArgs = FinancialInputOwnProps & {
+  /*
+      The number branch of the props union. Storybook's Meta needs one object
+      type, and a union of two would leave every `args` implicitly `any`.
+   */
+  value?: Nullable<number>;
+  onChange?: (value: Nullable<number>) => void;
   label?: string;
   helper?: string;
   error?: boolean;
@@ -166,6 +172,58 @@ export const Controlled: Story = {
         <small style={{ fontFamily: 'monospace', opacity: 0.7 }}>
           onChange: {value === null ? 'null' : value}
         </small>
+      </div>
+    );
+  }
+};
+
+/*
+    valueType: 'string', for state that is already text — a form storing raw
+    input, a backend expecting a string, or a form library whose fields are
+    strings.
+
+    What comes back is canonical: no grouping, always a "." fraction, whatever
+    the locale on screen. Type into the de-DE field and watch the two diverge.
+ */
+export const StringValues: Story = {
+  render: function StringValues(args) {
+    const [raw, setRaw] = useState<Nullable<string>>('1234.56');
+    const [german, setGerman] = useState<Nullable<string>>('1234.56');
+
+    return (
+      <div style={{ display: 'grid', gap: '1.5rem', width: 260 }}>
+        <div style={{ display: 'grid', gap: '0.4rem' }}>
+          <FinancialInput
+            valueType="string"
+            value={raw}
+            onChange={(next) => {
+              args.onChange?.(next === null ? null : Number(next));
+              setRaw(next);
+            }}
+          />
+          <p className="rfi-helper">
+            onChange: <code>{raw === null ? 'null' : JSON.stringify(raw)}</code>
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gap: '0.4rem' }}>
+          <FinancialInput
+            valueType="string"
+            value={german}
+            onChange={setGerman}
+            options={{ locale: 'de-DE' }}
+          />
+          <p className="rfi-helper">
+            de-DE on screen, canonical out:{' '}
+            <code>{german === null ? 'null' : JSON.stringify(german)}</code>
+          </p>
+        </div>
+
+        <p className="rfi-helper">
+          Trailing zeros survive here and cannot in number mode: typing the last
+          zero of <code>1.50</code> leaves the number at <code>1.5</code>, so
+          only the string reports it.
+        </p>
       </div>
     );
   }
