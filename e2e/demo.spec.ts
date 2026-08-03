@@ -101,6 +101,27 @@ test('demo: currency picker', async ({ page }) => {
   }
 });
 
+test('demo: search 162 currencies', async ({ page }) => {
+  await page.goto(withoutBadge(STORIES.withCurrencySearch));
+  await page.locator('.rfi-input').waitFor();
+
+  await page.locator('.rfi-input').click();
+  await page.locator('.rfi-input').pressSequentially('1234', { delay: 200 });
+  await page.waitForTimeout(500);
+
+  const combobox = page.getByRole('combobox', { name: 'Currency' });
+  await combobox.click();
+  await page.waitForTimeout(900);
+
+  await combobox.pressSequentially('kron', { delay: 260 });
+  await page.waitForTimeout(900);
+
+  await combobox.press('ArrowDown');
+  await page.waitForTimeout(500);
+  await combobox.press('Enter');
+  await page.waitForTimeout(1300);
+});
+
 test('demo: multiplier keys for a numeric keypad', async ({ page }) => {
   await open(page, withoutBadge(STORIES.shortcutButtons));
   await typeSlowly(page, '2.5');

@@ -64,12 +64,16 @@ unwinding character by character.
 
 ### Currency
 
-|                                   |                                    |
-| --------------------------------- | ---------------------------------- |
-| Symbol and separators from `Intl` | ![](docs/demo-currency-picker.gif) |
+|                                   |                                          |
+| --------------------------------- | ---------------------------------------- |
+| Symbol and separators from `Intl` | ![](docs/demo-currency-picker.gif)       |
+| Search, for when 162 is the list  | ![](docs/demo-search-162-currencies.gif) |
 
 `locale: 'de-DE'` gives `1.234,56`. `currency: 'SEK'` resolves the symbol **and**
 which side it belongs on — `1 234,56 kr`, not `kr 1 234,56`.
+
+Symbols follow the **locale**, not the currency: SEK reads `SEK` in `en-US` and
+`kr` only in `sv-SE`.
 
 ### Feedback and extras
 
