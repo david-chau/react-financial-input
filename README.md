@@ -14,7 +14,6 @@ Zero runtime dependencies. Unstyled by default.
 · **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
 · **[Framework examples →](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md)**
 
-
 ## Quick start
 
 ```bash
