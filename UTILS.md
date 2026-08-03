@@ -149,6 +149,11 @@ What a diff cannot recover, and the event can:
 Nothing here validates. It reports what happened; whether to allow it is yours
 to decide.
 
+A worked migration — a desktop `onKeyDown` guard rewritten to survive phones —
+is in [EXAMPLES.md](EXAMPLES.md#making-a-desktop-input-work-on-every-device),
+and the **Input events** story shows both readings of the same keystroke side
+by side.
+
 ## The search component
 
 There is a working combobox in the repository at
