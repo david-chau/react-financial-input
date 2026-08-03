@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/david-chau/react-financial-input/compare/v0.6.0...v0.6.1) (2026-08-03)
+
+
+### Bug fixes
+
+* recover the panel centring and the select chevron ([#18](https://github.com/david-chau/react-financial-input/issues/18)) ([9a4d4ae](https://github.com/david-chau/react-financial-input/commit/9a4d4aea7678c20c87149d6f1fe73629cf62a839))
+
 ## [0.6.0](https://github.com/david-chau/react-financial-input/compare/v0.5.1...v0.6.0) (2026-08-03)
 
 
