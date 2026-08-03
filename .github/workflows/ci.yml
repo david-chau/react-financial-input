@@ -24,6 +24,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run prettier:check
       - run: npm run build
+      - name: Bundle size
+        # Nothing else stops an entry point growing, and the work to get the
+        # root under 4 kB would decay one feature at a time.
+        run: npm run size
+
       - name: Styling must stay opt-in
         # Nothing in the built JavaScript may pull in the stylesheet, or
         # importing the component would drag styles into every consumer.
