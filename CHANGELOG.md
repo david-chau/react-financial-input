@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/david-chau/react-financial-input/compare/v0.6.7...v0.7.0) (2026-08-03)
+
+
+### Features
+
+* export the input-event utilities the input is built on ([#33](https://github.com/david-chau/react-financial-input/issues/33)) ([5800894](https://github.com/david-chau/react-financial-input/commit/5800894c255ad23c0449f93216fba7fbb09bf988))
+
 ## [0.6.7](https://github.com/david-chau/react-financial-input/compare/v0.6.6...v0.6.7) (2026-08-03)
 
 
