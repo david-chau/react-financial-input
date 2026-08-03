@@ -89,7 +89,6 @@ const preview: Preview = {
             'Shortcut Buttons',
             'With Currency',
             'With Currency Search',
-            'With Currency Picker',
             'With Clear Button',
             'Controlled',
 

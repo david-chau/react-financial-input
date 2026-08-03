@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/david-chau/react-financial-input/actions/workflows/ci.yml/badge.svg)](https://github.com/david-chau/react-financial-input/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/react-financial-input)](https://www.npmjs.com/package/react-financial-input)
-[![bundle size](https://img.shields.io/bundlephobia/minzip/react-financial-input)](https://bundlephobia.com/package/react-financial-input)
+[![bundle size](https://img.shields.io/bundlejs/size/react-financial-input)](https://bundlejs.com/?q=react-financial-input)
 [![license](https://img.shields.io/npm/l/react-financial-input)](./LICENSE)
 
 A React currency input that formats as you type, with `h`/`k`/`m`/`b` multiplier
@@ -45,10 +45,6 @@ import 'react-financial-input/styles.css';
 | Digits group as you type   | ![](docs/demo-digits-group-as-you-type.gif) |
 | `2.5m` expands to millions | ![](docs/demo-shortcuts-expand.gif)         |
 
-Multipliers are applied by shifting the decimal point, so `4.35h` is exactly
-`435` — not the `434.99999999999994` a float multiply gives you, and with no
-big-number dependency.
-
 ### Editing
 
 |                                 |                                                   |
@@ -57,23 +53,19 @@ big-number dependency.
 | Paste is sanitised, not refused | ![](docs/demo-paste-is-sanitised.gif)             |
 | Undo, one step per edit         | ![](docs/demo-undo-restores-in-one-step.gif)      |
 
-`$1,234.56 USD`, `(1,234.00)` and `2.5m` all paste as numbers; text with no
-number in it is refused and the previous value kept. Undo is the component's
-own, so a paste or an expansion comes back in a single step rather than
-unwinding character by character.
+Undo is the component's own, so a paste or an expansion comes back in a single
+step rather than unwinding character by character.
 
 ### Currency
 
-|                                   |                                          |
-| --------------------------------- | ---------------------------------------- |
-| Symbol and separators from `Intl` | ![](docs/demo-currency-picker.gif)       |
-| Search, for when 162 is the list  | ![](docs/demo-search-162-currencies.gif) |
+|                                   |                                            |
+| --------------------------------- | ------------------------------------------ |
+| Symbol and separators from `Intl` | ![](docs/demo-currency-and-separators.gif) |
+| Search, for when 162 is the list  | ![](docs/demo-search-162-currencies.gif)   |
 
 `locale: 'de-DE'` gives `1.234,56`. `currency: 'SEK'` resolves the symbol **and**
-which side it belongs on — `1 234,56 kr`, not `kr 1 234,56`.
-
-Symbols follow the **locale**, not the currency: SEK reads `SEK` in `en-US` and
-`kr` only in `sv-SE`.
+which side it belongs on. Symbols follow the **locale**, not the currency: SEK
+reads `SEK` in `en-US` and `kr` only in `sv-SE`.
 
 ### Feedback and extras
 
@@ -158,52 +150,22 @@ The hook returns everything the extras are built from:
 | `symbol`, `symbolPosition`     | The currency symbol and which side it belongs on |
 | `numericValue`, `displayValue` | The committed number, and what is on screen      |
 
-### Currency lists
+## Without React
 
-`listCurrencies()` and `searchCurrencies()` read `Intl`, so there is no bundled
-table to go stale — and both tree-shake away if you do not use them:
+`parseAmount('$1,234.56 USD')` gives `1234.56`, and `parseAmount('2.5m')` gives
+`2500000` — the same rules the input applies to a paste, as one call, with no
+DOM. Currency lists, search and flag emoji come from `Intl` rather than a
+bundled table.
 
-```ts
-listCurrencies('en-US'); // g10 by default, 10 currencies
-listCurrencies('en-US', 'g7'); // 5
-listCurrencies('en-US', 'all'); // 162
-listCurrencies('en-US', ['NZD', 'THB']); // your own, in your order
-
-searchCurrencies('kron', { codes: 'all' }); // DKK, NOK, SEK — code beats name
-```
-
-`toFlagEmoji('SEK')` gives 🇸🇪 at no cost — an ISO 4217 code is the country code
-plus a letter, and a flag is that code in regional indicator symbols. Windows
-renders the letters instead.
-
-The **With Currency Search** story has a working combobox you can copy: filter
-as you type, arrow keys, no dependency.
-
-## Just the parsing
-
-No React needed — the same rules the input applies to a paste, as one call:
-
-```ts
-import { parseAmount, formatNumber } from 'react-financial-input';
-
-parseAmount('1k'); // 1000
-parseAmount('2.5m'); // 2500000
-parseAmount('$1,234.56 USD'); // 1234.56
-parseAmount('(1,234.00)'); // -1234   accounting negative
-parseAmount('not a number'); // null
-
-formatNumber(1234567); // '1,234,567'
-formatNumber(1234.5, { group: '.', decimal: ',' }); // '1.234,5'
-```
-
-`parseAmount` takes optional separators and shortcuts as its second and third
-arguments, so `parseAmount('1.234,56', { group: '.', decimal: ',' })` reads the
-German convention. It runs server-side quite happily.
+All of it is in **[UTILS.md](UTILS.md)**.
 
 ## Docs
 
+- **[UTILS.md](UTILS.md)** — the non-React exports: parsing, formatting,
+  currency lists, search, flags.
 - **[DESIGN.md](DESIGN.md)** — why it behaves as it does: the mobile keyboard
-  trade-off, the input event cheatsheet, the device support matrix, styling.
+  trade-off, exact multipliers, the input event cheatsheet, the device support
+  matrix, styling.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — architecture rules and local setup.
 - **[CI.md](CI.md)** — what each workflow does, and how to publish.
 

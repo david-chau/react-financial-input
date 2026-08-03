@@ -1,5 +1,5 @@
 import { test, Page } from '@playwright/test';
-import { STORIES, withoutBadge } from './storyUrl';
+import { STORIES, withArgs, withoutBadge } from './storyUrl';
 
 /*
     Marketing recordings, not evidence — see typing.spec.ts and composition.spec.ts
@@ -89,16 +89,28 @@ test('demo: clear button, and undo brings it back', async ({ page }) => {
   await page.waitForTimeout(1200);
 });
 
-test('demo: currency picker', async ({ page }) => {
-  await open(page, withoutBadge(STORIES.withCurrencyPicker));
+/*
+    Symbol, side and separators all come from the locale, so the recording is
+    pinned to sv-SE: the symbol moves to the trailing side, the group separator
+    becomes U+00A0 and the decimal a comma.
+ */
+// Short title on purpose: the GIF filename is derived from it.
+test('demo: currency and separators', async ({ page }) => {
+  await open(
+    page,
+    withoutBadge(withArgs(STORIES.withCurrencySearch, { locale: 'sv-SE' }))
+  );
   await typeSlowly(page, '1234.5');
 
-  for (const currency of ['SEK', 'EUR', 'JPY']) {
-    await page
-      .getByRole('combobox', { name: 'Currency' })
-      .selectOption(currency);
-    await page.waitForTimeout(1100);
-  }
+  const combobox = page.getByRole('combobox', { name: 'Currency' });
+
+  await combobox.click();
+  await page.waitForTimeout(700);
+  await combobox.pressSequentially('SEK', { delay: 240 });
+  await page.waitForTimeout(700);
+  await combobox.press('ArrowDown');
+  await combobox.press('Enter');
+  await page.waitForTimeout(1400);
 });
 
 test('demo: search 162 currencies', async ({ page }) => {

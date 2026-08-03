@@ -56,7 +56,7 @@ and iOS Safari both honour it. **Some Android keyboards — Samsung's in
 particular — ignore it and key off `type` alone.** There is no workaround that
 preserves formatting, since `type` cannot change.
 
-The **Debug (Playground)** and **Keyboard tester** stories report what a given
+The **Debug - Playground** and **Debug - Keyboard tester** stories report what a given
 device actually resolves, which separates a library bug from a keyboard that
 does not implement the attribute.
 
@@ -163,21 +163,19 @@ works. Verified on Chromium, Firefox and WebKit.
 
 One step per accepted edit, so a paste or a shortcut expansion undoes in one.
 
-> The **Debug (Playground)** story logs all of this live. Open it on a device,
+> The **Debug - Playground** story logs all of this live. Open it on a device,
 > perform the gesture, and read off what actually fired. That is the fastest way
 > to find out what a particular keyboard app really does.
 
 ## Using it without React
 
-`parseAmount(text, separators?, shortcuts?)` runs the same sanitising a paste
-gets and returns a number or `null`, and `formatNumber(value, separators?)` goes
-the other way. Neither imports React, so both work on a server.
+The public surface — `parseAmount`, `formatNumber`, the currency lists and the
+flags — is documented in **[UTILS.md](UTILS.md)**.
 
-Everything else the library is built from is exported too — `shiftDecimal` for
-exact powers-of-ten multiplication, `toCanonical` and `formatCanonical` for the
-two-form conversion, `listCurrencies` and `toFlagEmoji` for currency data, and
-the reducer itself. The reducer is pure, so it can be driven from a test or
-another framework without a DOM.
+Beyond that, everything the library is built from is exported: `shiftDecimal`
+for exact powers-of-ten multiplication, `toCanonical` and `formatCanonical` for
+the two-form conversion, and the reducer itself. The reducer is pure, so it can
+be driven from a test or another framework without a DOM.
 
 ## Verification layers
 
@@ -385,18 +383,16 @@ regional indicator symbols — no image assets. Two caveats. **Windows renders n
 flag emoji at all**, showing the two letters instead. And codes with no country
 return `null` (`XAU` is gold), so you can fall back to the code.
 
-`.rfi-group` joins a `<select>` to the input so the two read as one control; the
-dropdown shows a flag and code, since the symbol already appears in the field.
+`.rfi-group` joins the combobox to the input so the two read as one control; the
+list shows a flag and code, since the symbol already appears in the field.
 
-**Presets.** `'g10'` is the default — the FX market's ten, which is the list a
-picker usually wants. `'g7'` is the seven countries' currencies, five once the
-euro members collapse. `'all'` is everything the runtime knows, currently 162,
-which is why there is a searchable combobox: a native `<select>` stops being
-usable long before that. Or pass your own array, in your own order.
+**Search, not a dropdown.** There was briefly both: a native `<select>` for a
+handful of currencies and a combobox for the rest. Supporting two pickers cost
+more than it returned, and the `<select>` was the weaker one — it stops being
+usable somewhere past a couple of dozen options, and `'all'` is 162. Only the
+combobox remains, and `.rfi-select` went with the story that used it.
 
-**Cost.** None of this is bundled data. Importing the component alone is about
-4.1 kB gzipped; adding the search, presets and flags takes it to about 4.6 kB,
-and it drops out entirely if unused.
+The presets and the cost are in **[UTILS.md](UTILS.md)**.
 
 Changing the selection re-resolves the symbol, its side **and** the separators,
 and reformats what is on screen. That last part was a bug — the value kept the
