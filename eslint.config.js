@@ -39,6 +39,16 @@ export default tseslint.config(
       ]
     }
   },
+  {
+    /*
+        Build scripts run in Node, not a browser. Without this the config only
+        declares globals for .ts and .tsx, so `console` in a build script reads
+        as undefined.
+     */
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-console': 'off' }
+  },
   /*
       Complexity, measured rather than assumed.
 
