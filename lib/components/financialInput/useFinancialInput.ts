@@ -201,7 +201,17 @@ export const useFinancialInput = ({
   const separators = useMemo(
     () => ({
       group: groupSeparator ?? localeSeparators.group,
-      decimal: decimalSeparator ?? localeSeparators.decimal
+      decimal: decimalSeparator ?? localeSeparators.decimal,
+      /*
+          Carried through from the locale. Rebuilding this object from the two
+          characters alone dropped the group sizes, so an Indian locale
+          resolved lakh grouping correctly and then formatted in thousands
+          anyway — the formatter was right and the value was still wrong.
+
+          Overriding a separator does not change how many digits go in a group,
+          so the sizes survive either way.
+       */
+      groupSizes: localeSeparators.groupSizes
     }),
     [groupSeparator, decimalSeparator, localeSeparators]
   );

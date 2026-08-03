@@ -567,6 +567,17 @@ of them. That is not modesty; it is that the verification does not exist:
 Several bugs in this library were found only because someone typed into a real
 phone. It follows that more are waiting on devices nobody has held.
 
+### Digits are always ASCII
+
+`Intl` renders numbers in a locale's own script — `ne-NP` gives `१,२३,४५,६७,८९०`
+and `bn-IN` gives Bengali digits. The value here is always `0`–`9`, whatever
+the locale, because the value is a number a form will submit and a backend will
+parse.
+
+Grouping _is_ locale-correct, including the Indian lakh/crore system, so
+`en-IN` gives `1,23,45,67,890`. Only the digit glyphs differ from what `Intl`
+would print.
+
 ### One flat reserve in the stylesheet
 
 The space kept clear for a suffix currency symbol is a fixed `3.5rem`, sized for

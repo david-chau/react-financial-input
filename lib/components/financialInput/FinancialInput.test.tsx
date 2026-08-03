@@ -1066,3 +1066,47 @@ describe('a commit that changes nothing', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+/*
+    Grouping follows the locale end to end, not just in the formatter.
+
+    An Indian locale groups three digits then twos — 1,23,45,678 rather than
+    12,345,678 — and the caret has to survive a separator appearing in a place
+    the thousands rule would never put one.
+ */
+describe('lakh and crore grouping', () => {
+  it('groups the Indian way while typing', async () => {
+    const user = userEvent.setup();
+    render(<FinancialInput options={{ locale: 'en-IN' }} />);
+    const input = screen.getByRole('textbox');
+
+    await user.type(input, '12345678');
+
+    expect(input).toHaveValue('1,23,45,678');
+  });
+
+  it('reports the same number regardless of how it is grouped', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <FinancialInput options={{ locale: 'en-IN' }} onChange={onChange} />
+    );
+
+    await user.type(screen.getByRole('textbox'), '100000');
+
+    expect(onChange).toHaveBeenLastCalledWith(100000);
+  });
+
+  it('backspaces across a lakh separator', async () => {
+    const user = userEvent.setup();
+    render(<FinancialInput options={{ locale: 'en-IN' }} value={100000} />);
+    const input = screen.getByRole('textbox');
+
+    expect(input).toHaveValue('1,00,000');
+
+    await user.click(input);
+    await user.keyboard('{Backspace}');
+
+    expect(input).toHaveValue('10,000');
+  });
+});
