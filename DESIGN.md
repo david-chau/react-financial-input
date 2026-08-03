@@ -167,6 +167,18 @@ One step per accepted edit, so a paste or a shortcut expansion undoes in one.
 > perform the gesture, and read off what actually fired. That is the fastest way
 > to find out what a particular keyboard app really does.
 
+## Using it without React
+
+`parseAmount(text, separators?, shortcuts?)` runs the same sanitising a paste
+gets and returns a number or `null`, and `formatNumber(value, separators?)` goes
+the other way. Neither imports React, so both work on a server.
+
+Everything else the library is built from is exported too — `shiftDecimal` for
+exact powers-of-ten multiplication, `toCanonical` and `formatCanonical` for the
+two-form conversion, `listCurrencies` and `toFlagEmoji` for currency data, and
+the reducer itself. The reducer is pure, so it can be driven from a test or
+another framework without a DOM.
+
 ## Verification layers
 
 Coverage lives in L1. The browser layers confirm reality still matches it.

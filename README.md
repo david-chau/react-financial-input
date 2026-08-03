@@ -157,6 +157,27 @@ The hook returns everything the extras are built from:
 `listCurrencies()` and `toFlagEmoji()` build a currency picker with no bundled
 table — both read `Intl`.
 
+## Just the parsing
+
+No React needed — the same rules the input applies to a paste, as one call:
+
+```ts
+import { parseAmount, formatNumber } from 'react-financial-input';
+
+parseAmount('1k'); // 1000
+parseAmount('2.5m'); // 2500000
+parseAmount('$1,234.56 USD'); // 1234.56
+parseAmount('(1,234.00)'); // -1234   accounting negative
+parseAmount('not a number'); // null
+
+formatNumber(1234567); // '1,234,567'
+formatNumber(1234.5, { group: '.', decimal: ',' }); // '1.234,5'
+```
+
+`parseAmount` takes optional separators and shortcuts as its second and third
+arguments, so `parseAmount('1.234,56', { group: '.', decimal: ',' })` reads the
+German convention. It runs server-side quite happily.
+
 ## Docs
 
 - **[DESIGN.md](DESIGN.md)** — why it behaves as it does: the mobile keyboard

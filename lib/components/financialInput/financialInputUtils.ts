@@ -8,6 +8,7 @@ import {
   containsOnlyNumberCharacters,
   hasLeadingZero,
   hasMultipleDecimals,
+  parseNumber,
   shiftDecimal,
   toCanonical
 } from '../../utils';
@@ -162,6 +163,28 @@ export const sanitiseNumericText = (
   const normalised = shifted.replace(/^0+(?=\d)/, '');
 
   return isNegative ? `-${normalised}` : normalised;
+};
+
+/*
+    The whole library in one call, for when you only want the parsing: text in,
+    number out. Same rules the input applies to a paste, so "1k", "1,000",
+    "$1,234.56 USD" and "(1,234.00)" all work, and anything without a number in
+    it returns null.
+
+    Useful server-side too — this has no React in it.
+ */
+export const parseAmount = (
+  text: string,
+  separators: Separators = DEFAULT_SEPARATORS,
+  shortcuts: StringKeyedMap<number> = DEFAULT_SHORTCUTS
+): Nullable<number> => {
+  const canonical = sanitiseNumericText(
+    text,
+    separators,
+    toExponents(shortcuts)
+  );
+
+  return canonical === null ? null : parseNumber(canonical);
 };
 
 export const isAboveScale = (fraction: string, scale: number): boolean =>
