@@ -95,6 +95,49 @@ because `18` resolves to the newest 18.x.
 Anything above 19 is untested by definition. The range is a statement that no
 API in use is expected to break, not that a future major has been verified.
 
+## The state model
+
+`value` is optional. Leave it off and the input manages its own state, telling
+you about changes through `onChange`; pass it and the input follows the prop.
+
+`null` means no value, in both directions: as the initial state, and as what
+you receive for an empty input or a lone `.` part-way through typing. Never
+`NaN`, never `undefined`.
+
+### An echo is not an external change
+
+The obvious controlled implementation — reformat whenever `value` changes —
+destroys text mid-edit. A parent that stores what `onChange` gave it and hands
+it straight back would collapse `1.` to `1` and `1.50` to `1.5` on the very
+next render, because those strings and their numbers are not in bijection.
+
+So the sync is guarded twice. The prop must actually have changed since the
+last render, and it must differ from the value the input has already committed.
+An echo satisfies neither, so what is being typed survives.
+
+It is adjusted during render rather than in an effect. An effect would render
+once with the stale value and again to correct it, and it trips
+`react-hooks/set-state-in-effect`. [React documents deriving state from a
+changed prop this way.](https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+
+### Two forms, one of them yours
+
+`valueType` picks which one crosses the boundary:
+
+|                  | `'number'` (default) | `'string'`                    |
+| ---------------- | -------------------- | ----------------------------- |
+| `value` accepts  | `number \| null`     | canonical, display, or `2.5m` |
+| `onChange` gives | `number \| null`     | canonical text                |
+| Fires when       | the number changes   | the canonical string changes  |
+
+That last row is the subtle one. Typing the trailing zero of `1.50` leaves the
+number at `1.5`, so number mode stays quiet — correctly, nothing about the
+number changed. A string consumer still needs telling, so string mode compares
+canonical instead.
+
+Canonical is taken from the display string rather than rebuilt from the number,
+which is what lets `1.50` and a mid-edit `1.` survive at all.
+
 ## How input is handled
 
 Browsers describe an edit through `InputEvent.inputType`: `insertText`,
