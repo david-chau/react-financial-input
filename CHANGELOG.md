@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.7](https://github.com/david-chau/react-financial-input/compare/v0.6.6...v0.6.7) (2026-08-03)
+
+
+### Bug fixes
+
+* refuse IME composition that can never become a number ([#32](https://github.com/david-chau/react-financial-input/issues/32)) ([3eeca75](https://github.com/david-chau/react-financial-input/commit/3eeca757d6ae6fa5ac36f06eabe0e05c374cf877))
+
 ## [0.6.6](https://github.com/david-chau/react-financial-input/compare/v0.6.5...v0.6.6) (2026-08-03)
 
 
