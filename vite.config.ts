@@ -68,14 +68,25 @@ export default defineConfig({
         'lib/Introduction.stories.tsx'
       ],
       /*
-          A floor, not a target. It is here so coverage cannot quietly slide;
-          raising it is a decision, and lowering it should need an argument.
+          100, and held there.
+
+          Getting here meant deleting three functions nothing called rather
+          than writing tests for them, and covering paths that had never run:
+          the POSITIVE range guard, toExponent's rejections, reduceHistory's
+          dispatch, clear and applyShortcut, the undo and redo keystrokes, and
+          every Intl fallback.
+
+          One line carries a v8 ignore, in useFinancialInput. React resets a
+          controlled input's caret on re-render, so under jsdom the guard above
+          it always short-circuits and setSelectionRange is unreachable.
+          Playwright covers it in a real browser. Mocking selectionStart to
+          force it would have tested the mock.
        */
       thresholds: {
-        statements: 90,
-        branches: 85,
-        functions: 90,
-        lines: 90
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100
       }
     }
   }

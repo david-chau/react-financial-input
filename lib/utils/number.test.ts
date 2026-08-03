@@ -265,3 +265,57 @@ describe('separators', () => {
     expect(areSeparatorsValid(separators as Separators)).toBe(expected);
   });
 });
+
+/*
+    The branches the suite reached around rather than through. Each is a real
+    path — reachable from the public API — that nothing had exercised.
+ */
+describe('edges that nothing else reaches', () => {
+  it.each([
+    // canonical      places  ->  result   note
+    ['5', -3, '0.005', 'shifted right past the start, so zeros are prepended'],
+    ['5', -1, '0.5', 'one place right'],
+    ['1.5', -2, '0.015', 'a fraction shifted right'],
+    ['-5', -3, '-0.005', 'and the sign survives it'],
+    ['1234', 0, '1234', 'no shift at all is the value unchanged']
+  ])('shiftDecimal(%j, %i) -> %j (%s)', (canonical, places, expected) => {
+    expect(shiftDecimal(canonical as string, places as number)).toBe(expected);
+  });
+
+  it.each([
+    // value        note
+    ['abc', 'letters parse to NaN, which must come back as null'],
+    ['1.2.3', 'two decimal points, likewise'],
+    ['--5', 'a doubled sign']
+  ])('parseNumber(%j) is null (%s)', (value) => {
+    expect(parseNumber(value as string)).toBe(null);
+  });
+
+  /*
+      A caret past every significant character in the formatted value. The loop
+      finds no match and falls through to the end, which is the right answer
+      and the one branch of it never taken.
+   */
+  it.each([
+    // raw          caret  formatted   -> cursor  note
+    ['1234567', 99, '1,234,567', 9, 'a caret past the end lands at the end'],
+    [
+      '12345678',
+      8,
+      '1,234',
+      5,
+      'more significant characters than the formatted value holds'
+    ]
+  ])(
+    'mapCursorToFormatted(%j, %i, %j) -> %i (%s)',
+    (raw, caret, formatted, expected) => {
+      expect(
+        mapCursorToFormatted(
+          raw as string,
+          caret as number,
+          formatted as string
+        )
+      ).toBe(expected);
+    }
+  );
+});

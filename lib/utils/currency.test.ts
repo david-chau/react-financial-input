@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SEPARATORS } from './number';
 import {
   listCurrencies,
   searchCurrencies,
@@ -336,5 +337,182 @@ describe('supportsFlagEmoji', () => {
       vi.restoreAllMocks();
       resetFlagSupportCache();
     }
+  });
+});
+
+/*
+    Fallbacks and feature detection. Intl is the one thing here that varies by
+    runtime, so these paths are the ones a different Node or an older browser
+    would take — and none of them had ever run.
+ */
+describe('when Intl gives less than expected', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetFlagSupportCache();
+  });
+
+  /*
+      formatToParts is expected to contain a currency part. If a runtime ever
+      omits it there is no symbol to resolve, and null is the honest answer.
+   */
+  it('returns null when the format has no currency part', () => {
+    vi.stubGlobal(
+      'Intl',
+      Object.assign(Object.create(Intl), {
+        NumberFormat: function NumberFormat() {
+          return { formatToParts: () => [{ type: 'integer', value: '1' }] };
+        }
+      })
+    );
+
+    expect(resolveCurrency('USD')).toBe(null);
+  });
+
+  // No grouping or decimal part in the format means falling back to defaults.
+  it('falls back to the default separators', () => {
+    vi.stubGlobal(
+      'Intl',
+      Object.assign(Object.create(Intl), {
+        NumberFormat: function NumberFormat() {
+          return { formatToParts: () => [{ type: 'integer', value: '1234' }] };
+        }
+      })
+    );
+
+    expect(resolveSeparators('en-US')).toEqual(DEFAULT_SEPARATORS);
+  });
+
+  it('falls back when formatting throws entirely', () => {
+    vi.stubGlobal(
+      'Intl',
+      Object.assign(Object.create(Intl), {
+        NumberFormat: function NumberFormat() {
+          throw new RangeError('unsupported');
+        }
+      })
+    );
+
+    expect(resolveSeparators('nonsense')).toEqual(DEFAULT_SEPARATORS);
+  });
+
+  // supportedValuesOf is comparatively recent; without it there is no list.
+  it('copes with no supportedValuesOf', () => {
+    const original = Intl.supportedValuesOf;
+
+    try {
+      // @ts-expect-error deliberately removing it
+      delete Intl.supportedValuesOf;
+
+      expect(Array.isArray(listCurrencies('en-US', 'all'))).toBe(true);
+    } finally {
+      Object.defineProperty(Intl, 'supportedValuesOf', {
+        configurable: true,
+        writable: true,
+        value: original
+      });
+    }
+  });
+
+  /*
+      A code that Intl cannot resolve is dropped from the list rather than
+      appearing with an empty symbol.
+   */
+  it('drops a code it cannot resolve', () => {
+    vi.stubGlobal(
+      'Intl',
+      Object.assign(Object.create(Intl), {
+        NumberFormat: function NumberFormat() {
+          return { formatToParts: () => [{ type: 'integer', value: '1' }] };
+        }
+      })
+    );
+
+    expect(listCurrencies('en-US', ['USD', 'EUR'])).toEqual([]);
+  });
+
+  it('copes with no DisplayNames', () => {
+    const original = Intl.DisplayNames;
+
+    try {
+      // @ts-expect-error deliberately removing it
+      delete Intl.DisplayNames;
+
+      const [first] = listCurrencies('en-US', ['USD']);
+
+      // Without names, the code stands in for one.
+      expect(first.name).toBeTruthy();
+    } finally {
+      // Read-only in the lib types, so restored the way it was removed.
+      Object.defineProperty(Intl, 'DisplayNames', {
+        configurable: true,
+        writable: true,
+        value: original
+      });
+    }
+  });
+});
+
+describe('search ranking and the flag cache', () => {
+  afterEach(() => resetFlagSupportCache());
+
+  // A code match outranks a name match, which is why "kron" finds SEK at all.
+  it('ranks a code substring above a name substring', () => {
+    const [first] = searchCurrencies('usd', { codes: 'all' });
+
+    expect(first.code).toBe('USD');
+  });
+
+  it('finds a currency by a fragment of its code', () => {
+    const results = searchCurrencies('sd', { codes: 'all' });
+
+    expect(results.some((option) => option.code === 'USD')).toBe(true);
+  });
+
+  /*
+      The answer cannot change mid-session, so it is cached — but only once
+      there is an answer. With no canvas to draw on it returns false and
+      caches nothing, because "cannot tell" is not a result worth remembering.
+      jsdom has no canvas, so a working one has to be supplied to reach the
+      cache at all.
+   */
+  it('answers the flag question once and remembers', () => {
+    const painted = new Uint8ClampedArray(16 * 16 * 4);
+    painted.set([220, 20, 20, 255], 0);
+
+    const context = {
+      font: '',
+      fillText: () => undefined,
+      getImageData: () => ({ data: painted })
+    };
+
+    const real = document.createElement.bind(document);
+    const create = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tag: string) => {
+        const element = real(tag) as HTMLCanvasElement;
+
+        if (tag === 'canvas') {
+          element.getContext = (() => context) as never;
+        }
+
+        return element;
+      });
+
+    try {
+      expect(supportsFlagEmoji()).toBe(true);
+
+      const afterFirst = create.mock.calls.length;
+
+      expect(supportsFlagEmoji()).toBe(true);
+      expect(create.mock.calls.length).toBe(afterFirst);
+    } finally {
+      create.mockRestore();
+    }
+  });
+
+  it('does not cache when there is no canvas to answer with', () => {
+    // jsdom supplies no 2d context, so the answer stays unknown and uncached.
+    expect(supportsFlagEmoji()).toBe(false);
+    expect(supportsFlagEmoji()).toBe(false);
   });
 });

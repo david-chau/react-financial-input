@@ -772,3 +772,297 @@ describe('caret restoration', () => {
     expect(input.selectionStart).toBe(5);
   });
 });
+
+/*
+    Two of the hook's returned functions. Both are exercised by Playwright
+    through the clear-button and keypad stories, but never at this level — so
+    every branch inside them, including the refusals, was unmeasured.
+ */
+describe('clear and applyShortcut', () => {
+  const Harness = ({ onChange, onError }: Record<string, unknown> = {}) => {
+    const { getInputProps, clear, applyShortcut } = useFinancialInput({
+      onChange: onChange as (value: number | null) => void,
+      onError: onError as () => void
+    });
+
+    return (
+      <>
+        <input {...getInputProps()} />
+        <button type="button" onClick={clear}>
+          clear
+        </button>
+        {['k', 'z'].map((character) => (
+          <button
+            key={character}
+            type="button"
+            onClick={() => applyShortcut(character)}
+          >
+            {character}
+          </button>
+        ))}
+      </>
+    );
+  };
+
+  it('clear empties the value and reports it', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChange={onChange} />);
+
+    const input = screen.getByRole('textbox');
+    await user.type(input, '1234');
+    expect(input).toHaveValue('1,234');
+
+    await user.click(screen.getByRole('button', { name: 'clear' }));
+
+    expect(input).toHaveValue('');
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it('clear returns focus to the input', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole('textbox'), '5');
+    await user.click(screen.getByRole('button', { name: 'clear' }));
+
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+  });
+
+  it('applyShortcut multiplies as if the letter had been typed', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChange={onChange} />);
+
+    const input = screen.getByRole('textbox');
+    await user.type(input, '2');
+    await user.click(screen.getByRole('button', { name: 'k' }));
+
+    expect(input).toHaveValue('2,000');
+    expect(onChange).toHaveBeenLastCalledWith(2000);
+  });
+
+  // The refusal path: a character that is not a configured shortcut.
+  it('applyShortcut reports an unknown character rather than applying it', async () => {
+    const onError = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onError={onError} />);
+
+    const input = screen.getByRole('textbox');
+    await user.type(input, '2');
+    await user.click(screen.getByRole('button', { name: 'z' }));
+
+    expect(input).toHaveValue('2');
+    expect(onError).toHaveBeenCalled();
+  });
+
+  it('applyShortcut returns focus to the input', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole('textbox'), '2');
+    await user.click(screen.getByRole('button', { name: 'k' }));
+
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+  });
+});
+
+/*
+    Undo and redo are driven from the keystroke rather than the historyUndo
+    input type, because the browser stops emitting that as soon as React
+    overwrites the value — so only the first Ctrl+Z would ever arrive.
+
+    Playwright covers this in a real browser; nothing covered it here, which
+    left the key-matching itself unmeasured.
+ */
+describe('undo and redo keystrokes', () => {
+  const typeThenPress = async (keys: string) => {
+    const user = userEvent.setup();
+    render(<FinancialInput />);
+    const input = screen.getByRole('textbox');
+
+    await user.type(input, '12');
+    await user.keyboard(keys);
+
+    return input;
+  };
+
+  it.each([
+    ['{Control>}z{/Control}', '1', 'Ctrl+Z steps back'],
+    ['{Meta>}z{/Meta}', '1', 'and Meta+Z on macOS']
+  ])('%s -> %j (%s)', async (keys, expected) => {
+    expect(await typeThenPress(keys)).toHaveValue(expected);
+  });
+
+  it.each([
+    ['{Control>}{Shift>}z{/Shift}{/Control}', 'Ctrl+Shift+Z'],
+    ['{Control>}y{/Control}', 'Ctrl+Y, which is redo on Windows']
+  ])('%s redoes (%s)', async (redoKeys) => {
+    const user = userEvent.setup();
+    render(<FinancialInput />);
+    const input = screen.getByRole('textbox');
+
+    await user.type(input, '12');
+    await user.keyboard('{Control>}z{/Control}');
+    expect(input).toHaveValue('1');
+
+    await user.keyboard(redoKeys);
+
+    expect(input).toHaveValue('12');
+  });
+
+  it.each([
+    ['{Control>}a{/Control}', 'a modified key that is not undo or redo'],
+    ['x', 'an ordinary keystroke with no modifier']
+  ])('leaves the value alone for %s (%s)', async (keys) => {
+    const user = userEvent.setup();
+    render(<FinancialInput />);
+    const input = screen.getByRole('textbox');
+
+    await user.type(input, '12');
+    await user.keyboard(keys);
+
+    // Either untouched, or edited normally — never undone.
+    expect(input).not.toHaveValue('1');
+  });
+});
+
+/*
+    The caret is put back after React re-renders with a reformatted value.
+    Typing in the middle is what moves it, and what makes the guard on "the
+    caret is already right" fall the other way.
+ */
+describe('caret restoration after reformatting', () => {
+  it('keeps the caret with the digit just typed', async () => {
+    const user = userEvent.setup();
+    render(<FinancialInput value={1234567} />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+
+    expect(input).toHaveValue('1,234,567');
+
+    input.setSelectionRange(1, 1);
+    await user.type(input, '9', {
+      initialSelectionStart: 1,
+      initialSelectionEnd: 1
+    });
+
+    expect(input).toHaveValue('19,234,567');
+    // Two characters in: past the "1" that was there and the "9" just added.
+    expect(input.selectionStart).toBe(2);
+  });
+});
+
+/*
+    Branches that only appear when something is absent — no handler, or no
+    value to reformat. Easy to miss precisely because nothing goes wrong.
+ */
+describe('when a piece is simply not there', () => {
+  it('accepts input in string mode with no onChange at all', async () => {
+    const user = userEvent.setup();
+    render(<FinancialInput valueType="string" />);
+    const input = screen.getByRole('textbox');
+
+    await user.type(input, '1234');
+
+    // Nothing to notify, and nothing that throws for the lack of it.
+    expect(input).toHaveValue('1,234');
+  });
+
+  /*
+      Switching locale reformats the value in place. With no value there is
+      nothing to reformat, and the guard that skips it had never been taken.
+   */
+  it('switches locale on an empty input without inventing a value', async () => {
+    const Switchable = () => {
+      const [locale, setLocale] = useState('en-US');
+
+      return (
+        <>
+          <FinancialInput options={{ locale }} />
+          <button type="button" onClick={() => setLocale('de-DE')}>
+            de
+          </button>
+        </>
+      );
+    };
+
+    const user = userEvent.setup();
+    render(<Switchable />);
+    const input = screen.getByRole('textbox');
+
+    expect(input).toHaveValue('');
+
+    await user.click(screen.getByRole('button', { name: 'de' }));
+
+    expect(input).toHaveValue('');
+
+    // And it still formats with the new locale once there is something to format.
+    await user.type(input, '1234');
+    expect(input).toHaveValue('1.234');
+  });
+});
+
+/*
+    Some platforms report selectionStart as null on an input event. The action
+    falls back to the value's length, and jsdom always supplies a number — so
+    the fallback needed the property overridden to be reached at all.
+
+    Not a contrivance: it is the same class of defect as Android reporting 0
+    for a backspace at the end, which is why deletes derive their position from
+    the strings instead.
+ */
+describe('a platform that reports no caret position', () => {
+  it('falls back to the end of the value', async () => {
+    const user = userEvent.setup();
+    render(<FinancialInput />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+
+    // Type first, so React owns a real value, then take the caret away.
+    await user.type(input, '123');
+
+    Object.defineProperty(input, 'selectionStart', {
+      configurable: true,
+      get: () => null
+    });
+
+    await user.type(input, '4');
+
+    expect(input).toHaveValue('1,234');
+  });
+});
+
+/*
+    String mode fires on a change of canonical rather than of the number.
+    Clearing an already-empty input is the case where a commit happens and the
+    canonical value does not move — so there is nothing to report, and the
+    consumer should not be told otherwise.
+ */
+describe('a commit that changes nothing', () => {
+  it('says nothing when clearing an already-empty input', async () => {
+    const onChange = vi.fn();
+
+    const Harness = () => {
+      const { getInputProps, clear } = useFinancialInput({
+        valueType: 'string',
+        onChange
+      });
+
+      return (
+        <>
+          <input {...getInputProps()} />
+          <button type="button" onClick={clear}>
+            clear
+          </button>
+        </>
+      );
+    };
+
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByRole('button', { name: 'clear' }));
+
+    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
