@@ -42,7 +42,12 @@ and skip the parse on the server:
 ```tsx
 'use client';
 
-<FinancialInput valueType="string" value={raw} onChange={setRaw} name="amount" />;
+<FinancialInput
+  valueType="string"
+  value={raw}
+  onChange={setRaw}
+  name="amount"
+/>;
 ```
 
 `onChange` hands back canonical text — `"1234.56"`, no grouping, always a `.`
@@ -130,7 +135,7 @@ const { getInputProps, symbol } = useFinancialInput({
 />;
 ```
 
-The currency symbol is deliberately *not* inside the input's value — it comes
+The currency symbol is deliberately _not_ inside the input's value — it comes
 back from the hook so you can render it as an adornment. Putting it in the value
 would force the caret arithmetic to skip non-digits.
 

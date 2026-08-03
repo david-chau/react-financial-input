@@ -110,22 +110,22 @@ See [the extras](DESIGN.md#off-by-default-extras).
 Every native `<input>` prop is passed through (`placeholder`, `disabled`,
 `name`, `onBlur`, `aria-*`), and `ref` is forwarded.
 
-| Prop                       | Type                               | Default         | Description                                                                   |
-| -------------------------- | ---------------------------------- | --------------- | ----------------------------------------------------------------------------- |
-| `value`                    | `number \| string \| null`         | `undefined`     | Typed by `valueType`. A string may be canonical, display, or `2.5m`.          |
-| `onChange`                 | `(value: number \| string \| null) => void` | —      | The number, or canonical text — never the formatted string.                   |
-| `valueType`                | `'number' \| 'string'`             | `'number'`      | Which of the two `value` and `onChange` speak.                                |
-| `onError`                  | `() => void`                       | —               | Called when a keystroke is refused.                                           |
-| `options.scale`            | `number`                           | `2`             | Maximum decimal places. `0` refuses the decimal point.                        |
-| `options.maxDigits`        | `number`                           | `11`            | Maximum integer digits.                                                       |
-| `options.locale`           | `string`                           | —               | BCP 47 tag. Supplies separators and the currency symbol.                      |
-| `options.currency`         | `string`                           | —               | ISO 4217 code. The symbol is returned, not put in the value.                  |
-| `options.groupSeparator`   | `string`                           | `','`           | Overrides the locale.                                                         |
-| `options.decimalSeparator` | `string`                           | `'.'`           | Overrides the locale.                                                         |
-| `options.shortcuts`        | `Record<string, number>`           | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                             |
-| `options.range`            | `'ALL' \| 'POSITIVE'`              | `'ALL'`         | `'POSITIVE'` refuses negatives.                                               |
-| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'` | `'text'`        | Which keyboard mobile raises.                                                 |
-| `options.flashOnError`     | `boolean`                          | `true`          | Flash on a refused keystroke. Colour only; add `rfi-input--shake` for motion. |
+| Prop                       | Type                                        | Default         | Description                                                                   |
+| -------------------------- | ------------------------------------------- | --------------- | ----------------------------------------------------------------------------- |
+| `value`                    | `number \| string \| null`                  | `undefined`     | Typed by `valueType`. A string may be canonical, display, or `2.5m`.          |
+| `onChange`                 | `(value: number \| string \| null) => void` | —               | The number, or canonical text — never the formatted string.                   |
+| `valueType`                | `'number' \| 'string'`                      | `'number'`      | Which of the two `value` and `onChange` speak.                                |
+| `onError`                  | `() => void`                                | —               | Called when a keystroke is refused.                                           |
+| `options.scale`            | `number`                                    | `2`             | Maximum decimal places. `0` refuses the decimal point.                        |
+| `options.maxDigits`        | `number`                                    | `11`            | Maximum integer digits.                                                       |
+| `options.locale`           | `string`                                    | —               | BCP 47 tag. Supplies separators and the currency symbol.                      |
+| `options.currency`         | `string`                                    | —               | ISO 4217 code. The symbol is returned, not put in the value.                  |
+| `options.groupSeparator`   | `string`                                    | `','`           | Overrides the locale.                                                         |
+| `options.decimalSeparator` | `string`                                    | `'.'`           | Overrides the locale.                                                         |
+| `options.shortcuts`        | `Record<string, number>`                    | `h`/`k`/`m`/`b` | Characters to multipliers. Must be powers of ten.                             |
+| `options.range`            | `'ALL' \| 'POSITIVE'`                       | `'ALL'`         | `'POSITIVE'` refuses negatives.                                               |
+| `options.inputMode`        | `'text' \| 'decimal' \| 'numeric'`          | `'text'`        | Which keyboard mobile raises.                                                 |
+| `options.flashOnError`     | `boolean`                                   | `true`          | Flash on a refused keystroke. Colour only; add `rfi-input--shake` for motion. |
 
 ### Shortcuts
 
@@ -154,13 +154,13 @@ const { getInputProps } = useFinancialInput({ value, onChange: setValue });
 
 The hook returns everything the extras are built from:
 
-| Returned                       | For                                              |
-| ------------------------------ | ------------------------------------------------ |
-| `getInputProps()`              | Spread onto any input                            |
-| `applyShortcut(character)`     | Multiplier tap targets                           |
-| `clear()`                      | A clear button. Undoable, like any other edit    |
-| `symbol`, `symbolPosition`     | The currency symbol and which side it belongs on |
-| `numericValue`, `displayValue` | The committed number, and what is on screen      |
+| Returned                       | For                                                   |
+| ------------------------------ | ----------------------------------------------------- |
+| `getInputProps()`              | Spread onto any input                                 |
+| `applyShortcut(character)`     | Multiplier tap targets                                |
+| `clear()`                      | A clear button. Undoable, like any other edit         |
+| `symbol`, `symbolPosition`     | The currency symbol and which side it belongs on      |
+| `numericValue`, `displayValue` | The committed number, and what is on screen           |
 | `canonicalValue`               | The string to send onward — no grouping, `.` fraction |
 
 ## Without React
