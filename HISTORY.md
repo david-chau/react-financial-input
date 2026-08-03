@@ -76,8 +76,8 @@ and the first fix for it was wrong. Later, a release pull request written before
 another merge landed swallowed a feature into a patch version, which is recorded
 honestly in [CHANGELOG.md](CHANGELOG.md) rather than quietly renumbered.
 
-**Then the stack.** Jest to Vitest, ESLint 8 to flat config, Storybook 8 to 10,
-React 18 and 19 both supported and both tested — later widened to `>=18.0.0`,
+**Then the stack.** Jest to Vitest, ESLint 8 to flat config, React 18 and 19
+both supported and both tested — later widened to `>=18.0.0`,
 which immediately exposed that `@types/react@18.0` has no `useRef<T>(undefined)`
 overload and the declared floor had been broken all along.
 
@@ -93,12 +93,11 @@ never allow.
 
 Both `dependencies` and `optionalDependencies` are now empty objects.
 
-**Then the rest of the dependencies, by removing them too.** `bignumber.js`
-existed for one multiply. Every shortcut multiplier is a power of ten, so the decimal point can
-be shifted through the string instead — ten lines, exact, and `4.35h` is `435`
-rather than the `434.99999999999994` a float gives you. `vite` was in
-`dependencies`, shipping a build tool to every consumer. The result is zero
-runtime dependencies, which is the headline the README can now actually make.
+**Then the last real dependency.** `bignumber.js` was there for one multiply.
+Every shortcut multiplier is a power of ten, so the decimal point can be shifted
+through the string instead — ten lines, exact, and `4.35h` is `435` rather than
+the `434.99999999999994` a float gives you. That left zero runtime
+dependencies, which is the headline the README can now actually make.
 
 **Then the four stubs.** Paste, drop, cut and forward delete were implemented,
 along with word and line deletes, iOS replacement text, and Android IME
