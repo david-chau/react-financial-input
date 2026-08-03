@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/david-chau/react-financial-input/compare/v0.11.1...v1.0.0) (2026-08-03)
+
+
+### Bug fixes
+
+* **ci:** fail clearly when a dispatched tag does not exist ([#50](https://github.com/david-chau/react-financial-input/issues/50)) ([fbe345b](https://github.com/david-chau/react-financial-input/commit/fbe345b52d05777aeebd161435ef6d7d370c0798))
+
 ## [0.11.1](https://github.com/david-chau/react-financial-input/compare/v0.11.0...v0.11.1) (2026-08-03)
 
 
