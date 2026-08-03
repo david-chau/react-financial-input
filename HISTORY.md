@@ -81,8 +81,20 @@ React 18 and 19 both supported and both tested — later widened to `>=18.0.0`,
 which immediately exposed that `@types/react@18.0` has no `useRef<T>(undefined)`
 overload and the declared floor had been broken all along.
 
-**Then the dependencies, by removing them.** `bignumber.js` existed for one
-multiply. Every shortcut multiplier is a power of ten, so the decimal point can
+**Then the build.** Vite 5 to 8, Storybook 8 to 10 — but the interesting part
+was not the version numbers. `vite` itself sat in `dependencies`, so every
+consumer of a currency input was installing a build tool. Beside it,
+`optionalDependencies` pinned `@rollup/rollup-linux-x64-gnu`, a workaround for
+an npm bug fixed long before, which forced a Linux binary onto Mac installs.
+`tsup` was in there too, a second bundler for a project that already had one,
+and `vite-plugin-lib-inject-css` — whose entire job is to inject CSS imports
+into the JavaScript bundle, which is exactly what the opt-in stylesheet must
+never allow.
+
+Both `dependencies` and `optionalDependencies` are now empty objects.
+
+**Then the rest of the dependencies, by removing them too.** `bignumber.js`
+existed for one multiply. Every shortcut multiplier is a power of ten, so the decimal point can
 be shifted through the string instead — ten lines, exact, and `4.35h` is `435`
 rather than the `434.99999999999994` a float gives you. `vite` was in
 `dependencies`, shipping a build tool to every consumer. The result is zero
