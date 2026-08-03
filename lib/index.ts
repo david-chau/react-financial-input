@@ -34,26 +34,15 @@ export type {
 export type { Range } from './components/financialInput/financialInputUtils';
 
 /*
-    Parsing and formatting, with no React in them. `parseAmount` applies the
-    same rules a paste goes through; `shiftDecimal` is the exact powers-of-ten
-    multiply that replaced bignumber.js.
+    Parsing lives at react-financial-input/parse, which is the only entry
+    without a 'use client' banner — so it can be called from a server action or
+    a server component. Re-exporting it here would put it back behind the
+    directive and undo that.
  */
-export {
-  parseAmount,
-  DEFAULT_SHORTCUTS
-} from './components/financialInput/financialInputUtils';
-
-export {
-  formatNumber,
-  shiftDecimal,
-  toCanonical,
-  formatCanonical
-} from './utils/number';
-export type { Separators } from './utils/number';
 
 /*
-    Currency data and input-event reading live at their own entry points, so
-    that importing the input does not measure as importing them:
+    Currency data and input-event reading live at their own entry points too,
+    so that importing the input does not measure as importing them:
 
       react-financial-input/currency
       react-financial-input/events

@@ -88,10 +88,15 @@ If you would rather submit the display value and deal with it server-side,
 server action:
 
 ```ts
-import { parseAmount } from 'react-financial-input';
+import { parseAmount } from 'react-financial-input/parse';
 
 const amount = parseAmount(String(formData.get('amount'))); // number | null
 ```
+
+> The import path matters here. `/parse` is the only entry without a
+> `'use client'` banner, and a module carrying that directive has all of its
+> exports turned into client references — so importing `parseAmount` from the
+> root would not run in a server action, however pure the function is.
 
 ## React Hook Form
 
@@ -337,7 +342,7 @@ Refusing a paste outright annoys people who copied a price from a spreadsheet.
 Take the number out of it instead:
 
 ```tsx
-import { parseAmount } from 'react-financial-input';
+import { parseAmount } from 'react-financial-input/parse';
 import { describeEdit } from 'react-financial-input/events';
 
 if (edit.kind === 'insertBulk') {

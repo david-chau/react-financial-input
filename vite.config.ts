@@ -18,6 +18,7 @@ export default defineConfig({
        */
       entry: {
         index: resolve(rootDir, 'lib/index.ts'),
+        parse: resolve(rootDir, 'lib/parse.ts'),
         currency: resolve(rootDir, 'lib/currency.ts'),
         events: resolve(rootDir, 'lib/events.ts')
       },
@@ -27,8 +28,17 @@ export default defineConfig({
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime'],
       output: {
-        // Lets the component be imported from a Next.js App Router server file.
-        banner: "'use client';"
+        /*
+            'use client' goes only on the entry that contains React.
+
+            A module carrying the directive has every export turned into a
+            client reference by the Next.js App Router, so putting it on the
+            pure entries made `parseAmount` unusable in a server action — which
+            the documentation had been promising worked. `parse`, `currency`
+            and `events` import no React at all, so they stay server-callable.
+         */
+        banner: (chunk) =>
+          chunk.isEntry && chunk.name === 'index' ? "'use client';" : ''
       }
     }
   },
