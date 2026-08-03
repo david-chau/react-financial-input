@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/david-chau/react-financial-input/compare/v0.5.1...v0.6.0) (2026-08-03)
+
+
+### Features
+
+* currency search and presets, parseAmount, and two real-device fixes ([#16](https://github.com/david-chau/react-financial-input/issues/16)) ([82a3c7f](https://github.com/david-chau/react-financial-input/commit/82a3c7f5ad2c82511cbc39428c6ab7a2213c2806))
+
 ## [0.5.1](https://github.com/david-chau/react-financial-input/compare/v0.5.0...v0.5.1) (2026-08-02)
 
 
