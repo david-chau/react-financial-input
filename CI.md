@@ -35,6 +35,35 @@ gh run watch                                # watch the publish
 npm view react-financial-input version      # confirm
 ```
 
+### Approve the workflows first, then merge
+
+The release PR is opened by `github-actions[bot]`, and the repository's Actions
+approval policy was `first_time_contributors` — which counts the bot as one. So
+the release PR arrives with **1 workflow awaiting approval** and six required
+checks stuck on "Expected — Waiting for status to be reported". In that order:
+
+1. **Approve workflows to run.** The checks cannot report until the run starts.
+2. **Squash and merge.** The button stays grey until they are green.
+
+Not the red _Merge without waiting for requirements (bypass rules)_ checkbox.
+It is there for an emergency, and it ships a release nothing verified.
+
+> **Approving a workflow run is not approving a pull request.** They are
+> different permissions that happen to share a word. A solo committer cannot
+> review-approve their own PR — which is exactly why branch protection here
+> requires status checks rather than a review — but the workflow button is an
+> Actions maintainer action with no such restriction. Click it on your own PRs.
+
+The policy has since been relaxed so step 1 should stop appearing:
+
+```bash
+gh api repos/david-chau/react-financial-input/actions/permissions/fork-pr-contributor-approval
+# {"approval_policy":"first_time_contributors_new_to_github"}
+```
+
+Fork PRs from accounts new to GitHub still need approval. Changing the policy
+does **not** release a run that is already pending — approve that one by hand.
+
 ### The version comes from your commit messages
 
 The bump is derived from [Conventional Commits](https://www.conventionalcommits.org):
