@@ -2,10 +2,41 @@
 
 ## [0.6.2](https://github.com/david-chau/react-financial-input/compare/v0.6.1...v0.6.2) (2026-08-03)
 
+> **This release contains features, despite the patch version.** The release
+> pull request was generated when only the documentation commit below was
+> pending, then [#22](https://github.com/david-chau/react-financial-input/pull/22)
+> merged, and the release pull request was merged without being regenerated —
+> so the `v0.6.2` tag sits on top of a `feat:` commit that never got its own
+> version bump or entry. Everything in #22 is in 0.6.2 and is listed here by
+> hand. Nothing is missing from the package; only the version understates it.
+
+### Features
+
+* string-valued API — `valueType="string"` accepts canonical, display or `2.5m`
+  and hands back canonical text; `canonicalValue` added to the hook
+  ([#22](https://github.com/david-chau/react-financial-input/pull/22))
+* currency search replaces the `<select>` picker, with the preset, a custom
+  array and the locale exposed as Storybook controls
+  ([#22](https://github.com/david-chau/react-financial-input/pull/22))
+* `peerDependencies` widened to `react >=18.0.0` / `react-dom >=18.0.0`
+  ([#22](https://github.com/david-chau/react-financial-input/pull/22))
+
+### Bug fixes
+
+* `useRef<T>(undefined)` typed so it compiles against `@types/react@18.0`,
+  which has no such overload — the declared floor was broken
+  ([#22](https://github.com/david-chau/react-financial-input/pull/22))
 
 ### Documentation
 
 * record the approve-then-merge order for release PRs ([#20](https://github.com/david-chau/react-financial-input/issues/20)) ([4e4b059](https://github.com/david-chau/react-financial-input/commit/4e4b05962722d77887cc9f7498445186b3153e07))
+* correct the form-submission examples, which put `name` on the input and so
+  submitted the formatted value ([#22](https://github.com/david-chau/react-financial-input/pull/22))
+
+### Removed
+
+* the `<select>` currency picker and its `.rfi-select` styles. Search replaces
+  it ([#22](https://github.com/david-chau/react-financial-input/pull/22))
 
 ## [0.6.1](https://github.com/david-chau/react-financial-input/compare/v0.6.0...v0.6.1) (2026-08-03)
 

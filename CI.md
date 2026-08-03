@@ -64,6 +64,38 @@ gh api repos/david-chau/react-financial-input/actions/permissions/fork-pr-contri
 Fork PRs from accounts new to GitHub still need approval. Changing the policy
 does **not** release a run that is already pending — approve that one by hand.
 
+### A release pull request goes stale the moment anything else merges
+
+The release pull request is a snapshot. It says "0.6.2" because of what was
+pending **when the bot last wrote it** — and merging anything else afterwards
+does not retitle it. Merge the two out of order and the tag lands on top of
+commits the release does not describe:
+
+```
+#20 docs:  merged   ->  bot opens "release 0.6.2"   (patch, docs only)
+#22 feat:  merged   ->  bot has not re-run yet
+#21        merged   ->  v0.6.2 tagged ON TOP of the feat
+                        the feature ships in a patch, absent from the changelog
+```
+
+Worse, it is not self-correcting. Everything up to `v0.6.2` now counts as
+released, so the bot will never revisit that feature — the next release starts
+from the tag.
+
+**Before merging a release pull request, check its title still matches what is
+on `main`.** If commits have landed since, wait for the bot's push to update it:
+
+```bash
+gh pr view <release-pr> --json title,updatedAt
+git log --oneline v$(gh pr view <release-pr> --json title -q .title | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')..origin/main
+```
+
+An empty second command is what you want. Anything listed is a commit the
+release will swallow without describing.
+
+This happened once, to 0.6.2. Since npm versions are immutable, the fix was to
+write the missing entries into `CHANGELOG.md` by hand rather than republish.
+
 ### The version comes from your commit messages
 
 The bump is derived from [Conventional Commits](https://www.conventionalcommits.org):

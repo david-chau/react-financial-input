@@ -36,6 +36,7 @@ const Readout = ({ children }: { children: React.ReactNode }) => (
 
 export const App = () => {
   const [amount, setAmount] = useState<number | null>(1234.56);
+  const [raw, setRaw] = useState<string | null>('1234.56');
   const [currency, setCurrency] = useState('USD');
 
   // The headless path: same behaviour, your own markup.
@@ -66,6 +67,14 @@ export const App = () => {
       <Panel title="Numbers (the default)" hint="onChange gives you a number.">
         <FinancialInput value={amount} onChange={setAmount} />
         <Readout>{amount === null ? 'null' : amount}</Readout>
+      </Panel>
+
+      <Panel
+        title="Strings"
+        hint="valueType='string' — canonical out, so it is safe to POST as-is."
+      >
+        <FinancialInput valueType="string" value={raw} onChange={setRaw} />
+        <Readout>{raw === null ? 'null' : JSON.stringify(raw)}</Readout>
       </Panel>
 
       <Panel

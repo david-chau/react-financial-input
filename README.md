@@ -33,46 +33,20 @@ export const AmountField = () => {
 ```
 
 Type `1234567` and you get `1,234,567`; type `2.5m` and you get `2,500,000`.
-
-`onChange` receives a `number`, or `null` while the value is incomplete — an
-empty input, or a lone `.` part-way through typing. Never `NaN`.
-
-Already storing text? Ask for it back:
-
-```tsx
-<FinancialInput valueType="string" value={raw} onChange={setRaw} />
-```
-
-`onChange` then hands back canonical text — `"1234.56"`, no grouping, always a
-`.` fraction, whatever the locale.
-
-> Submitting a native `<form>`? Do not put `name` on the input. It submits what
-> is on screen, which is the formatted `"1,234.56"`. Put the canonical value in
-> a hidden input instead — [EXAMPLES.md](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md#a-plain-form-no-library)
-> has the four lines.
-
-### State model
-
-`value` is optional. Leave it off and the input manages its own state, telling
-you about changes through `onChange`; pass it and the input follows the prop.
-
-Two things worth knowing about the controlled path, because they are what makes
-it usable inside a form:
-
-- **An echo is not an external change.** A parent that stores what `onChange`
-  gave it and passes it straight back will not disturb what is being typed.
-  Only a value that differs from the committed one reformats the field, so
-  `1.` and the trailing zero of `1.50` survive mid-edit.
-- **`null` means no value**, both ways: as the initial state, and as what you
-  receive for an empty input. It is never `NaN` and never `undefined`.
-
-React 18 or newer as a peer dependency (`>=18.0.0`). Nothing else.
+`onChange` gives you a `number`, or `null` while the value is incomplete —
+never `NaN`. Want strings instead? `valueType="string"`.
 
 Want it styled? One import, opt-in:
 
 ```tsx
 import 'react-financial-input/styles.css';
 ```
+
+React 18 or newer (`>=18.0.0`). Nothing else.
+
+> **Submitting a native `<form>`?** Do not put `name` on the input — it submits
+> the formatted `"1,234.56"`.
+> [Use a hidden field](https://github.com/david-chau/react-financial-input/blob/main/EXAMPLES.md#a-plain-form-no-library).
 
 **[Open the playground in StackBlitz →](https://stackblitz.com/github/david-chau/react-financial-input/tree/main/examples/playground)**
 · **[Browse every state in Storybook →](https://david-chau.github.io/react-financial-input/)**
@@ -215,9 +189,9 @@ All of it is in **[UTILS.md](https://github.com/david-chau/react-financial-input
   Chakra, TanStack Form, plain forms, and how to test it.
 - **[UTILS.md](https://github.com/david-chau/react-financial-input/blob/main/UTILS.md)** — the non-React exports: parsing, formatting,
   currency lists, search, flags.
-- **[DESIGN.md](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md)** — why it behaves as it does: the mobile keyboard
-  trade-off, exact multipliers, the input event cheatsheet, the device support
-  matrix, styling.
+- **[DESIGN.md](https://github.com/david-chau/react-financial-input/blob/main/DESIGN.md)** — why it behaves as it does: the state model and
+  controlled mode, the mobile keyboard trade-off, exact multipliers, the input
+  event cheatsheet, the device support matrix, styling.
 - **[CONTRIBUTING.md](https://github.com/david-chau/react-financial-input/blob/main/CONTRIBUTING.md)** — architecture rules and local setup.
 - **[CI.md](https://github.com/david-chau/react-financial-input/blob/main/CI.md)** — what each workflow does, and how to publish.
 
