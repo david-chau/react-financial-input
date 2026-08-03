@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.0](https://github.com/david-chau/react-financial-input/compare/v0.9.0...v0.10.0) (2026-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* listCurrencies, searchCurrencies, toFlagEmoji, supportsFlagEmoji, CURRENCY_PRESETS and DEFAULT_CURRENCY_PRESET moved to react-financial-input/currency; classifyInputType, describeEdit, isDeleteInputType and InputType moved to react-financial-input/events. The root now exports the component, the hook, and parsing.
+
+### Features
+
+* split currency and input events into their own entry points ([#40](https://github.com/david-chau/react-financial-input/issues/40)) ([d76a9c2](https://github.com/david-chau/react-financial-input/commit/d76a9c29933fd956c0c3a6cc7371a04a68b8c259))
+
 ## [0.9.0](https://github.com/david-chau/react-financial-input/compare/v0.8.0...v0.9.0) (2026-08-03)
 
 
