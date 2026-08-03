@@ -1,0 +1,33 @@
+/*
+    The examples, typechecked against the library source.
+
+    examples/playground has its own tsconfig for anyone who installs and runs
+    it, but nothing in CI installed it — so when the currency helpers moved to
+    their own entry point, App.tsx was updated by hand and CurrencyCombobox.tsx
+    was missed. The playground on StackBlitz went to a white screen with
+    "does not provide an export named 'searchCurrencies'", and nothing failed.
+
+    Mapping the package name onto lib/ means the examples are checked against
+    the entry points as they are now, on every run, with no install step.
+ */
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "react-financial-input": ["./lib/index.ts"],
+      "react-financial-input/parse": ["./lib/parse.ts"],
+      "react-financial-input/currency": ["./lib/currency.ts"],
+      "react-financial-input/events": ["./lib/events.ts"]
+    }
+  },
+  "include": ["examples"],
+  "exclude": ["**/node_modules", "**/dist"]
+}

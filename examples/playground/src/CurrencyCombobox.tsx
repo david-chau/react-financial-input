@@ -4,7 +4,7 @@ import {
   CurrencyPreset,
   searchCurrencies,
   toFlagEmoji
-} from 'react-financial-input';
+} from 'react-financial-input/currency';
 
 /*
     Copied verbatim from the library's own story, save for the import above.
