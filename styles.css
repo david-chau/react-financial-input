@@ -351,10 +351,24 @@
 .rfi-select {
   box-sizing: border-box;
   height: var(--rfi-height);
-  padding: 0 var(--rfi-padding-x);
+  /*
+      appearance: none and our own chevron, because a native select puts its
+      arrow inside the right padding by an amount that differs per browser —
+      so the two halves of the group never looked balanced.
+   */
+  appearance: none;
+  padding: 0 calc(var(--rfi-padding-x) + 0.9rem) 0 var(--rfi-padding-x);
   border: 1px solid var(--rfi-border-color);
   border-radius: var(--rfi-radius);
-  background: var(--rfi-background);
+  /*
+      background-color, not the shorthand: `background:` resets every
+      sub-property, so a shorthand after this wipes the chevron out. It did.
+   */
+  background-color: var(--rfi-background);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23667085' stroke-width='1.5'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--rfi-padding-x) center;
+  background-size: 0.6rem;
   color: var(--rfi-color);
   font-family: var(--rfi-font-family);
   font-size: var(--rfi-font-size);

@@ -26,12 +26,20 @@ const meta: Meta<FieldArgs> = {
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
   args: { onChange: fn(), onError: fn() },
+  /*
+      The full-width panels opt out of the shared frame. A meta decorator wraps
+      outside a story's own, so without this the 260px box squeezed them to a
+      column against the left edge.
+   */
   decorators: [
-    (Story) => (
-      <div style={{ width: 260, padding: '1.5rem 0' }}>
+    (Story, context) =>
+      context.parameters.layout === 'fullscreen' ? (
         <Story />
-      </div>
-    )
+      ) : (
+        <div style={{ width: 260, padding: '1.5rem 0' }}>
+          <Story />
+        </div>
+      )
   ]
 };
 
