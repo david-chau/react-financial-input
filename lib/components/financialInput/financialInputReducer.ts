@@ -4,6 +4,7 @@ import {
   DEFAULT_SEPARATORS,
   Separators,
   commonPrefixLength,
+  describeEdit,
   containsLetters,
   formatCanonical,
   formatNumber,
@@ -280,7 +281,11 @@ const remove = (
       backspace at the end of the value, and trusting it threw the caret to the
       front of the field on every delete.
    */
-  const deletedAt = commonPrefixLength(state.displayValue, targetValue);
+  const { at: deletedAt } = describeEdit(
+    state.displayValue,
+    targetValue,
+    action
+  );
 
   /*
       Backspacing a grouping separator only moves the caret. The separator is
@@ -477,13 +482,16 @@ export const reduceInput = (
         The suggestion strip inserts whole words the same way, and they are
         sanitised to null and refused, which is also right.
      */
-    case InputType.INSERT_TEXT:
+    case InputType.INSERT_TEXT: {
+      const edit = describeEdit(state.displayValue, action.targetValue, action);
+
       return remember(
         state,
-        (action.data ?? '').length > 1
+        edit.kind === 'insertBulk'
           ? replace(state, action)
           : insert(state, action)
       );
+    }
 
     case InputType.DELETE_CONTENT_BACKWARD:
       return remember(state, remove(state, action));

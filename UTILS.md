@@ -82,6 +82,73 @@ symbols. Two caveats — **Windows renders no flag emoji at all**, showing the t
 letters instead, and codes with no country return `null`, so fall back to the
 code.
 
+## Reading input events
+
+The part of this library that is about _browsers_ rather than about money. No
+React, no currency, no formatting — just working out what a user did to a text
+field, across desktop, iOS and Android, where the same gesture arrives under
+different names or under no name at all.
+
+`FinancialInput` is built on these, which is the only reason to trust them:
+every quirk encoded here was found by a real device failing.
+
+```ts
+import { classifyInputType, describeEdit } from 'react-financial-input';
+```
+
+### From an event
+
+```ts
+const onInput = (event: InputEvent) => {
+  const edit = describeEdit(previous, input.value, event);
+
+  edit.kind; // 'insert' | 'insertBulk' | 'delete' | 'replace'
+  // | 'compose' | 'history' | 'none' | 'unknown'
+  edit.at; // where it happened
+  edit.text; // what went in
+  edit.removed; // what came out
+};
+```
+
+**`insertText` does not mean "one character".** It is the one type that cannot
+be decided from its name: a keystroke sends it with one character, and so does
+the clipboard chip above an Android keyboard, carrying an entire string.
+`classifyInputType('insertText')` therefore returns `null`, and `describeEdit`
+settles it by length. Missing that is a real bug this library shipped.
+
+```ts
+classifyInputType('insertFromPaste'); // 'insertBulk'
+classifyInputType('deleteWordBackward'); // 'delete'
+classifyInputType('insertText'); // null — length decides
+```
+
+### From `onChange` alone
+
+Most desktop code wires `onChange` and nothing else. Omit the event and
+everything comes from the two strings:
+
+```ts
+describeEdit('1,000', '1,00'); // { kind: 'delete',     at: 4, removed: '0' }
+describeEdit('12', '12345'); // { kind: 'insertBulk', at: 2, text: '345' }
+describeEdit('1234', '1x4'); // { kind: 'replace',    at: 1, text: 'x' }
+```
+
+**`at` comes from the strings, never from `selectionStart`.** Android reports
+`selectionStart` as 0 for a backspace at the end of the value, and honouring it
+threw the caret to the front of the field on every delete.
+
+What a diff cannot recover, and the event can:
+
+|                         | from strings              | from the event |
+| ----------------------- | ------------------------- | -------------- |
+| position and text       | yes                       | yes            |
+| paste vs. fast typing   | no — inferred from length | yes            |
+| composition in progress | no                        | yes            |
+| undo vs. retyping       | no                        | yes            |
+
+Nothing here validates. It reports what happened; whether to allow it is yours
+to decide.
+
 ## The search component
 
 There is a working combobox in the repository at
