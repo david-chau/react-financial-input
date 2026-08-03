@@ -89,6 +89,21 @@ const CHEATSHEET: {
     notes: 'Symbols, spaces and letters stripped; refuses if no number remains'
   },
   {
+    action: 'Tap the clipboard chip above an Android keyboard',
+    inputType: 'insertText — data carries the WHOLE string',
+    handling: 'sanitised as a paste, not validated as a keystroke',
+    notes:
+      'SwiftKey and Samsung. Not insertFromPaste — which is why this used to ' +
+      'be refused while Ctrl+V on the same device worked. One character is a ' +
+      'keystroke; more than one arrived in bulk. No iOS equivalent'
+  },
+  {
+    action: 'Tap a word in the suggestion strip',
+    inputType: 'insertText — data carries the whole word',
+    handling: 'sanitised, so refused unless it contains a number',
+    notes: 'Same path as the clipboard chip, opposite outcome'
+  },
+  {
     action: 'Drag text in',
     inputType: 'insertFromDrop',
     handling: 'sanitised, then validated',
@@ -399,10 +414,22 @@ export const EventTesterPanel = () => {
           ))}
         </div>
         {copied && (
-          <p style={{ ...styles.code, fontSize: '0.7rem' }}>
-            clipboard: {JSON.stringify(copied)} — now press Ctrl/Cmd+V, or
-            long-press the input and choose Paste
-          </p>
+          <>
+            <p style={{ ...styles.code, fontSize: '0.7rem' }}>
+              clipboard: {JSON.stringify(copied)} — now press Ctrl/Cmd+V, or
+              long-press the input and choose Paste
+            </p>
+            {/*
+                The three routes send different inputTypes, and the chip is the
+                one that was broken, so it is worth naming rather than leaving
+                people to find it.
+             */}
+            <p style={{ ...styles.code, fontSize: '0.7rem', opacity: 0.7 }}>
+              On Android, also try the clipboard chip above the keyboard — that
+              one arrives as insertText rather than insertFromPaste, and the log
+              below will show which you got.
+            </p>
+          </>
         )}
 
         <p style={styles.heading}>2. Or drag this into the input</p>
