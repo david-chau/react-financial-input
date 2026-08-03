@@ -30,3 +30,29 @@ export const commonPrefixLength = (before: string, after: string): number => {
 
   return index;
 };
+
+/*
+    The mirror of commonPrefixLength, from the end. Together they bracket the
+    part of a string that actually changed, which is how an edit can be located
+    without trusting the caret the platform reports.
+
+    Bounded by what the prefix already claimed, so "aa" -> "aaa" cannot count
+    the same character twice and report a longer overlap than either string.
+ */
+export const commonSuffixLength = (
+  before: string,
+  after: string,
+  from = 0
+): number => {
+  const limit = Math.min(before.length - from, after.length - from);
+  let index = 0;
+
+  while (
+    index < limit &&
+    before[before.length - 1 - index] === after[after.length - 1 - index]
+  ) {
+    index += 1;
+  }
+
+  return index;
+};

@@ -236,6 +236,121 @@ needed.
 </form.Field>
 ```
 
+## Making a desktop input work on every device
+
+You do not need `FinancialInput` for this. If you already have your own input
+and want it to survive phones, the two utilities behind this library are
+exported on their own.
+
+### What desktop code usually looks like
+
+```tsx
+// Blocks anything that is not a digit.
+<input
+  value={value}
+  onKeyDown={(event) => {
+    if (!/[0-9]/.test(event.key)) {
+      event.preventDefault();
+    }
+  }}
+  onChange={(event) => setValue(event.target.value)}
+/>
+```
+
+This works on a desktop keyboard and fails everywhere else:
+
+|                                                | why                                                                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Android soft keyboards**                     | send `event.key === 'Unidentified'` and `keyCode` 229 for every key, so the test rejects every digit |
+| **Any paste**                                  | never fires `keydown`, so the guard is skipped entirely                                              |
+| **Autocorrect, drag-drop, the clipboard chip** | same — no `keydown` at all                                                                           |
+| **IME composition**                            | half-formed text lands in the value with no `keydown` to see it                                      |
+
+The last three are why a "digits only" input still ends up holding
+`$1,234.56 USD`.
+
+### The same input, reading the edit instead
+
+```tsx
+import { useRef, useState } from 'react';
+import { describeEdit } from 'react-financial-input';
+
+const DigitsOnly = () => {
+  const [value, setValue] = useState('');
+  const previous = useRef('');
+
+  return (
+    <input
+      value={value}
+      onInput={(reactEvent) => {
+        const next = reactEvent.currentTarget.value;
+        const edit = describeEdit(
+          previous.current,
+          next,
+          reactEvent.nativeEvent as InputEvent
+        );
+
+        // Still being composed by an IME: leave it alone until it settles.
+        if (edit.kind === 'compose') return;
+
+        // Judge what arrived, not which key was pressed.
+        if (/[^0-9]/.test(edit.text)) {
+          setValue(previous.current); // refuse, keep what was there
+          return;
+        }
+
+        previous.current = next;
+        setValue(next);
+      }}
+      onChange={() => {
+        // onInput does the work; React needs this to treat the input as controlled.
+      }}
+    />
+  );
+};
+```
+
+One handler, and every path is covered: typing, pasting, dropping, autocorrect,
+the Android clipboard chip, and composition. Nothing is keyed off `event.key`,
+so nothing depends on a keyboard reporting one.
+
+### If you only have `onChange`
+
+Working inside a framework or component library that gives you `onChange` and
+no event? Drop the third argument:
+
+```tsx
+const edit = describeEdit(previous.current, event.target.value);
+```
+
+You still get `kind`, `at`, `text` and `removed`. What you lose is provenance:
+a paste is indistinguishable from fast typing, composition is invisible, and
+undo cannot be told from retyping. For a "digits only" rule none of that
+matters — for anything that treats a paste differently from a keystroke, it
+does.
+
+### Sanitising instead of refusing
+
+Refusing a paste outright annoys people who copied a price from a spreadsheet.
+Take the number out of it instead:
+
+```tsx
+import { describeEdit, parseAmount } from 'react-financial-input';
+
+if (edit.kind === 'insertBulk') {
+  const amount = parseAmount(edit.text); // "$1,234.56 USD" -> 1234.56
+
+  if (amount !== null) {
+    commit(amount);
+    return;
+  }
+}
+```
+
+**[Try both readings side by side in Storybook →](https://david-chau.github.io/react-financial-input/?path=/story/input-events--playground)**
+— a bare `<input>`, showing what the strings alone report next to what the event
+adds, on the same keystroke.
+
 ## Testing it
 
 `userEvent.type` drives it the way a person would, and the value on screen is

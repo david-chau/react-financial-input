@@ -240,3 +240,70 @@ export const searchCurrencies = (
     .slice(0, limit)
     .map(({ option }) => option);
 };
+
+/*
+    Whether this platform draws flag emoji at all.
+
+    Windows does not. It has no glyphs for regional indicator pairs, so a
+    browser falls back to rendering the two letters — "SE" rather than the
+    Swedish flag. Nothing in CSS or JavaScript changes that; the glyphs simply
+    are not on the machine.
+
+    Detected by drawing one and looking for colour. A real flag is painted in
+    several hues; the letter fallback is drawn in a single text colour, so a
+    pixel whose channels differ from one another means the flag rendered.
+
+    Returns false where there is no canvas to draw on — during server rendering,
+    or in a test environment without one — because the honest answer to "does
+    this platform draw flags" is then "cannot tell", and the fallback is the
+    safe branch either way.
+ */
+let flagSupport: Nullable<boolean> = null;
+
+export const supportsFlagEmoji = (): boolean => {
+  if (flagSupport !== null) {
+    return flagSupport;
+  }
+
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 16;
+
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    return false;
+  }
+
+  context.font = '16px sans-serif';
+  context.fillText('\u{1F1E8}\u{1F1E6}', 0, 14);
+
+  const { data } = context.getImageData(0, 0, 16, 16);
+  let coloured = false;
+
+  for (let index = 0; index < data.length && !coloured; index += 4) {
+    const [red, green, blue, alpha] = [
+      data[index],
+      data[index + 1],
+      data[index + 2],
+      data[index + 3]
+    ];
+
+    // Any painted pixel that is not a shade of grey.
+    coloured =
+      alpha > 0 && (Math.abs(red - green) > 24 || Math.abs(green - blue) > 24);
+  }
+
+  flagSupport = coloured;
+
+  return coloured;
+};
+
+/** Test seam. The result is cached, since it cannot change mid-session. */
+export const resetFlagSupportCache = (): void => {
+  flagSupport = null;
+};

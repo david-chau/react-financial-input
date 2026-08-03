@@ -106,7 +106,9 @@ const preview: Preview = {
             // Device tools
             'Mobile Viewport',
             'Keyboard tester'
-          ]
+          ],
+          // Not currency-specific, so it sits outside the input's own folder.
+          'Input events'
         ]
       }
     },

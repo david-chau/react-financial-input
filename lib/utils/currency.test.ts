@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   listCurrencies,
   searchCurrencies,
+  resetFlagSupportCache,
   resolveCurrency,
   resolveSeparators,
+  supportsFlagEmoji,
   toFlagEmoji
 } from './currency';
 
@@ -234,5 +236,105 @@ describe('the default shortlist', () => {
     expect(
       searchCurrencies('kron', { locale: 'en-US', codes: 'all' }).length
     ).toBeGreaterThan(2);
+  });
+});
+
+/*
+    Windows ships no glyphs for regional indicator pairs, so it draws the two
+    letters instead of a flag. Detection is by drawing one and looking for
+    colour: a real flag has several hues, the letter fallback has one.
+
+    jsdom has no canvas, which exercises the branch that matters most — the
+    answer has to be "no" wherever it cannot be measured, so callers fall back
+    rather than promising flags that will not appear.
+ */
+describe('supportsFlagEmoji', () => {
+  beforeEach(() => resetFlagSupportCache());
+
+  it('says no when there is no canvas to draw on', () => {
+    expect(supportsFlagEmoji()).toBe(false);
+  });
+
+  it('says no during server rendering', () => {
+    const { document: real } = globalThis;
+
+    // @ts-expect-error deliberately removing it, as a server would not have it
+    delete globalThis.document;
+
+    try {
+      expect(supportsFlagEmoji()).toBe(false);
+    } finally {
+      globalThis.document = real;
+    }
+  });
+
+  it('reports a colourful glyph as supported', () => {
+    resetFlagSupportCache();
+
+    const painted = new Uint8ClampedArray(16 * 16 * 4);
+    // One vivid red pixel: channels far enough apart to read as colour.
+    painted[0] = 220;
+    painted[1] = 20;
+    painted[2] = 20;
+    painted[3] = 255;
+
+    const context = {
+      font: '',
+      fillText: () => undefined,
+      getImageData: () => ({ data: painted })
+    };
+
+    const create = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const element = create(tag) as HTMLCanvasElement;
+
+      if (tag === 'canvas') {
+        element.getContext = (() => context) as never;
+      }
+
+      return element;
+    });
+
+    try {
+      expect(supportsFlagEmoji()).toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+      resetFlagSupportCache();
+    }
+  });
+
+  it('reports a monochrome fallback as unsupported', () => {
+    resetFlagSupportCache();
+
+    const grey = new Uint8ClampedArray(16 * 16 * 4);
+    // The letters, drawn in one text colour.
+    grey[0] = 30;
+    grey[1] = 30;
+    grey[2] = 30;
+    grey[3] = 255;
+
+    const context = {
+      font: '',
+      fillText: () => undefined,
+      getImageData: () => ({ data: grey })
+    };
+
+    const create = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const element = create(tag) as HTMLCanvasElement;
+
+      if (tag === 'canvas') {
+        element.getContext = (() => context) as never;
+      }
+
+      return element;
+    });
+
+    try {
+      expect(supportsFlagEmoji()).toBe(false);
+    } finally {
+      vi.restoreAllMocks();
+      resetFlagSupportCache();
+    }
   });
 });
