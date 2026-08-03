@@ -97,8 +97,8 @@ export interface FinancialInputOptions {
 
       Mobile numeric keypads have no letter keys, so 'decimal' and 'numeric'
       make the h/k/m/b shortcuts physically unreachable on a phone — which
-      leaves an ordinary formatted number input, and the shortcuts working on
-      every device is the point of this library.
+      leaves an ordinary formatted number input, and the shortcuts staying
+      typeable on a phone is the point of this library.
 
       Set 'decimal' or 'numeric' if a numeric keypad matters more than typed
       shortcuts for your users; pair it with `applyShortcut` and a row of tap

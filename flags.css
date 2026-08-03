@@ -1,0 +1,51 @@
+/*
+ * Optional, and only Windows needs it.
+ *
+ *   import 'react-financial-input/flags.css';
+ *
+ * Windows ships no glyphs for regional indicator pairs, so a browser draws the
+ * two letters — "SE" rather than the Swedish flag. Every other platform has
+ * them already and this file changes nothing there.
+ *
+ * `unicode-range` is what keeps it harmless: the font is only ever consulted
+ * for flag codepoints, so it cannot reach your digits, labels, currency
+ * symbols or anything else.
+ *
+ * It does download on every platform that imports it, not only Windows. The
+ * family has to come first in the stack, because Windows *does* have glyphs
+ * for regional indicators — it draws them as boxed letters — so a fallback
+ * position would let those win and this file would never be used. The upside
+ * is that flags then look the same everywhere instead of Apple's on macOS and
+ * Google's on Android.
+ *
+ * `supportsFlagEmoji()` is still exported if you would rather decide yourself.
+ *
+ * ---------------------------------------------------------------------------
+ * The font is "Twemoji Country Flags", a subset of Twemoji Mozilla.
+ * Artwork © Twitter, Inc and other contributors, used under CC-BY 4.0:
+ * https://creativecommons.org/licenses/by/4.0/
+ * Subset by TalkJS (country-flag-emoji-polyfill, MIT).
+ * Full text in NOTICE.md.
+ * ---------------------------------------------------------------------------
+ */
+
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  /* Regional indicators, plus the tag sequences England/Scotland/Wales use. */
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E007F;
+  src: url('./flags.woff2') format('woff2');
+  font-display: swap;
+}
+
+/*
+ * The currency search already carries .rfi-flag on the glyph, so importing
+ * this file is the whole integration.
+ *
+ * Rendering flags in your own markup too? Put the family first in whatever
+ * font-family that markup uses. The unicode-range keeps it harmless:
+ *
+ *   body { font-family: 'Twemoji Country Flags', system-ui, sans-serif; }
+ */
+.rfi-flag {
+  font-family: 'Twemoji Country Flags', var(--rfi-font-family);
+}

@@ -87,7 +87,7 @@ export const Welcome: Story = {
         A React currency input that formats as you type, with{' '}
         <code style={styles.code}>h</code> <code style={styles.code}>k</code>{' '}
         <code style={styles.code}>m</code> <code style={styles.code}>b</code>{' '}
-        multiplier shortcuts that work on every device, including phones.
+        multiplier shortcuts designed for modern desktop and mobile browsers.
       </p>
 
       <h2 style={styles.h2}>New to Storybook?</h2>

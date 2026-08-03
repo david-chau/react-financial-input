@@ -9,6 +9,13 @@ import { version } from '../package.json';
 import '../styles.css';
 
 /*
+    The flag font, which consumers import separately. Storybook opts in so the
+    currency search shows flags on Windows too — otherwise the one platform
+    that needs the file is the one place the stories look wrong.
+ */
+import '../flags.css';
+
+/*
     Which build you are actually looking at, on every screen.
 
     The deployed Storybook lags whatever is on a branch, and there is otherwise

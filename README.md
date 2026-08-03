@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/npm/l/react-financial-input)](https://github.com/david-chau/react-financial-input/blob/main/LICENSE)
 
 A React currency input that formats as you type, with `h`/`k`/`m`/`b` multiplier
-shortcuts that work on **every device, including phones**.
+shortcuts designed for modern desktop and mobile browsers.
 
 Zero runtime dependencies. Unstyled by default.
 
@@ -44,6 +44,13 @@ Want it styled? One import, opt-in:
 
 ```tsx
 import 'react-financial-input/styles.css';
+```
+
+Showing currency flags? Windows has no flag glyphs of its own, so the font
+ships too. Importing it is what makes flags work on every OS, at 80 kB:
+
+```tsx
+import 'react-financial-input/flags.css';
 ```
 
 React 18 or newer (`>=18.0.0`). Nothing else.
@@ -181,6 +188,8 @@ All of it is in **[UTILS.md](https://github.com/david-chau/react-financial-input
   event cheatsheet, the device support matrix, styling.
 - **[CONTRIBUTING.md](https://github.com/david-chau/react-financial-input/blob/main/CONTRIBUTING.md)** — architecture rules and local setup.
 - **[CI.md](https://github.com/david-chau/react-financial-input/blob/main/CI.md)** — what each workflow does, and how to publish.
+- **[HISTORY.md](https://github.com/david-chau/react-financial-input/blob/main/HISTORY.md)** — where it came from, why it stalled for two
+  years, and what real devices taught it.
 
 ## License
 

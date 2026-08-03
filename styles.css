@@ -342,27 +342,18 @@
 }
 
 /*
- * Flag glyphs, for platforms that have none.
+ * The flag glyph in the currency search.
  *
- * Windows ships no glyphs for regional indicator pairs, so a browser draws the
- * two letters instead — "SE" rather than the Swedish flag. No amount of CSS
- * conjures a glyph that is not installed, so the only real fix is a font that
- * carries them, and that is a few hundred kilobytes nobody should download
- * without asking for it.
+ * Windows has no glyphs for regional indicator pairs and draws the two letters
+ * instead, which is readable but not what you asked for. The fix is a font, and
+ * it is a separate opt-in import so nobody downloads 80 kB they do not need:
  *
- * So this library ships the hook, not the font. Point --rfi-flag-font at
- * whatever you choose to load and the flags appear; leave it alone and the
- * letters stay, which is a perfectly readable fallback.
+ *   import 'react-financial-input/flags.css';
  *
- *   @font-face { font-family: 'Your Flags'; src: url(...) format('woff2'); }
- *   :root { --rfi-flag-font: 'Your Flags'; }
- *
- * `supportsFlagEmoji()` reports whether the platform needs it, so the download
- * can be skipped everywhere except Windows.
+ * That file is what puts a font on this class. Here it only stops a flag
+ * stretching the row it sits in.
  */
 .rfi-flag {
-  font-family: var(--rfi-flag-font), var(--rfi-font-family);
-  /* Never let a flag stretch the row it sits in. */
   line-height: 1;
 }
 

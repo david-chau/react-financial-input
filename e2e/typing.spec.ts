@@ -476,6 +476,162 @@ test.describe('a clipboard chip pastes through insertText', () => {
   });
 });
 
+/*
+    Windows ships no glyphs for regional indicator pairs and draws the two
+    letters instead. The fix is a font, shipped as a separate opt-in import so
+    that nobody downloads 80 kB they do not need.
+
+    What runs here is the wiring: the font is declared, it reaches the flag,
+    and — because its unicode-range covers only flag codepoints — it cannot
+    reach anything else. Whether Windows then paints a flag is Windows'
+    business, and CI's windows-latest runner is where that would be proven.
+ */
+test.describe('the flag font', () => {
+  test('is declared, and scoped to flag codepoints alone', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    await input(page).waitFor();
+
+    const face = await page.evaluate(async () => {
+      await document.fonts.ready;
+
+      const flags = [...document.fonts].find(
+        (font) => font.family.replace(/["']/g, '') === 'Twemoji Country Flags'
+      );
+
+      return flags ? { status: flags.status, range: flags.unicodeRange } : null;
+    });
+
+    expect(face).not.toBeNull();
+
+    /*
+        Upper-cased before comparing: WebKit normalises unicodeRange to
+        lowercase and Chromium reports it as written, so a case-sensitive
+        assertion passes on one engine and fails on the other.
+     */
+    const range = (face?.range ?? '').toUpperCase();
+
+    // Regional indicators only: it can never paint a digit or a letter.
+    expect(range).toContain('U+1F1E6');
+    expect(range).not.toContain('U+0030');
+  });
+
+  test('reaches the flag and not the text beside it', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    const combobox = page.getByRole('combobox', { name: 'Currency' });
+    await combobox.waitFor();
+    await combobox.click();
+
+    await expect(page.locator('.rfi-flag').first()).toHaveCSS(
+      'font-family',
+      /Twemoji Country Flags/
+    );
+
+    await expect(
+      page.locator('.rfi-combobox__option strong').first()
+    ).not.toHaveCSS('font-family', /Twemoji Country Flags/);
+  });
+});
+
+/*
+    The assertion that actually closes the Windows question.
+
+    Declaring the @font-face and resolving the family prove wiring, not
+    outcome — both pass with a corrupt woff2. This paints the glyph and looks
+    at the pixels: a real flag has several hues, the letter fallback is drawn
+    in one colour.
+
+    On Windows the second half is the interesting one. The system stack must
+    come back monochrome, because that is the whole reason the font ships; if
+    Windows ever gains its own flag glyphs, this fails and the 80 kB can go.
+ */
+test.describe('the font paints a real flag', () => {
+  const paint = (page: Page, family: string) =>
+    page.evaluate(async (fontFamily) => {
+      /*
+          Canvas does not trigger a webfont download, and document.fonts.ready
+          only settles what the document already asked for. Without this
+          explicit load the canvas silently falls back to system fonts — which
+          made this pass on macOS, where the system has flags of its own, while
+          proving nothing. Windows, having none, is what exposed it.
+       */
+      const faces = await document.fonts.load(
+        `24px ${fontFamily}`,
+        '\u{1F1E8}\u{1F1E6}'
+      );
+      await document.fonts.ready;
+
+      // Empty for a system family, which is fine; non-empty must have loaded.
+      const loaded = faces.every((face) => face.status === 'loaded');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+
+      const context = canvas.getContext('2d');
+      if (!context) return { coloured: false, loaded: false, faces: 0 };
+
+      context.font = `24px ${fontFamily}`;
+      context.fillStyle = '#000';
+      context.fillText('\u{1F1E8}\u{1F1E6}', 0, 24);
+
+      const { data } = context.getImageData(0, 0, 32, 32);
+
+      let coloured = false;
+
+      for (let index = 0; index < data.length && !coloured; index += 4) {
+        const [red, green, blue, alpha] = [
+          data[index],
+          data[index + 1],
+          data[index + 2],
+          data[index + 3]
+        ];
+
+        // A flag is painted in several hues; letters are one flat colour.
+        coloured =
+          alpha > 0 &&
+          (Math.abs(red - green) > 24 || Math.abs(green - blue) > 24);
+      }
+
+      return { coloured, loaded, faces: faces.length };
+    }, family);
+
+  test('renders in colour wherever it is loaded', async ({ page }) => {
+    await page.goto(STORIES.withCurrencySearch);
+    await input(page).waitFor();
+
+    const result = await paint(page, '"Twemoji Country Flags"');
+
+    // The webfont itself resolved, rather than the canvas quietly falling back.
+    expect(result.faces).toBeGreaterThan(0);
+    expect(result.loaded).toBe(true);
+    expect(result.coloured).toBe(true);
+  });
+
+  /*
+      And the gap it fills, measured on the platform that has it.
+
+      Only Chromium on Windows falls through to Segoe UI Emoji, which carries
+      no flags. Firefox ships Twemoji Mozilla with the browser, so it draws
+      them on Windows regardless — the font is redundant there, which is worth
+      encoding rather than discovering later.
+   */
+  test('the system stack alone is monochrome on Windows Chromium', async ({
+    page,
+    browserName
+  }) => {
+    test.skip(
+      process.platform !== 'win32' || browserName !== 'chromium',
+      'only meaningful on the platform that lacks the glyphs'
+    );
+
+    await page.goto(STORIES.withCurrencySearch);
+    await input(page).waitFor();
+
+    // If this ever passes, Windows grew flag glyphs and the 80 kB can go.
+    expect((await paint(page, 'system-ui, sans-serif')).coloured).toBe(false);
+  });
+});
+
 test.describe('currency search presets', () => {
   for (const [codes, expected] of [
     ['g7', 5],

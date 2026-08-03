@@ -236,7 +236,7 @@ needed.
 </form.Field>
 ```
 
-## Making a desktop input work on every device
+## Handling input beyond desktop keyboards
 
 You do not need `FinancialInput` for this. If you already have your own input
 and want it to survive phones, the two utilities behind this library are
@@ -257,7 +257,8 @@ exported on their own.
 />
 ```
 
-This works on a desktop keyboard and fails everywhere else:
+This works for ordinary desktop typing, but misses several non-keyboard edit
+paths:
 
 |                                                | why                                                                                                  |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -310,9 +311,10 @@ const DigitsOnly = () => {
 };
 ```
 
-One handler, and every path is covered: typing, pasting, dropping, autocorrect,
-the Android clipboard chip, and composition. Nothing is keyed off `event.key`,
-so nothing depends on a keyboard reporting one.
+One handler can reconcile typing, paste, drops, autocorrect, the Android
+clipboard chip, and composition from the input event and the resulting value.
+Nothing is keyed off `event.key`, so the rule does not depend on a physical
+keyboard reporting one.
 
 ### If you only have `onChange`
 

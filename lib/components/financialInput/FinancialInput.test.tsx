@@ -325,7 +325,7 @@ describe('<FinancialInput />', () => {
   /*
       Mobile numeric keypads have no letter keys, so inputmode="decimal" would
       make the h/k/m/b shortcuts unreachable on a phone. Defaulting to "text"
-      keeps them typeable on every device, which is the point of the library.
+      keeps them typeable on a phone, which is the point of the library.
    */
   it('defaults to a keyboard that can type the shortcut letters', () => {
     const { input } = setup();
